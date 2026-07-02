@@ -1,0 +1,87 @@
+:root {
+  /* Anime / Ghibli soft palette (matches the pet bubbles) */
+  --bg: #fbf4e4;
+  --panel: #fffdf7;
+  --panel-soft: #f3e7cf;
+  --border: #d8bd92;
+  --text: #4f4031;
+  --muted: #8a7a63;
+  --accent: #e0795c;
+  --accent-press: #c9603f;
+  --danger: #cf5b46;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 13px;
+}
+#titlebar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 13px; background: var(--panel); border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag; font-weight: 600;
+}
+#titlebar small { color: var(--muted); font-weight: 400; margin-left: 6px; }
+#close-btn {
+  -webkit-app-region: no-drag; background: transparent; border: none; color: var(--muted);
+  font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 6px;
+}
+#close-btn:hover { color: var(--text); background: rgba(79,64,49,0.08); }
+
+#tabs { display: flex; gap: 4px; padding: 8px 12px 0; }
+.tab {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  padding: 7px 12px; font-size: 13px; border-radius: 8px 8px 0 0; border-bottom: 2px solid transparent;
+}
+.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+main { padding: 14px; }
+
+.empty { color: var(--muted); text-align: center; padding: 24px 0; font-size: 14px; }
+
+.card-q, .card-a {
+  background: var(--panel-soft); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+  user-select: text; -webkit-user-select: text;
+}
+.card-q { margin-bottom: 10px; font-weight: 600; }
+.card-a { margin: 10px 0; color: var(--text); }
+
+.primary-btn {
+  background: var(--accent); color: #fff; border: 1px solid var(--accent);
+  border-radius: 9px; padding: 9px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.primary-btn:hover { background: var(--accent-press); }
+.primary-btn.full { width: 100%; }
+
+.rate-row { display: flex; gap: 6px; margin-top: 4px; }
+.rate-btn {
+  flex: 1; border: 1px solid var(--border); border-radius: 9px; padding: 9px 4px;
+  font-size: 12.5px; font-weight: 600; cursor: pointer; color: #1d1f24;
+}
+.rate-btn.again { background: #ff8d7a; border-color: #ff8d7a; }
+.rate-btn.hard  { background: #ffcf8a; border-color: #ffcf8a; }
+.rate-btn.good  { background: #9ad7b0; border-color: #9ad7b0; }
+.rate-btn.easy  { background: #8fc3ff; border-color: #8fc3ff; }
+.rate-btn:hover { filter: brightness(1.08); }
+
+.cards-list { display: flex; flex-direction: column; gap: 7px; }
+.card-item {
+  display: flex; align-items: center; gap: 9px; background: var(--panel-soft);
+  border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px;
+}
+.card-item.due { border-color: var(--accent); }
+.card-item .ci-main { flex: 1; min-width: 0; }
+.card-item .ci-q { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-item .ci-meta { color: var(--muted); font-size: 11px; }
+.card-item .ci-del { background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 16px; }
+.cards-empty { color: var(--muted); font-style: italic; font-size: 12px; }
+
+#add-form { display: flex; flex-direction: column; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field > span { font-size: 12px; color: var(--muted); }
+textarea {
+  background: var(--panel-soft); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; width: 100%;
+}
+textarea:focus { outline: none; border-color: var(--accent); }

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:" />
+  <link rel="stylesheet" href="ai-character.css" />
+  <title>Karakter Görünümü</title>
+</head>
+<body>
+  <div id="titlebar">
+    <span>🎨 Karakter Görünümü <small id="char-name"></small></span>
+    <button id="close-btn" type="button" aria-label="Kapat">×</button>
+  </div>
+
+  <main>
+    <div id="preview-wrap">
+      <img id="preview-pose" alt="önizleme" />
+      <p id="classic-note" hidden>Klasik kedi — deseni "Desen editörü"nden düzenlenir.</p>
+    </div>
+
+    <section class="group">
+      <div class="seg-label">Karakter</div>
+      <div id="sets" class="sets"></div>
+      <button id="paint-btn" type="button" class="ghost-btn full">🎨 Pikselleri düzenle</button>
+    </section>
+
+    <button id="apply-btn" type="button" class="primary-btn full">Uygula</button>
+  </main>
+  <script src="ai-character.js"></script>
+</body>
+</html>

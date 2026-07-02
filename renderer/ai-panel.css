@@ -1,0 +1,150 @@
+:root {
+  /* Anime / Ghibli soft palette (matches the pet bubbles) */
+  --bg: #fffdf7;
+  --bg-soft: #f3e7cf;
+  --border: #d8bd92;
+  --text: #4f4031;
+  --muted: #8a7a63;
+  --accent: #e0795c;
+  --accent-press: #c9603f;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  color: var(--text);
+  user-select: none;
+  overflow: hidden;
+}
+
+#card {
+  margin: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(79, 64, 49, 0.22);
+  overflow: hidden;
+}
+
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--bg-soft);
+  -webkit-app-region: drag;
+  border-bottom: 1px solid var(--border);
+}
+
+#title { font-size: 13px; font-weight: 600; }
+#title-text { opacity: 0.92; }
+
+#close-btn {
+  -webkit-app-region: no-drag;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 6px;
+}
+#close-btn:hover { color: var(--text); background: rgba(79,64,49,0.08); }
+
+section { padding: 10px 12px 12px; }
+
+.brief {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  min-height: 16px;
+  line-height: 1.4;
+}
+.brief:empty { display: none; }
+
+.task-list { display: flex; flex-direction: column; gap: 6px; }
+
+.task-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.task-btn:hover { background: #ede0c4; }
+.task-btn .emoji { font-size: 16px; }
+.task-btn.recommended {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(224, 121, 92, 0.35);
+}
+.task-btn .badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.spinner { display: flex; gap: 5px; justify-content: center; padding: 14px 0 8px; }
+.spinner span {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  animation: bounce 1s infinite ease-in-out;
+}
+.spinner span:nth-child(2) { animation-delay: 0.15s; }
+.spinner span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce { 0%, 80%, 100% { transform: scale(0.5); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+
+.busy-label { text-align: center; color: var(--muted); font-size: 12.5px; margin-bottom: 10px; }
+
+.result-task { font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 6px; }
+.result-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+  padding-right: 4px;
+}
+.result-text.error { color: #ff8d7a; }
+.result-text::-webkit-scrollbar { width: 8px; }
+.result-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+#result-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+.ghost-btn, .primary-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+.ghost-btn { background: var(--bg-soft); color: var(--muted); }
+.ghost-btn:hover { color: var(--text); }
+.primary-btn { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.primary-btn:hover { background: var(--accent-press); }
+.primary-btn.done { background: #4caf7d; border-color: #4caf7d; color: #fff; }
+
+#cancel-btn { display: block; margin: 0 auto; width: auto; padding: 6px 16px; }
+#journal-btn { width: 100%; margin-top: 8px; }
+#journal-btn.done { background: #4caf7d; border-color: #4caf7d; color: #fff; }

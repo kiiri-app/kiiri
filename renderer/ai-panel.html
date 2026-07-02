@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <link rel="stylesheet" href="ai-panel.css" />
+  <title>Kiri AI</title>
+</head>
+<body>
+  <div id="card">
+    <div id="header">
+      <span id="title">🐾 <span id="title-text">Kiri</span></span>
+      <button id="close-btn" type="button" aria-label="Kapat">×</button>
+    </div>
+
+    <!-- Menu view -->
+    <section id="menu-view">
+      <div id="brief" class="brief"></div>
+      <div id="task-list" class="task-list"></div>
+    </section>
+
+    <!-- Busy view -->
+    <section id="busy-view" hidden>
+      <div class="spinner" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div id="busy-label" class="busy-label">Bakıyorum…</div>
+      <button id="cancel-btn" type="button" class="ghost-btn">İptal</button>
+    </section>
+
+    <!-- Result view -->
+    <section id="result-view" hidden>
+      <div id="result-task" class="result-task"></div>
+      <div id="result-text" class="result-text"></div>
+      <div id="result-actions">
+        <button id="back-btn" type="button" class="ghost-btn">← Görevler</button>
+        <button id="copy-btn" type="button" class="primary-btn">Kopyala</button>
+      </div>
+      <button id="journal-btn" type="button" class="ghost-btn">📚 Deftere ekle</button>
+    </section>
+  </div>
+  <script src="ai-panel.js"></script>
+</body>
+</html>

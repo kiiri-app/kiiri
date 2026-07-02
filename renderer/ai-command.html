@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <link rel="stylesheet" href="ai-command.css" />
+  <title>Kiri'a komut ver</title>
+</head>
+<body>
+  <div id="titlebar">
+    <span>🐾 Kiri'a komut ver</span>
+    <button id="close-btn" type="button" aria-label="Kapat">×</button>
+  </div>
+
+  <div id="tabs">
+    <button id="tab-command" type="button" class="tab active">Komut</button>
+    <button id="tab-skills" type="button" class="tab">Skiller</button>
+  </div>
+
+  <!-- COMMAND TAB -->
+  <main id="command-tab">
+    <div id="skill-chips" class="chips"></div>
+
+    <form id="command-form">
+      <textarea id="command-input" rows="2" placeholder="Ne yapayım? (ör. yapay zeka hakkında 5 slaytlık sunum yap)"></textarea>
+      <button type="submit" id="command-send" class="primary-btn">Gönder</button>
+    </form>
+
+    <!-- response area -->
+    <section id="resp" hidden>
+      <div id="resp-busy" class="busy" hidden>
+        <div class="spinner"><span></span><span></span><span></span></div>
+        <span id="resp-busy-label">Düşünüyorum…</span>
+        <button id="resp-cancel" type="button" class="ghost-btn">İptal</button>
+      </div>
+
+      <div id="resp-text" class="resp-text" hidden></div>
+
+      <div id="resp-plan" hidden>
+        <div class="plan-title">Şunu yapacağım:</div>
+        <ul id="plan-list" class="plan-list"></ul>
+        <div class="plan-actions">
+          <button id="plan-reject" type="button" class="ghost-btn">İptal</button>
+          <button id="plan-approve" type="button" class="primary-btn">Onayla</button>
+        </div>
+      </div>
+
+      <div id="resp-result" hidden>
+        <div id="result-list" class="result-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- SKILLS TAB -->
+  <main id="skills-tab" hidden>
+    <div id="skills-list" class="skills-list"></div>
+    <section class="group">
+      <h2>Yeni skill — tarif et</h2>
+      <p class="hint">Örn: "Sana 'sunum yap' dediğimde verdiğim konuda bir PowerPoint oluştur ve kaydet."</p>
+      <textarea id="skill-desc" rows="3" placeholder="Skill'i doğal dille tarif et…"></textarea>
+      <button id="skill-author-btn" type="button" class="primary-btn full">Oluştur</button>
+      <div id="skill-draft" class="skill-draft" hidden>
+        <div class="draft-row"><span class="draft-emoji"></span><b class="draft-name"></b></div>
+        <div class="draft-triggers"></div>
+        <div class="draft-tools"></div>
+        <div class="draft-instruction"></div>
+        <div class="draft-actions">
+          <button id="draft-discard" type="button" class="ghost-btn">Vazgeç</button>
+          <button id="draft-save" type="button" class="primary-btn">Kaydet</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="ai-command.js"></script>
+</body>
+</html>

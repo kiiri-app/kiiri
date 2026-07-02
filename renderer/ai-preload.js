@@ -56,6 +56,14 @@ contextBridge.exposeInMainWorld("aiAPI", {
   closeJournal: () => ipcRenderer.send("ai-journal-close"),
   resizeJournal: (size) => ipcRenderer.send("ai-journal-resize", size),
 
+  // Per-character memory (work history + auto-context)
+  memoryList: () => ipcRenderer.invoke("memory-list"),
+  memoryDelete: (id) => ipcRenderer.invoke("memory-delete", id),
+  memoryClear: () => ipcRenderer.invoke("memory-clear"),
+  memoryOpenFile: () => ipcRenderer.invoke("memory-open-file"),
+  onMemoryChanged: (cb) => ipcRenderer.on("memory-changed", () => cb()),
+  closeMemory: () => ipcRenderer.send("memory-close"),
+
   // Pixel-overlay editor window open/close
   openOverlayEditor: () => ipcRenderer.send("open-overlay-editor"),
   closeOverlay: () => ipcRenderer.send("overlay-editor-close"),

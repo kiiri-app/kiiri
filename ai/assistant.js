@@ -57,7 +57,7 @@ function parseClassify(text) {
 }
 
 // Step 1: capture under the cat + (optionally) classify to recommend a task.
-async function analyzeDrop(petWin, { catName, persona } = {}) {
+async function analyzeDrop(petWin, { catName, persona, memory } = {}) {
   const cfg = config.loadConfig();
   if (!cfg.enabled) return { error: "disabled" };
   if (!config.providerReady()) return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
@@ -93,7 +93,7 @@ async function analyzeDrop(petWin, { catName, persona } = {}) {
   const controller = newController();
   try {
     const { text } = await llm.callVision({
-      system: systemPrompt(cfg.responseLanguage, catName, persona),
+      system: systemPrompt(cfg.responseLanguage, catName, persona, memory),
       userText: classifyUserText(cfg.responseLanguage),
       imageBase64: capture.base64,
       mediaType: capture.mediaType,
@@ -124,7 +124,7 @@ async function analyzeDrop(petWin, { catName, persona } = {}) {
 }
 
 // Step 2: run a chosen task against the cached capture.
-async function runTask({ captureId, taskId, catName, persona } = {}) {
+async function runTask({ captureId, taskId, catName, persona, memory } = {}) {
   const cfg = config.loadConfig();
   if (!config.providerReady()) return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
 
@@ -137,7 +137,7 @@ async function runTask({ captureId, taskId, catName, persona } = {}) {
   const controller = newController();
   try {
     const { text } = await llm.callVision({
-      system: systemPrompt(cfg.responseLanguage, catName, persona),
+      system: systemPrompt(cfg.responseLanguage, catName, persona, memory),
       userText: taskUserText(task, cfg.responseLanguage),
       imageBase64: capture.base64,
       mediaType: capture.mediaType,
@@ -199,7 +199,7 @@ function stripPointForDisplay(text) {
 // { ok, text, point, display }. `point` (if any) carries absolute screen coords
 // for the paw overlay plus the normalized position. When `onDelta` is given, the
 // answer streams: onDelta(cleanTextSoFar) fires as tokens arrive.
-async function answerScreenQuestion(capture, { question, catName, persona } = {}, onDelta) {
+async function answerScreenQuestion(capture, { question, catName, persona, memory } = {}, onDelta) {
   const cfg = config.loadConfig();
   if (!config.providerReady()) {
     return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
@@ -208,7 +208,7 @@ async function answerScreenQuestion(capture, { question, catName, persona } = {}
 
   const controller = newController();
   const callOpts = {
-    system: screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat),
+    system: screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat, memory),
     userText: screenQuestionUser(question, cfg.responseLanguage),
     imageBase64: capture.base64,
     mediaType: capture.mediaType,

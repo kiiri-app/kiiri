@@ -44,7 +44,7 @@ function deleteSkill(id) {
 }
 
 // ---- Command → plan ----
-async function runCommand({ commandText, catName, persona } = {}) {
+async function runCommand({ commandText, catName, persona, memory } = {}) {
   const cfg = config.loadConfig();
   if (!cfg.enabled) return { error: "disabled", message: "AI Asistan kapalı." };
   if (!config.providerReady()) return { error: "no_key", message: "Önce sağlayıcı anahtarını gir (Ollama için gerekmez)." };
@@ -64,6 +64,7 @@ async function runCommand({ commandText, catName, persona } = {}) {
       lang: cfg.responseLanguage,
       catName,
       persona,
+      memory,
       instruction,
       commandText: text,
       allowedTypes,

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <link rel="stylesheet" href="ai-memory.css" />
+  <title>Memory</title>
+</head>
+<body>
+  <div id="titlebar">
+    <span>🧠 <span id="mem-title" data-i18n="memoryName">Memory</span> <small id="mem-sub"></small></span>
+    <button id="close-btn" type="button" aria-label="Close" data-i18n-aria="close">×</button>
+  </div>
+
+  <div id="toolbar">
+    <p id="mem-hint" class="hint" data-i18n="memoryHint">Kiri remembers its recent work here and uses it as context — so it picks up where you left off.</p>
+    <div class="toolbar-actions">
+      <button id="open-file" type="button" class="link-btn" data-i18n="openFile">Open .md</button>
+      <button id="clear-all" type="button" class="link-btn danger" data-i18n="clearAll">Clear all</button>
+    </div>
+  </div>
+
+  <main>
+    <div id="empty" class="empty" data-i18n="memoryEmpty" hidden>No memories yet — do an AI task and it'll show up here.</div>
+    <div id="list" class="mem-list"></div>
+  </main>
+
+  <script src="ai-memory.js"></script>
+</body>
+</html>

@@ -10,7 +10,7 @@ const llm = require("../llm");
 const { agentSystemPrompt } = require("../prompts");
 
 // Returns { actions: [{ type, input, summary }], text }
-async function plan({ lang, catName, persona, instruction, commandText, allowedTypes, signal }) {
+async function plan({ lang, catName, persona, memory, instruction, commandText, allowedTypes, signal }) {
   const tools = registry.toolSchemas(allowedTypes);
   const parts = [];
   if (instruction) parts.push(instruction.trim());
@@ -18,7 +18,7 @@ async function plan({ lang, catName, persona, instruction, commandText, allowedT
   const userText = parts.join("\n\n");
 
   const { text, toolUses } = await llm.callWithTools({
-    system: agentSystemPrompt(lang, catName, persona),
+    system: agentSystemPrompt(lang, catName, persona, memory),
     userText,
     tools,
     maxTokens: 4096,

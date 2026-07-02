@@ -28,6 +28,10 @@ characters or design your own.
   **Ollama** (fully local / offline / free).
 - **Knowledge Journal** — save what the character solved/explained as flashcards
   and review them on an SM-2 spaced-repetition schedule.
+- **Per-character memory** — each character keeps its own history of the work it
+  did (summaries, screen answers, files it made) in a readable `.md`, and feeds
+  the recent entries back as context — so it remembers across restarts and picks
+  up where you left off. Right-click → **🧠 Memory** to view, edit, or clear it.
 - **Characters** — pick Kiri or Tori, paint your own look in the pixel overlay
   editor, and run several characters at once, each with its own name, look, and
   personality.

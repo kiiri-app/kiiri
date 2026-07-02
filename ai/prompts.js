@@ -15,7 +15,20 @@ function languageName(lang) {
   return LANGUAGE_NAMES[lang] || LANGUAGE_NAMES.en;
 }
 
-function systemPrompt(lang, catName, persona) {
+// A "what you did before with this user" block, injected into system prompts so
+// each character carries its own memory across restarts. Empty string when the
+// character has no history.
+function memoryBlock(memory) {
+  const mem = memory && String(memory).trim();
+  if (!mem) return "";
+  return [
+    ``,
+    `Bu kullanıcıyla geçmişte yaptıkların (en yeniden eskiye) — hatırla ve gerektiğinde bunlara atıfta bulun:`,
+    mem,
+  ].join("\n");
+}
+
+function systemPrompt(lang, catName, persona, memory) {
   const name = (catName && String(catName).trim()) || "Kiri";
   const langName = languageName(lang);
   const personaLine = persona && String(persona).trim()
@@ -26,6 +39,7 @@ function systemPrompt(lang, catName, persona) {
     personaLine,
     `Kullanıcı seni ekrandaki bir içeriğin üzerine bıraktı; sana o bölgenin ekran görüntüsü verildi.`,
     `Görüntüyü incele ve istenen görevi yap.`,
+    memoryBlock(memory),
     ``,
     `Kurallar:`,
     `- Yanıtı her zaman ${langName} dilinde ver.`,
@@ -33,7 +47,7 @@ function systemPrompt(lang, catName, persona) {
     `- Düşünme/çözümleme sürecini yazma; yalnızca nihai sonucu ver.`,
     `- Görüntüde ilgili içerik yoksa bunu tek cümlede belirt.`,
     `- Emin olmadığın yerde tahmin yürüttüğünü kısaca söyle.`,
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 // Quick classification pass → recommends a task and gives a one-line preview.
@@ -66,7 +80,7 @@ function taskUserText(task, lang, instructionOverride) {
 // question). The full screen is the context, but the cat's position is a strong
 // hint: users usually ask about whatever the cat is sitting next to. The model
 // may point at a UI element with [POINT:x,y] (normalized 0..1 of the screen).
-function screenQuestionSystem(lang, catName, persona, cat) {
+function screenQuestionSystem(lang, catName, persona, cat, memory) {
   const name = (catName && String(catName).trim()) || "Kiri";
   const langName = languageName(lang);
   const personaLine = persona && String(persona).trim()
@@ -78,6 +92,7 @@ function screenQuestionSystem(lang, catName, persona, cat) {
     `Sen ${name}, kullanıcının masaüstünde yaşayan yardımsever bir kedi-AI asistanısın.`,
     personaLine,
     `Sana kullanıcının EKRANININ TAMAMININ görüntüsü ve sözlü/yazılı bir sorusu verildi.`,
+    memoryBlock(memory),
     ``,
     `ÖNEMLİ — kullanıcının ne kastettiği:`,
     `- Sen ekranda yaklaşık (%${cx}, %${cy}) konumunda (soldan/yukarıdan) duruyorsun.`,
@@ -103,7 +118,7 @@ function screenQuestionUser(question, lang) {
 }
 
 // System prompt for the action/command agent (text-driven, may use tools).
-function agentSystemPrompt(lang, catName, persona) {
+function agentSystemPrompt(lang, catName, persona, memory) {
   const name = (catName && String(catName).trim()) || "Kiri";
   const langName = languageName(lang);
   const personaLine = persona && String(persona).trim()
@@ -113,6 +128,7 @@ function agentSystemPrompt(lang, catName, persona) {
     `Sen ${name}, kullanıcının masaüstünde yaşayan yardımsever bir AI asistanısın.`,
     personaLine,
     `Kullanıcının komutunu yerine getirmek için sana verilen ARAÇLARDAN uygun olanı çağır.`,
+    memoryBlock(memory),
     `Bir dosya/sunum/belge isteniyorsa içeriği (slayt başlıkları, maddeler, paragraflar) SEN üret — zengin, doğru ve isteğe uygun olsun.`,
     ``,
     `Kurallar:`,

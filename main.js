@@ -24,6 +24,7 @@ const aiAgent = require("./ai/agent");
 const aiVoice = require("./ai/voice");
 const aiJournal = require("./ai/journal/store");
 const aiCardgen = require("./ai/journal/cardgen");
+const aiMemory = require("./ai/memory/store");
 const charStore = require("./characters");
 const { localizedTasks } = require("./ai/tasks");
 
@@ -99,6 +100,7 @@ let aiPanelWin = null;
 let aiSettingsWin = null;
 let aiCommandWin = null;
 let aiJournalWin = null;
+let memoryWin = null;
 let overlayWin = null;
 let journalReminderTimer = null;
 let lastJournalNudgeAt = 0;
@@ -175,6 +177,10 @@ const I18N = {
     showCatName: "Show Kiri name",
     aiAssistant: "🐾 AI Assistant…",
     askScreen: "🔍 Ask about my screen…",
+    aiMemory: "🧠 Memory…",
+    memoryTitle: "Memory",
+    memoryKindTask: "Task",
+    memoryFileCreated: (name) => `Created ${name}`,
     aiCommand: "💬 Give Kiri a command…",
     aiJournal: "📚 Knowledge Journal…",
     setCatPersona: "Set this cat's personality…",
@@ -258,6 +264,10 @@ const I18N = {
     showCatName: "캣짱 이름 표시",
     aiAssistant: "🐾 AI 어시스턴트…",
     askScreen: "🔍 내 화면에 대해 묻기…",
+    aiMemory: "🧠 기억…",
+    memoryTitle: "기억",
+    memoryKindTask: "작업",
+    memoryFileCreated: (name) => `${name} 만듦`,
     aiCommand: "💬 캣짱에게 명령하기…",
     aiJournal: "📚 지식 노트…",
     setCatPersona: "이 고양이의 성격 설정…",
@@ -341,6 +351,10 @@ const I18N = {
     showCatName: "Kiri の名前を表示",
     aiAssistant: "🐾 AI アシスタント…",
     askScreen: "🔍 画面について聞く…",
+    aiMemory: "🧠 記憶…",
+    memoryTitle: "記憶",
+    memoryKindTask: "タスク",
+    memoryFileCreated: (name) => `${name} を作成`,
     aiCommand: "💬 Kiri に指示する…",
     aiJournal: "📚 ナレッジノート…",
     setCatPersona: "この猫の性格を設定…",
@@ -424,6 +438,10 @@ const I18N = {
     showCatName: "Kiri'nin adını göster",
     aiAssistant: "🐾 AI Asistan…",
     askScreen: "🔍 Ekranımı sor…",
+    aiMemory: "🧠 Hafıza…",
+    memoryTitle: "Hafıza",
+    memoryKindTask: "Görev",
+    memoryFileCreated: (name) => `${name} oluşturuldu`,
     aiCommand: "💬 Kiri'ye komut ver…",
     aiJournal: "📚 Bilgi Defteri…",
     setCatPersona: "Bu kedinin kişiliğini ayarla…",
@@ -913,6 +931,7 @@ function setLanguage(language) {
     [aiSettingsWin, null],
     [aiCommandWin, null],
     [aiJournalWin, "journalWindowTitle"],
+    [memoryWin, "memoryTitle"],
     [overlayWin, "overlayEditorTitle"],
   ];
   for (const [win, titleKey] of aiWindows) {
@@ -1173,6 +1192,18 @@ function attachWindowDiagnostics(win, label) {
 // ── Multi-character helpers ──
 function charById(id) { return characters.find((c) => c.id === id) || null; }
 function activeChar() { return charById(activeCharId); }
+
+// Per-character memory: the recent-work context fed into prompts, and a helper
+// to record a new entry for whichever character just did the work.
+function activeMemoryContext() {
+  return activeCharId ? aiMemory.recentContext(activeCharId) : "";
+}
+function rememberForActiveChar(kind, title, detail) {
+  if (!activeCharId) return;
+  const c = activeChar();
+  aiMemory.add(activeCharId, { kind, title, detail }, c && c.name);
+  if (memoryWin && !memoryWin.isDestroyed()) memoryWin.webContents.send("memory-changed");
+}
 function eachPetWin(cb) {
   for (const win of petWins.values()) { if (win && !win.isDestroyed()) cb(win); }
 }
@@ -1365,6 +1396,7 @@ function removeCharacter(id) {
   const win = petWins.get(id);
   characters = characters.filter((c) => c.id !== id);
   charStore.save(characters);
+  aiMemory.deleteChar(id); // a removed character's history goes with it
   if (win && !win.isDestroyed()) {
     win.close(); // closed handler cleans the maps + reassigns active
   } else {
@@ -1549,6 +1581,10 @@ ipcMain.on("show-context-menu", (evt) => {
     {
       label: (() => { const d = aiJournal.dueCount(); return t("aiJournal") + (d > 0 ? ` (${d})` : ""); })(),
       click: () => openAiJournal(),
+    },
+    {
+      label: t("aiMemory"),
+      click: () => openMemoryWindow(),
     },
     {
       label: t("aiAssistant"),
@@ -2149,7 +2185,7 @@ async function handleAiDrop(payload) {
   if (aiPanelWin && !aiPanelWin.isDestroyed()) aiPanelWin.hide();
   sendCatThinking(true);
   try {
-    const data = await aiAssistant.analyzeDrop(petWin, { catName, persona: activeChar() && activeChar().persona });
+    const data = await aiAssistant.analyzeDrop(petWin, { catName, persona: activeChar() && activeChar().persona, memory: activeMemoryContext() });
     if (data && data.ok) {
       showAiPanel(data);
     } else if (data && data.error && data.error !== "aborted" && data.error !== "disabled") {
@@ -2202,7 +2238,15 @@ ipcMain.on("ai-trigger-drop", (evt, payload) => {
 ipcMain.handle("ai-run-task", async (_evt, payload) => {
   sendCatThinking(true);
   try {
-    return await aiAssistant.runTask({ ...(payload || {}), catName, persona: activeChar() && activeChar().persona });
+    const result = await aiAssistant.runTask({ ...(payload || {}), catName, persona: activeChar() && activeChar().persona, memory: activeMemoryContext() });
+    if (result && result.ok && result.text) {
+      const cfg = aiConfig.loadConfig();
+      const tasks = localizedTasks(cfg.responseLanguage, cfg.customTasks);
+      const task = tasks.find((t) => t.id === result.taskId);
+      const label = (task && `${task.emoji || ""} ${task.label}`.trim()) || t("memoryKindTask");
+      rememberForActiveChar("task", label, result.text);
+    }
+    return result;
   } finally {
     sendCatThinking(false);
   }
@@ -2302,7 +2346,7 @@ ipcMain.on("ai-command-resize", (_evt, size) => {
 ipcMain.handle("ai-agent-run", async (_evt, commandText) => {
   sendCatThinking(true);
   try {
-    return await aiAgent.runCommand({ commandText, catName, persona: activeChar() && activeChar().persona });
+    return await aiAgent.runCommand({ commandText, catName, persona: activeChar() && activeChar().persona, memory: activeMemoryContext() });
   } finally {
     sendCatThinking(false);
   }
@@ -2313,6 +2357,11 @@ ipcMain.handle("ai-agent-approve", async (_evt, planId) => {
     const res = await aiAgent.approve(planId);
     if (res && res.ok && res.results && res.results.some((r) => r.ok)) {
       if (petWin && !petWin.isDestroyed()) petWin.webContents.send("ai-task-complete", { agentId: "kiri-ai" });
+      for (const r of res.results) {
+        if (r && r.ok && r.name) {
+          rememberForActiveChar("command", t("memoryFileCreated", r.name), r.path || "");
+        }
+      }
     }
     return res;
   } finally {
@@ -2620,6 +2669,62 @@ ipcMain.on("ai-journal-resize", (_evt, size) => {
     x: b.x, y: b.y, width: b.width,
     height: Math.max(320, Math.min(900, Math.round(size.height || b.height))),
   });
+});
+
+// ── Per-character memory (work history + auto-context) ──
+
+function openMemoryWindow() {
+  if (memoryWin && !memoryWin.isDestroyed()) {
+    memoryWin.show();
+    memoryWin.focus();
+    return;
+  }
+  memoryWin = new BrowserWindow({
+    width: 440,
+    height: 520,
+    minWidth: 360,
+    minHeight: 320,
+    title: t("memoryTitle"),
+    frame: false,
+    backgroundColor: "#fbf4e4",
+    resizable: true,
+    skipTaskbar: false,
+    alwaysOnTop: true,
+    icon: APP_ICON_PATH,
+    webPreferences: {
+      preload: path.join(__dirname, "renderer", "ai-preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  keepWindowOnTop(memoryWin);
+  memoryWin.loadFile(path.join(__dirname, "renderer", "ai-memory.html"));
+  memoryWin.on("closed", () => { memoryWin = null; });
+}
+
+ipcMain.handle("memory-list", () => {
+  const c = activeChar();
+  return {
+    charName: (c && c.name) || catName || "Kiri",
+    entries: activeCharId ? aiMemory.list(activeCharId) : [],
+  };
+});
+ipcMain.handle("memory-delete", (_evt, id) => {
+  if (!activeCharId) return { ok: false };
+  const r = aiMemory.remove(activeCharId, id);
+  return r;
+});
+ipcMain.handle("memory-clear", () => {
+  if (!activeCharId) return { ok: false };
+  return aiMemory.clear(activeCharId);
+});
+ipcMain.handle("memory-open-file", () => {
+  if (!activeCharId) return { ok: false };
+  shell.openPath(aiMemory.mdPath(activeCharId));
+  return { ok: true };
+});
+ipcMain.on("memory-close", () => {
+  if (memoryWin && !memoryWin.isDestroyed()) memoryWin.close();
 });
 
 // Gentle proactive nudge when cards are due (at most once / 4h).
@@ -2948,12 +3053,14 @@ ipcMain.handle("ptt-audio", async (evt, payload) => {
       question: stt.text,
       catName,
       persona: c && c.persona,
+      memory: activeMemoryContext(),
     }, (textSoFar) => {
       if (!started) { sendScreenStream("start"); started = true; }
       sendScreenStream("delta", textSoFar);
     });
     if (answer && answer.ok) {
       sendScreenAnswer({ question: stt.text, text: answer.text, point: answer.point });
+      rememberForActiveChar("screen", stt.text, answer.text);
       return { ok: true };
     }
     if (answer && answer.error !== "aborted") {
@@ -2986,12 +3093,14 @@ ipcMain.handle("ask-screen", async (evt, question) => {
       question: q,
       catName,
       persona: activeChar() && activeChar().persona,
+      memory: activeMemoryContext(),
     }, (textSoFar) => {
       if (!started) { sendScreenStream("start"); started = true; }
       sendScreenStream("delta", textSoFar);
     });
     if (answer && answer.ok) {
       sendScreenAnswer({ question: q, text: answer.text, point: answer.point });
+      rememberForActiveChar("screen", q, answer.text);
       return { ok: true };
     }
     if (answer && answer.error !== "aborted") {

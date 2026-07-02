@@ -56,4 +56,9 @@ function recent(limit = 20) {
   return load().slice(0, limit);
 }
 
-module.exports = { record, markReverted, recent };
+function find(id) {
+  if (!id) return null;
+  return load().find((x) => x.id === id) || null;
+}
+
+module.exports = { record, markReverted, recent, find };

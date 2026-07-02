@@ -18,6 +18,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const http = require("http");
+const crypto = require("crypto");
 const vm = require("vm");
 const { spawn } = require("child_process");
 const bundledFfmpegPath = require("ffmpeg-static");
@@ -122,7 +123,34 @@ let keyHookRetryTimer = null;
 const APP_ICON_PATH = path.join(__dirname, "assets", "kiri-logo.png");
 const AGENT_STATE_PORT = 23456;
 const AGENT_ACTIVE_TTL_MS = 10 * 60 * 1000;
+let agentStateToken = null;
+
+// Shared secret between the local agent-state server and the hook scripts.
+// Stored under userData so the copied hooks (userData/hooks/*) can read it via
+// their own relative path; keeps arbitrary local processes / web pages from
+// injecting fake agent states.
+function ensureAgentStateToken() {
+  if (agentStateToken) return agentStateToken;
+  const tokenPath = path.join(app.getPath("userData"), "agent-state-token");
+  try {
+    const existing = fs.readFileSync(tokenPath, "utf8").trim();
+    if (existing) {
+      agentStateToken = existing;
+      return agentStateToken;
+    }
+  } catch {
+    // fall through to create
+  }
+  agentStateToken = crypto.randomBytes(16).toString("hex");
+  try {
+    fs.writeFileSync(tokenPath, agentStateToken, { encoding: "utf8", mode: 0o600 });
+  } catch (err) {
+    console.warn("[Kiri] agent state token save failed:", err && err.message);
+  }
+  return agentStateToken;
+}
 let agentStateServer = null;
+let agentSweepTimer = null;
 let codexMonitor = null;
 let kiroMonitor = null;
 let cursorAgentMonitor = null;
@@ -1402,6 +1430,7 @@ function startApp() {
   startStretchTimer();
   startReminderTimer();
   startJournalReminder();
+  if (!agentSweepTimer) agentSweepTimer = setInterval(sweepAgentSessions, 60 * 1000);
 }
 
 function stopKeyHook() {
@@ -2561,6 +2590,24 @@ function handleAgentStateEvent(event) {
   if (activeAgentSessions.size !== before || state === "notification") refreshTray();
 }
 
+// Periodic sweep so sessions whose agent died without a terminal event still
+// expire (otherwise the tray + pet animation stay "working" until a new event).
+function sweepAgentSessions() {
+  const now = Date.now();
+  let removed = false;
+  for (const [key, active] of activeAgentSessions) {
+    if (!active || now - active.lastActiveAt > AGENT_ACTIVE_TTL_MS) {
+      activeAgentSessions.delete(key);
+      removed = true;
+    }
+  }
+  if (!removed) return;
+  refreshTray();
+  if (activeAgentSessions.size === 0 && petWin && !petWin.isDestroyed()) {
+    petWin.webContents.send("ai-task-state", { agentId: "sweep", state: "idle" });
+  }
+}
+
 // ── Menu-bar (tray) icon: AI-agent status + monitoring toggle + shortcuts ──
 function activeAgentList() {
   const now = Date.now();
@@ -2634,10 +2681,16 @@ function createTray() {
 
 function startAgentStateServer() {
   if (agentStateServer) return;
+  const token = ensureAgentStateToken();
   agentStateServer = http.createServer((req, res) => {
     if (req.method !== "POST" || req.url !== "/agent-state") {
       res.writeHead(404);
       res.end("not found");
+      return;
+    }
+    if (String(req.headers["x-kiri-token"] || "") !== token) {
+      res.writeHead(403);
+      res.end("forbidden");
       return;
     }
     let body = "";
@@ -2766,7 +2819,7 @@ async function handleAiDrop(payload) {
   if (!cfg.enabled) return;
   const shouldRun = cfg.alwaysAnalyzeOnDrop || !!(payload && payload.alt);
   if (!shouldRun) return;
-  if (!aiConfig.hasApiKey()) {
+  if (!aiConfig.providerReady()) {
     sendCatNotice("API anahtarı gerekli — AI Asistan ayarlarından ekle.");
     openAiSettings();
     return;
@@ -3586,7 +3639,21 @@ function scheduleRegularChecks() {
   }, REGULAR_CHECK_INTERVAL_MS);
 }
 
+// A second instance would lose the 23456 port race yet still install hooks,
+// start monitors, and show a second tray — quit it instead. The smoke test
+// bypasses the lock so it can run while the real app is open.
+const hasSingleInstanceLock = IS_SMOKE_TEST || app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
+app.on("second-instance", () => {
+  if (petWin && !petWin.isDestroyed()) {
+    petWin.show();
+  }
+});
+
 app.whenReady().then(async () => {
+  if (!hasSingleInstanceLock) return;
   try {
     logInfo("[Kiri] starting", {
       version: app.getVersion(),
@@ -3642,6 +3709,10 @@ app.on("will-quit", () => {
   stopReminderTimer();
   stopPomodoroTimer();
   stopAgentIntegrations();
+  if (agentSweepTimer) {
+    clearInterval(agentSweepTimer);
+    agentSweepTimer = null;
+  }
   if (regularCheckTimer) {
     clearInterval(regularCheckTimer);
     regularCheckTimer = null;

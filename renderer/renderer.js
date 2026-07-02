@@ -132,6 +132,7 @@ let currentReminders = [];
 let editingReminderId = null;
 let currentFixedMessage = "";
 let aiTaskStaleTimer = null;
+const AI_TASK_STALE_MS = 12 * 60 * 1000; // backstop above main's 10-min session TTL
 let mouseEventsEnabled = true;
 let currentLanguage = "en";
 let currentPomodoroState = null;
@@ -2263,6 +2264,16 @@ function applyPomodoroState(state) {
   refreshBaseSpeech();
 }
 
+function clearAiTaskVisuals() {
+  if (poseMode) {
+    poseAiActive = false;
+    updatePoseState();
+  } else if (spriteMode) {
+    setSpriteState("idle");
+  }
+  setThinkingDotsVisible(false);
+}
+
 function applyAiTaskState(event) {
   const state = event && typeof event.state === "string" ? event.state : "";
   const active = state === "thinking" || state === "working";
@@ -2270,20 +2281,22 @@ function applyAiTaskState(event) {
     poseAiActive = active;
     updatePoseState();
     setThinkingDotsVisible(false);
-    return;
-  }
-  if (spriteMode) {
+  } else if (spriteMode) {
     setSpriteState(active ? "thinking" : "idle");
     setThinkingDotsVisible(false);
-    return;
+  } else {
+    setThinkingDotsVisible(active);
   }
-  setThinkingDotsVisible(active);
   clearAiTaskStaleTimer();
-  if (active && event && event.agentId === "antigravity") {
+  if (active) {
+    // Antigravity's hook has no terminal event, so its bursts decay fast.
+    // Every other agent gets a long backstop slightly above main's 10-min
+    // session TTL, in case the terminal/idle event never arrives.
+    const staleMs = event && event.agentId === "antigravity" ? 3000 : AI_TASK_STALE_MS;
     aiTaskStaleTimer = setTimeout(() => {
       aiTaskStaleTimer = null;
-      setThinkingDotsVisible(false);
-    }, 3000);
+      clearAiTaskVisuals();
+    }, staleMs);
   }
 }
 

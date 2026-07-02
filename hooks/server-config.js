@@ -1,9 +1,22 @@
 "use strict";
 
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 
 const DEFAULT_AGENT_PORT = 23456;
 const STATE_PATH = "/agent-state";
+
+// This file is copied to {userData}/hooks/ at install time, so the token that
+// main.js writes to {userData}/agent-state-token is one directory up.
+function readAgentToken() {
+  if (process.env.KIRI_AGENT_TOKEN) return process.env.KIRI_AGENT_TOKEN;
+  try {
+    return fs.readFileSync(path.join(__dirname, "..", "agent-state-token"), "utf8").trim();
+  } catch {
+    return "";
+  }
+}
 
 function postAgentState(payload, callback) {
   const body = JSON.stringify(payload || {});
@@ -16,6 +29,7 @@ function postAgentState(payload, callback) {
     headers: {
       "Content-Type": "application/json",
       "Content-Length": Buffer.byteLength(body),
+      "X-Kiri-Token": readAgentToken(),
     },
   }, (res) => {
     res.resume();

@@ -4,8 +4,10 @@
 // (or a one-off plan), plans actions with Claude tool-use, and — after approval —
 // executes them through the executor registry with an undoable ledger entry.
 
+const path = require("path");
 const { shell } = require("electron");
 const config = require("./config");
+const paths = require("./actions/paths");
 const registry = require("./actions/registry");
 const planner = require("./actions/planner");
 const ledger = require("./actions/ledger");
@@ -117,9 +119,18 @@ function cancel(planId) {
 
 // ---- Undo / open ----
 async function undo({ ledgerId, filePath } = {}) {
-  if (!filePath) return { ok: false };
+  // The renderer-supplied path is untrusted: prefer the ledger's recorded path
+  // and refuse to trash anything outside the output sandbox.
+  const entry = ledgerId ? ledger.find(ledgerId) : null;
+  const target = (entry && entry.path) || filePath;
+  if (!target) return { ok: false };
+  const resolved = path.resolve(String(target));
+  const rel = path.relative(paths.outputRoot(), resolved);
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) {
+    return { ok: false, message: "Geri alma yalnızca Kiri çıktı klasöründeki dosyalar için geçerli." };
+  }
   try {
-    await shell.trashItem(filePath);
+    await shell.trashItem(resolved);
     if (ledgerId) ledger.markReverted(ledgerId);
     return { ok: true };
   } catch (err) {

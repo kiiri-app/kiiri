@@ -2640,7 +2640,12 @@ function buildTrayMenu() {
       checked: agentMonitoringEnabled,
       click: (item) => {
         agentMonitoringEnabled = item.checked;
-        if (!agentMonitoringEnabled) activeAgentSessions.clear();
+        if (agentMonitoringEnabled) {
+          startAgentIntegrations();
+        } else {
+          stopAgentIntegrations();
+          uninstallAgentHooks();
+        }
         saveSettings();
         refreshTray();
       },
@@ -3340,16 +3345,26 @@ function startJournalReminder() {
   setTimeout(checkJournalDue, 90 * 1000);
 }
 
+function agentHookDir() {
+  return path.join(app.getPath("userData"), "hooks");
+}
+
+function ensureAgentHookRunner() {
+  const { writeHookRunner } = require("./hooks/install");
+  return writeHookRunner(agentHookDir(), process.execPath);
+}
+
 function installClaudeCodeHooks() {
   try {
     const { registerClaudeHooks } = require("./hooks/install");
-    const hookDir = path.join(app.getPath("userData"), "hooks");
+    const hookDir = agentHookDir();
     fs.mkdirSync(hookDir, { recursive: true });
     for (const file of ["kiri-claude-hook.js", "server-config.js"]) {
       fs.copyFileSync(path.join(__dirname, "hooks", file), path.join(hookDir, file));
     }
     const result = registerClaudeHooks({
       hookScript: path.join(hookDir, "kiri-claude-hook.js"),
+      runnerPath: ensureAgentHookRunner(),
     });
     if (result.added || result.updated) {
       console.log(`[Kiri] synced Claude Code hooks (added ${result.added}, updated ${result.updated})`);
@@ -3362,13 +3377,14 @@ function installClaudeCodeHooks() {
 function installAntigravityHooks() {
   try {
     const { registerAntigravityHooks } = require("./hooks/install");
-    const hookDir = path.join(app.getPath("userData"), "hooks");
+    const hookDir = agentHookDir();
     fs.mkdirSync(hookDir, { recursive: true });
     for (const file of ["kiri-antigravity-hook.js", "server-config.js"]) {
       fs.copyFileSync(path.join(__dirname, "hooks", file), path.join(hookDir, file));
     }
     const result = registerAntigravityHooks({
       hookScript: path.join(hookDir, "kiri-antigravity-hook.js"),
+      runnerPath: ensureAgentHookRunner(),
     });
     if (result.added || result.updated) {
       console.log(`[Kiri] synced Antigravity hooks (added ${result.added}, updated ${result.updated})`);
@@ -3381,13 +3397,14 @@ function installAntigravityHooks() {
 function installCursorHooks() {
   try {
     const { registerCursorHooks } = require("./hooks/install");
-    const hookDir = path.join(app.getPath("userData"), "hooks");
+    const hookDir = agentHookDir();
     fs.mkdirSync(hookDir, { recursive: true });
     for (const file of ["kiri-cursor-hook.js", "server-config.js"]) {
       fs.copyFileSync(path.join(__dirname, "hooks", file), path.join(hookDir, file));
     }
     const result = registerCursorHooks({
       hookScript: path.join(hookDir, "kiri-cursor-hook.js"),
+      runnerPath: ensureAgentHookRunner(),
     });
     if (result.added || result.updated) {
       console.log(`[Kiri] synced Cursor hooks (added ${result.added}, updated ${result.updated})`);
@@ -3431,6 +3448,9 @@ function startCursorAgentMonitor() {
 }
 
 function startAgentIntegrations() {
+  // Respect the saved tray toggle: when monitoring is off we must not rewrite
+  // third-party configs, run pollers, or hold the port.
+  if (!agentMonitoringEnabled) return;
   startAgentStateServer();
   installClaudeCodeHooks();
   installAntigravityHooks();
@@ -3440,8 +3460,28 @@ function startAgentIntegrations() {
   startCursorAgentMonitor();
 }
 
+function uninstallAgentHooks() {
+  try {
+    const { unregisterClaudeHooks, unregisterAntigravityHooks, unregisterCursorHooks } = require("./hooks/install");
+    let removed = 0;
+    for (const unregister of [unregisterClaudeHooks, unregisterAntigravityHooks, unregisterCursorHooks]) {
+      try {
+        removed += unregister().removed || 0;
+      } catch (err) {
+        console.warn("[Kiri] hook removal failed:", err && err.message);
+      }
+    }
+    if (removed) console.log(`[Kiri] removed ${removed} agent hook entries`);
+  } catch (err) {
+    console.warn("[Kiri] failed to remove agent hooks:", err && err.message);
+  }
+}
+
 function stopAgentIntegrations() {
   activeAgentSessions.clear();
+  if (petWin && !petWin.isDestroyed()) {
+    petWin.webContents.send("ai-task-state", { agentId: "sweep", state: "idle" });
+  }
   if (codexMonitor) {
     codexMonitor.stop();
     codexMonitor = null;

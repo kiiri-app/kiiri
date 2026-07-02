@@ -3,7 +3,6 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { execFileSync } = require("child_process");
 
 const CLAUDE_HOOK_MARKER = "kiri-claude-hook.js";
 const ANTIGRAVITY_HOOK_MARKER = "kiri-antigravity-hook.js";
@@ -32,21 +31,36 @@ const CURSOR_HOOK_EVENTS = [
   "beforeMCPExecution",
 ];
 
-function resolveNodeBin() {
-  const candidates = [
-    process.env.NODE || "",
-    "/opt/homebrew/bin/node",
-    "/usr/local/bin/node",
-    "/usr/bin/node",
-    "node",
-  ].filter(Boolean);
-  for (const candidate of candidates) {
-    try {
-      execFileSync(candidate, ["--version"], { stdio: "ignore", timeout: 1000 });
-      return candidate;
-    } catch {}
+// Hooks used to run with the system `node`, which most user machines don't
+// have. Instead we generate a tiny runner script that re-uses Kiri's own
+// binary as a Node runtime (ELECTRON_RUN_AS_NODE) — zero external deps.
+// The runner is regenerated on every install, so app relocation self-heals.
+function writeHookRunner(hookDir, execPath) {
+  fs.mkdirSync(hookDir, { recursive: true });
+  if (process.platform === "win32") {
+    const runnerPath = path.join(hookDir, "kiri-hook-runner.cmd");
+    const content = `@echo off\r\nset ELECTRON_RUN_AS_NODE=1\r\n"${execPath}" "%~dp0%~1" %2\r\n`;
+    fs.writeFileSync(runnerPath, content);
+    return runnerPath;
   }
-  return "node";
+  const runnerPath = path.join(hookDir, "kiri-hook-runner.sh");
+  const content = [
+    "#!/bin/sh",
+    "# Kiri agent hook runner - uses Kiri's bundled Node runtime (no system node needed).",
+    "export ELECTRON_RUN_AS_NODE=1",
+    'DIR="$(cd "$(dirname "$0")" && pwd)"',
+    'SCRIPT="$1"',
+    "shift",
+    `exec "${execPath}" "$DIR/$SCRIPT" "$@"`,
+    "",
+  ].join("\n");
+  fs.writeFileSync(runnerPath, content, { mode: 0o755 });
+  try { fs.chmodSync(runnerPath, 0o755); } catch {}
+  return runnerPath;
+}
+
+function hookCommand(runnerPath, hookScript, event) {
+  return `"${runnerPath}" ${path.basename(hookScript)} ${event}`;
 }
 
 function readJson(filePath) {
@@ -125,7 +139,7 @@ function removeCommandHooksByMarker(entries, marker) {
 function registerClaudeHooks(options = {}) {
   const settingsPath = options.settingsPath || path.join(os.homedir(), ".claude", "settings.json");
   const hookScript = options.hookScript || path.join(__dirname, "kiri-claude-hook.js");
-  const nodeBin = options.nodeBin || resolveNodeBin();
+  const runnerPath = options.runnerPath || writeHookRunner(path.dirname(hookScript), process.execPath);
   const settings = readJson(settingsPath);
   if (!settings.hooks || typeof settings.hooks !== "object") settings.hooks = {};
 
@@ -139,7 +153,7 @@ function registerClaudeHooks(options = {}) {
       settings.hooks[event] = existing && typeof existing === "object" ? [existing] : [];
       changed = true;
     }
-    const expectedCommand = `"${nodeBin}" "${hookScript}" ${event}`;
+    const expectedCommand = hookCommand(runnerPath, hookScript, event);
     const sync = syncCommandHook(settings.hooks[event], expectedCommand, CLAUDE_HOOK_MARKER);
     if (sync.found) {
       if (sync.changed) {
@@ -168,7 +182,7 @@ function ensureCommandHandlerList(list) {
 function registerAntigravityHooks(options = {}) {
   const settingsPath = options.settingsPath || path.join(os.homedir(), ".gemini", "config", "hooks.json");
   const hookScript = options.hookScript || path.join(__dirname, "kiri-antigravity-hook.js");
-  const nodeBin = options.nodeBin || resolveNodeBin();
+  const runnerPath = options.runnerPath || writeHookRunner(path.dirname(hookScript), process.execPath);
   const settings = readJson(settingsPath);
   const hookName = options.hookName || "kiri";
   const hookConfig = settings[hookName] && typeof settings[hookName] === "object" ? settings[hookName] : {};
@@ -189,7 +203,7 @@ function registerAntigravityHooks(options = {}) {
   }
 
   for (const event of ANTIGRAVITY_HOOK_EVENTS) {
-    const expectedCommand = `"${nodeBin}" "${hookScript}" ${event}`;
+    const expectedCommand = hookCommand(runnerPath, hookScript, event);
     if (event === "PreToolUse" || event === "PostToolUse") {
       hookConfig[event] = ensureCommandHandlerList(hookConfig[event]);
       const sync = syncCommandHook(hookConfig[event], expectedCommand, ANTIGRAVITY_HOOK_MARKER);
@@ -230,7 +244,7 @@ function registerAntigravityHooks(options = {}) {
 function registerCursorHooks(options = {}) {
   const settingsPath = options.settingsPath || path.join(os.homedir(), ".cursor", "hooks.json");
   const hookScript = options.hookScript || path.join(__dirname, "kiri-cursor-hook.js");
-  const nodeBin = options.nodeBin || resolveNodeBin();
+  const runnerPath = options.runnerPath || writeHookRunner(path.dirname(hookScript), process.execPath);
   const settings = readJson(settingsPath);
   if (!settings.hooks || typeof settings.hooks !== "object") settings.hooks = {};
   if (!settings.version) settings.version = 1;
@@ -245,7 +259,7 @@ function registerCursorHooks(options = {}) {
       settings.hooks[event] = existing && typeof existing === "object" ? [existing] : [];
       changed = true;
     }
-    const expectedCommand = `"${nodeBin}" "${hookScript}" ${event}`;
+    const expectedCommand = hookCommand(runnerPath, hookScript, event);
     const sync = syncCommandHook(settings.hooks[event], expectedCommand, CURSOR_HOOK_MARKER);
     if (sync.found) {
       if (sync.changed) {
@@ -265,11 +279,72 @@ function registerCursorHooks(options = {}) {
   return { added, updated, settingsPath };
 }
 
+// ── Uninstall: remove every Kiri hook entry from the third-party configs so
+// turning the feature off (or removing Kiri) leaves nothing behind. ──
+
+function unregisterClaudeHooks(options = {}) {
+  const settingsPath = options.settingsPath || path.join(os.homedir(), ".claude", "settings.json");
+  const settings = readJson(settingsPath);
+  if (!settings.hooks || typeof settings.hooks !== "object") return { removed: 0, settingsPath };
+  let removed = 0;
+  for (const event of Object.keys(settings.hooks)) {
+    const result = removeCommandHooksByMarker(ensureCommandHandlerList(settings.hooks[event]), CLAUDE_HOOK_MARKER);
+    if (result.removed > 0) {
+      removed += result.removed;
+      if (result.entries.length > 0) settings.hooks[event] = result.entries;
+      else delete settings.hooks[event];
+    }
+  }
+  if (removed > 0) writeJsonAtomic(settingsPath, settings);
+  return { removed, settingsPath };
+}
+
+function unregisterAntigravityHooks(options = {}) {
+  const settingsPath = options.settingsPath || path.join(os.homedir(), ".gemini", "config", "hooks.json");
+  const hookName = options.hookName || "kiri";
+  const settings = readJson(settingsPath);
+  const hookConfig = settings[hookName];
+  if (!hookConfig || typeof hookConfig !== "object") return { removed: 0, settingsPath };
+  let removed = 0;
+  for (const key of Object.keys(hookConfig)) {
+    if (key === "enabled") continue;
+    const result = removeCommandHooksByMarker(ensureCommandHandlerList(hookConfig[key]), ANTIGRAVITY_HOOK_MARKER);
+    removed += result.removed;
+    if (result.entries.length > 0) hookConfig[key] = result.entries;
+    else delete hookConfig[key];
+  }
+  const remainingEvents = Object.keys(hookConfig).filter((key) => key !== "enabled");
+  if (remainingEvents.length === 0) delete settings[hookName];
+  if (removed > 0) writeJsonAtomic(settingsPath, settings);
+  return { removed, settingsPath };
+}
+
+function unregisterCursorHooks(options = {}) {
+  const settingsPath = options.settingsPath || path.join(os.homedir(), ".cursor", "hooks.json");
+  const settings = readJson(settingsPath);
+  if (!settings.hooks || typeof settings.hooks !== "object") return { removed: 0, settingsPath };
+  let removed = 0;
+  for (const event of Object.keys(settings.hooks)) {
+    const result = removeCommandHooksByMarker(ensureCommandHandlerList(settings.hooks[event]), CURSOR_HOOK_MARKER);
+    if (result.removed > 0) {
+      removed += result.removed;
+      if (result.entries.length > 0) settings.hooks[event] = result.entries;
+      else delete settings.hooks[event];
+    }
+  }
+  if (removed > 0) writeJsonAtomic(settingsPath, settings);
+  return { removed, settingsPath };
+}
+
 module.exports = {
   CLAUDE_HOOK_EVENTS,
   ANTIGRAVITY_HOOK_EVENTS,
   CURSOR_HOOK_EVENTS,
+  writeHookRunner,
   registerAntigravityHooks,
   registerClaudeHooks,
   registerCursorHooks,
+  unregisterAntigravityHooks,
+  unregisterClaudeHooks,
+  unregisterCursorHooks,
 };

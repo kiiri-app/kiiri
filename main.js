@@ -18,7 +18,6 @@ const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const crypto = require("crypto");
-const vm = require("vm");
 const aiConfig = require("./ai/config");
 const aiAssistant = require("./ai/assistant");
 const aiAgent = require("./ai/agent");
@@ -99,7 +98,6 @@ let aiPanelWin = null;
 let aiSettingsWin = null;
 let aiCommandWin = null;
 let aiJournalWin = null;
-let aiCharacterWin = null;
 let overlayWin = null;
 let journalReminderTimer = null;
 let lastJournalNudgeAt = 0;
@@ -108,8 +106,6 @@ let aiPanelPendingMenu = null;
 let aiCommandReady = false;
 let aiCommandPendingVoice = null;
 let aiBusy = false;
-let patternWin = null;
-let mappingWin = null;
 let cursorPollTimer = null;
 let keyHookStarted = false;
 let keyHookListenersAttached = false;
@@ -163,8 +159,6 @@ let currentLanguage = "en";
 
 const I18N = {
   en: {
-    patternEditorTitle: "Kiri Pattern Editor",
-    mappingEditorTitle: "Kiri Cell Mapping Editor",
     appMenuAbout: "About Kiri",
     appMenuQuit: "Quit",
     checkForUpdates: "Check for Updates",
@@ -175,10 +169,6 @@ const I18N = {
     larger: "Larger (+20)",
     resetSize: "Reset size (100 × 100)",
     petSizePixels: (size) => `${size} × ${size}`,
-    stretch: "Break Stretch",
-    stretchNow: "Start break stretch now",
-    jump: "Jump",
-    jumpNow: "Jump now",
     setUserName: "Tell my name",
     setCatName: "Set Kiri name",
     showCatName: "Show Kiri name",
@@ -186,11 +176,9 @@ const I18N = {
     aiCommand: "💬 Give Kiri a command…",
     aiJournal: "📚 Knowledge Journal…",
     setCatPersona: "Set this cat's personality…",
-    characterAppearance: "🎨 Character appearance…",
     pixelEditor: "🖌️ Edit pixels…",
     addCharacter: "➕ Add character",
     removeCharacter: "➖ Remove this character",
-    newCharacterName: "Cat",
     tasks: "Tasks",
     agentMonitoring: "Watch AI agents (Claude Code…)",
     aiAgents: "AI agents",
@@ -213,20 +201,12 @@ const I18N = {
     pomodoroRestLabel: "Break",
     pomodoroMinutes: (min) => `${min} min`,
     pomodoroCustom: "Custom",
-    patternEditor: "Pattern Editor",
-    mappingEditor: "Cell Mapping Editor",
     taskCompleteSound: "Notification sound",
     soundOff: "Off",
     soundLow: "Low",
     soundNormal: "Normal",
     soundHigh: "High",
-    autoStretch: "Auto Break Stretch",
     off: "Off",
-    everyMinuteTest: "Every 1 minute (test)",
-    everyMinutes: (min) => `Every ${min} minutes`,
-    everyHour: "Every hour",
-    everyHourAndHalf: "Every 1 hour 30 minutes",
-    everyTwoHours: "Every 2 hours",
     language: "Language",
     english: "English",
     korean: "Korean",
@@ -253,7 +233,6 @@ const I18N = {
     voiceNotUnderstood: "I didn't catch that — try again.",
     voiceTranscribeFailed: "Couldn't understand the audio.",
     journalDueNudge: (due) => `📚 ${due} card${due === 1 ? "" : "s"} ready to review`,
-    characterWindowTitle: "Character Appearance",
     overlayEditorTitle: "Pixel Editor",
     journalWindowTitle: "Knowledge Journal",
     overlayDefaultName: "Design",
@@ -262,8 +241,6 @@ const I18N = {
     confirmQuestion: "Are you sure?",
   },
   ko: {
-    patternEditorTitle: "캣짱 패턴 편집기",
-    mappingEditorTitle: "캣짱 셀 매핑 편집기",
     appMenuAbout: "Kiri에 관하여",
     appMenuQuit: "종료",
     checkForUpdates: "업데이트 확인",
@@ -274,10 +251,6 @@ const I18N = {
     larger: "조금 크게 (+20)",
     resetSize: "크기 초기화 (100 × 100)",
     petSizePixels: (size) => `${size} × ${size}`,
-    stretch: "휴식 스트레칭",
-    stretchNow: "지금 휴식 스트레칭",
-    jump: "점프",
-    jumpNow: "지금 점프",
     setUserName: "내 이름 알려주기",
     setCatName: "캣짱 이름 지정",
     showCatName: "캣짱 이름 표시",
@@ -285,11 +258,9 @@ const I18N = {
     aiCommand: "💬 캣짱에게 명령하기…",
     aiJournal: "📚 지식 노트…",
     setCatPersona: "이 고양이의 성격 설정…",
-    characterAppearance: "🎨 캐릭터 외형…",
     pixelEditor: "🖌️ 픽셀 편집…",
     addCharacter: "➕ 캐릭터 추가",
     removeCharacter: "➖ 이 캐릭터 제거",
-    newCharacterName: "고양이",
     tasks: "작업",
     agentMonitoring: "AI 에이전트 감시 (Claude Code…)",
     aiAgents: "AI 에이전트",
@@ -312,20 +283,12 @@ const I18N = {
     pomodoroRestLabel: "휴식",
     pomodoroMinutes: (min) => `${min}분`,
     pomodoroCustom: "커스텀",
-    patternEditor: "패턴 편집",
-    mappingEditor: "셀 매핑 편집",
     taskCompleteSound: "알림음",
     soundOff: "끄기",
     soundLow: "작게",
     soundNormal: "보통",
     soundHigh: "크게",
-    autoStretch: "자동 휴식 스트레칭",
     off: "끄기",
-    everyMinuteTest: "1분마다 (테스트)",
-    everyMinutes: (min) => `${min}분마다`,
-    everyHour: "1시간마다",
-    everyHourAndHalf: "1시간 30분마다",
-    everyTwoHours: "2시간마다",
     language: "언어",
     english: "영어",
     korean: "한국어",
@@ -352,7 +315,6 @@ const I18N = {
     voiceNotUnderstood: "못 알아들었다냥, 다시 말해줘냥.",
     voiceTranscribeFailed: "음성을 알아듣지 못했어요.",
     journalDueNudge: (due) => `📚 카드 ${due}장 복습할 시간이다냥`,
-    characterWindowTitle: "캐릭터 외형",
     overlayEditorTitle: "픽셀 편집기",
     journalWindowTitle: "지식 노트",
     overlayDefaultName: "디자인",
@@ -361,8 +323,6 @@ const I18N = {
     confirmQuestion: "진행할까요?",
   },
   ja: {
-    patternEditorTitle: "Kiri パターンエディター",
-    mappingEditorTitle: "Kiri セルマッピングエディター",
     appMenuAbout: "Kiri について",
     appMenuQuit: "終了",
     checkForUpdates: "アップデートを確認",
@@ -373,10 +333,6 @@ const I18N = {
     larger: "少し大きく (+20)",
     resetSize: "サイズをリセット (100 × 100)",
     petSizePixels: (size) => `${size} × ${size}`,
-    stretch: "休憩ストレッチ",
-    stretchNow: "今すぐ休憩ストレッチ",
-    jump: "ジャンプ",
-    jumpNow: "今すぐジャンプ",
     setUserName: "自分の名前を教える",
     setCatName: "Kiri の名前を設定",
     showCatName: "Kiri の名前を表示",
@@ -384,7 +340,6 @@ const I18N = {
     aiCommand: "💬 Kiri に指示する…",
     aiJournal: "📚 ナレッジノート…",
     setCatPersona: "この猫の性格を設定…",
-    characterAppearance: "🎨 キャラクター外見…",
     pixelEditor: "🖌️ ピクセル編集…",
     tasks: "タスク",
     agentMonitoring: "AIエージェントを監視 (Claude Code…)",
@@ -393,7 +348,6 @@ const I18N = {
     agentWorking: "作業中…",
     addCharacter: "➕ キャラクター追加",
     removeCharacter: "➖ このキャラクターを削除",
-    newCharacterName: "猫",
     personaGuide: "この猫に性格を与えます。AIタスクでの応答の仕方に反映されます。",
     personaPlaceholder: "例: 明るく簡潔なチューター",
     fixedMessage: "固定メッセージ",
@@ -411,20 +365,12 @@ const I18N = {
     pomodoroRestLabel: "休憩",
     pomodoroMinutes: (min) => `${min}分`,
     pomodoroCustom: "カスタム",
-    patternEditor: "パターン編集",
-    mappingEditor: "セルマッピング編集",
     taskCompleteSound: "通知音",
     soundOff: "オフ",
     soundLow: "小",
     soundNormal: "標準",
     soundHigh: "大",
-    autoStretch: "自動休憩ストレッチ",
     off: "オフ",
-    everyMinuteTest: "1分ごと (テスト)",
-    everyMinutes: (min) => `${min}分ごと`,
-    everyHour: "1時間ごと",
-    everyHourAndHalf: "1時間30分ごと",
-    everyTwoHours: "2時間ごと",
     language: "言語",
     english: "英語",
     korean: "韓国語",
@@ -451,7 +397,6 @@ const I18N = {
     voiceNotUnderstood: "聞き取れなかったにゃ、もう一度言ってにゃ。",
     voiceTranscribeFailed: "音声を聞き取れませんでした。",
     journalDueNudge: (due) => `📚 カード${due}枚の復習時間だにゃ`,
-    characterWindowTitle: "キャラクター外見",
     overlayEditorTitle: "ピクセルエディター",
     journalWindowTitle: "ナレッジノート",
     overlayDefaultName: "デザイン",
@@ -460,8 +405,6 @@ const I18N = {
     confirmQuestion: "よろしいですか？",
   },
   tr: {
-    patternEditorTitle: "Kiri Desen Editörü",
-    mappingEditorTitle: "Kiri Hücre Eşleme Editörü",
     appMenuAbout: "Kiri Hakkında",
     appMenuQuit: "Çıkış",
     checkForUpdates: "Güncellemeleri Denetle",
@@ -472,10 +415,6 @@ const I18N = {
     larger: "Biraz büyüt (+20)",
     resetSize: "Boyutu sıfırla (100 × 100)",
     petSizePixels: (size) => `${size} × ${size}`,
-    stretch: "Mola Esnemesi",
-    stretchNow: "Şimdi esneme molası ver",
-    jump: "Zıpla",
-    jumpNow: "Şimdi zıpla",
     setUserName: "Adımı söyle",
     setCatName: "Kiri'nin adını değiştir",
     showCatName: "Kiri'nin adını göster",
@@ -483,11 +422,9 @@ const I18N = {
     aiCommand: "💬 Kiri'ye komut ver…",
     aiJournal: "📚 Bilgi Defteri…",
     setCatPersona: "Bu kedinin kişiliğini ayarla…",
-    characterAppearance: "🎨 Karakter görünümü…",
     pixelEditor: "🖌️ Pikselleri düzenle…",
     addCharacter: "➕ Karakter ekle",
     removeCharacter: "➖ Bu karakteri kaldır",
-    newCharacterName: "Kedi",
     tasks: "Görevler",
     agentMonitoring: "AI ajanlarını izle (Claude Code…)",
     aiAgents: "AI ajanları",
@@ -510,20 +447,12 @@ const I18N = {
     pomodoroRestLabel: "Mola",
     pomodoroMinutes: (min) => `${min} dk`,
     pomodoroCustom: "Özel",
-    patternEditor: "Desen Editörü",
-    mappingEditor: "Hücre Eşleme Editörü",
     taskCompleteSound: "Bildirim sesi",
     soundOff: "Kapalı",
     soundLow: "Kısık",
     soundNormal: "Normal",
     soundHigh: "Yüksek",
-    autoStretch: "Otomatik Mola Esnemesi",
     off: "Kapalı",
-    everyMinuteTest: "Her 1 dakikada (test)",
-    everyMinutes: (min) => `Her ${min} dakikada`,
-    everyHour: "Her saat başı",
-    everyHourAndHalf: "Her 1 saat 30 dakikada",
-    everyTwoHours: "Her 2 saatte",
     language: "Dil",
     english: "İngilizce",
     korean: "Korece",
@@ -550,7 +479,6 @@ const I18N = {
     voiceNotUnderstood: "Anlamadım, tekrar dene.",
     voiceTranscribeFailed: "Ses çözümlenemedi.",
     journalDueNudge: (due) => `📚 ${due} kart tekrar zamanı`,
-    characterWindowTitle: "Karakter Görünümü",
     overlayEditorTitle: "Piksel Editörü",
     journalWindowTitle: "Bilgi Defteri",
     overlayDefaultName: "Tasarım",
@@ -575,20 +503,6 @@ function defaultLanguage() {
   return normalizeLanguage(app.getLocale && app.getLocale());
 }
 
-function readJsonFile(filePath) {
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-function writeJsonFile(filePath, data) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-}
-
 // ── 패턴 (사용자 커스텀 무늬) ──
 // { baseColor, eyeColor, eyeBgColor, oddEye, eyeColorLeft, eyeColorRight,
 //   head: [{x, y, color}], body: [...], tail: [...] }
@@ -611,26 +525,8 @@ let currentPattern = {
   legFl: [], legFr: [], legRl: [], legRr: [],
   earL: [], earR: [],
 };
-const PATTERN_PRESETS = [
-  { id: "black-cat", label: { en: "Black cat", ko: "검은냥이" }, file: "black-cat.json", image: "../workspace/assets/img/presets/black.png" },
-  { id: "white-cat", label: { en: "White cat", ko: "하얀냥이" }, file: "white-cat.json", image: "../workspace/assets/img/presets/white.png" },
-  { id: "cheese-cat", label: { en: "Cheese cat", ko: "치즈냥이" }, file: "cheese-cat.json", image: "../workspace/assets/img/presets/orange.png" },
-  { id: "siamese-cat", label: { en: "Siamese cat", ko: "샴고양이" }, file: "siamese-cat.json", image: "../workspace/assets/img/presets/siamese.png" },
-  { id: "mackerel-tabby", label: { en: "Mackerel tabby", ko: "고등어냥이" }, file: "mackerel-tabby.json", image: "../workspace/assets/img/presets/mackerel.png" },
-  { id: "calico-cat", label: { en: "Calico cat", ko: "삼색냥이" }, file: "calico-cat.json", image: "../workspace/assets/img/presets/calico.png" },
-  { id: "russian-blue", label: { en: "Russian Blue", ko: "러시안블루" }, file: "rusian-blue.json", image: "../workspace/assets/img/presets/rusian-blue.png" },
-];
-
 function patternPath() {
   return path.join(app.getPath("userData"), "pattern.json");
-}
-function customPatternPresetsPath() {
-  return path.join(app.getPath("userData"), "custom-presets.json");
-}
-function customPatternPresetExportName(name) {
-  const presetName = typeof name === "string" && name.trim() ? name.trim() : "custom";
-  const safeName = presetName.replace(/[^a-z0-9가-힣_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "custom";
-  return `kiri-pattern-${safeName}.json`;
 }
 function sanitizePattern(data) {
   const pattern = data && typeof data === "object" ? data : {};
@@ -651,61 +547,6 @@ function sanitizePattern(data) {
     legRr: Array.isArray(pattern.legRr) ? pattern.legRr : [],
     earL: Array.isArray(pattern.earL) ? pattern.earL : [],
     earR: Array.isArray(pattern.earR) ? pattern.earR : [],
-  };
-}
-function patternPresetPath(fileName) {
-  return path.join(__dirname, "presets", "patterns", path.basename(fileName));
-}
-function loadCustomPatternPresets() {
-  try {
-    const data = readJsonFile(customPatternPresetsPath());
-    if (!data || !Array.isArray(data.presets)) return [];
-    return data.presets
-      .filter((preset) => preset && typeof preset === "object" && typeof preset.id === "string")
-      .map((preset) => ({
-        id: preset.id,
-        name: typeof preset.name === "string" && preset.name.trim() ? preset.name.trim().slice(0, 60) : "My preset",
-        createdAt: typeof preset.createdAt === "string" ? preset.createdAt : new Date().toISOString(),
-        updatedAt: typeof preset.updatedAt === "string" ? preset.updatedAt : new Date().toISOString(),
-        pattern: sanitizePattern(preset.pattern),
-      }));
-  } catch {
-    return [];
-  }
-}
-function saveCustomPatternPresets(presets) {
-  writeJsonFile(customPatternPresetsPath(), { version: 1, presets });
-}
-function uniqueCustomPatternPresetName(name, presets) {
-  const baseName = (typeof name === "string" && name.trim() ? name.trim() : "My preset").slice(0, 60);
-  const used = new Set(presets.map((preset) => preset.name));
-  if (!used.has(baseName)) return baseName;
-  for (let index = 1; index < 1000; index += 1) {
-    const nextName = `${baseName} (${index})`.slice(0, 60);
-    if (!used.has(nextName)) return nextName;
-  }
-  return `${baseName}-${Date.now()}`.slice(0, 60);
-}
-function normalizeImportedCustomPresets(data) {
-  if (!data || typeof data !== "object") return [];
-  const sourcePresets = Array.isArray(data.presets) ? data.presets : (data.preset ? [data.preset] : []);
-  return sourcePresets
-    .filter((preset) => preset && typeof preset === "object")
-    .map((preset) => ({
-      name: typeof preset.name === "string" && preset.name.trim() ? preset.name.trim().slice(0, 60) : "My preset",
-      createdAt: typeof preset.createdAt === "string" ? preset.createdAt : new Date().toISOString(),
-      updatedAt: typeof preset.updatedAt === "string" ? preset.updatedAt : new Date().toISOString(),
-      pattern: sanitizePattern(preset.pattern),
-    }));
-}
-function customPatternPresetPayload(preset) {
-  return {
-    id: preset.id,
-    label: { en: preset.name, ko: preset.name },
-    source: "custom",
-    createdAt: preset.createdAt,
-    updatedAt: preset.updatedAt,
-    pattern: sanitizePattern(preset.pattern),
   };
 }
 function loadPattern() {
@@ -1060,13 +901,6 @@ function setLanguage(language) {
   currentLanguage = normalizeLanguage(language);
   saveSettings();
   buildAppMenu();
-  if (patternWin && !patternWin.isDestroyed()) {
-    patternWin.setTitle(t("patternEditorTitle"));
-    patternWin.webContents.send("language-changed", currentLanguage);
-  }
-  if (mappingWin && !mappingWin.isDestroyed()) {
-    mappingWin.setTitle(t("mappingEditorTitle"));
-  }
   broadcastAll("language-changed", currentLanguage);
   // Keep any open AI / editor windows in sync too.
   const aiWindows = [
@@ -1074,7 +908,6 @@ function setLanguage(language) {
     [aiSettingsWin, null],
     [aiCommandWin, null],
     [aiJournalWin, "journalWindowTitle"],
-    [aiCharacterWin, "characterWindowTitle"],
     [overlayWin, "overlayEditorTitle"],
   ];
   for (const [win, titleKey] of aiWindows) {
@@ -1574,267 +1407,6 @@ function stopKeyHook() {
 
 
 // ── 패턴 에디터 윈도우 ──
-function openPatternEditor() {
-  if (patternWin && !patternWin.isDestroyed()) {
-    patternWin.focus();
-    return;
-  }
-  patternWin = new BrowserWindow({
-    width: 860,
-    height: 700,
-    title: t("patternEditorTitle"),
-    backgroundColor: "#1e1e1e",
-    icon: APP_ICON_PATH,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  patternWin.setMenu(null);
-  patternWin.loadFile(path.join(__dirname, "editor", "index.html"));
-  patternWin.on("closed", () => { patternWin = null; });
-}
-
-function openMappingEditor() {
-  if (mappingWin && !mappingWin.isDestroyed()) {
-    mappingWin.focus();
-    return;
-  }
-  mappingWin = new BrowserWindow({
-    width: 1180,
-    height: 780,
-    title: t("mappingEditorTitle"),
-    backgroundColor: "#1e1e1e",
-    icon: APP_ICON_PATH,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  mappingWin.setMenu(null);
-  mappingWin.loadFile(path.join(__dirname, "mapping-editor", "index.html"));
-  mappingWin.on("closed", () => { mappingWin = null; });
-}
-
-function cellMappingsPath() {
-  return path.join(__dirname, "renderer", "cell-mappings.js");
-}
-
-function serializeCellMappings(mappings) {
-  return `/* eslint-disable */\n// 자동 생성 — 모든 cell의 svg pixel 매핑이 명시적으로 기록됨.\n// 각 entry: "cellX,cellY": [[dx1, dy1], [dx2, dy2], ...] (origin 기준 offset)\n// 사용자가 특정 cell의 매핑을 수정하려면 그 entry만 직접 변경하면 됨.\n(function () {\n  const MAPPINGS = ${JSON.stringify(mappings, null, 2)};\n\n  // 특정 cell의 픽셀 좌표 반환 (절대 svg 좌표).\n  // svgName: 'cat-idle-follow-v2', 'press-left' 등. elemId: 'head', 'leg-fl' 등.\n  function getPixelsForCell(svgName, elemId, cellX, cellY) {\n    const key = \`${"${svgName}"}:${"${elemId}"}\`;\n    const m = MAPPINGS[key];\n    if (!m) return null;\n    const cell = m.cells[\`${"${cellX}"},${"${cellY}"}\`];\n    if (!cell) return [];\n    const [ox, oy] = m.origin;\n    return cell.map(([dx, dy]) => ({ x: ox + dx, y: oy + dy }));\n  }\n\n  window.cellMappings = { MAPPINGS, getPixelsForCell };\n})();\n`;
-}
-
-function loadCellMappings() {
-  const filePath = cellMappingsPath();
-  if (!fs.existsSync(filePath)) return null;
-  const source = fs.readFileSync(filePath, "utf8");
-  const sandbox = { window: {} };
-  vm.createContext(sandbox);
-  vm.runInContext(source, sandbox, { filename: filePath });
-  const mappings = sandbox.window && sandbox.window.cellMappings && sandbox.window.cellMappings.MAPPINGS;
-  return mappings && typeof mappings === "object" ? mappings : null;
-}
-
-// ── IPC: renderer → main ──
-
-// 패턴 — 에디터/펫 윈도우 양방향
-ipcMain.handle("pattern-get", () => currentPattern);
-ipcMain.handle("pattern-presets-get", () => {
-  const builtinPresets = PATTERN_PRESETS.map((preset) => {
-    try {
-      const raw = fs.readFileSync(patternPresetPath(preset.file), "utf8");
-      return {
-        id: preset.id,
-        label: preset.label,
-        source: "builtin",
-        image: preset.image,
-        pattern: sanitizePattern(JSON.parse(raw)),
-      };
-    } catch {
-      return null;
-    }
-  }).filter(Boolean);
-  const customPresets = loadCustomPatternPresets().map(customPatternPresetPayload);
-  return [...builtinPresets, ...customPresets];
-});
-ipcMain.handle("pattern-custom-preset-save", (_evt, payload) => {
-  const name = typeof payload?.name === "string" ? payload.name.trim().slice(0, 60) : "";
-  const now = new Date().toISOString();
-  const presets = loadCustomPatternPresets();
-  const pattern = sanitizePattern(payload?.pattern);
-  const patternSignature = JSON.stringify(pattern);
-  let preset = null;
-  if (typeof payload?.id === "string" && payload.id.startsWith("custom-")) {
-    preset = presets.find((item) => item.id === payload.id);
-  }
-  if (preset) {
-    if (name) preset.name = name;
-    preset.pattern = pattern;
-    preset.updatedAt = now;
-  } else {
-    preset = {
-      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name: name || "My preset",
-      createdAt: now,
-      updatedAt: now,
-      pattern,
-    };
-    const duplicate = presets.find((item) => item.name === preset.name && JSON.stringify(item.pattern) === patternSignature);
-    if (duplicate) return customPatternPresetPayload(duplicate);
-    presets.unshift(preset);
-  }
-  saveCustomPatternPresets(presets);
-  return customPatternPresetPayload(preset);
-});
-ipcMain.handle("pattern-custom-preset-delete", (_evt, id) => {
-  if (typeof id !== "string" || !id.startsWith("custom-")) return { ok: false };
-  const presets = loadCustomPatternPresets();
-  const next = presets.filter((preset) => preset.id !== id);
-  saveCustomPatternPresets(next);
-  return { ok: next.length !== presets.length };
-});
-ipcMain.handle("pattern-custom-preset-rename", (_evt, payload) => {
-  const id = typeof payload?.id === "string" ? payload.id : "";
-  const name = typeof payload?.name === "string" ? payload.name.trim().slice(0, 60) : "";
-  if (!id.startsWith("custom-") || !name) return { ok: false };
-  const presets = loadCustomPatternPresets();
-  const preset = presets.find((item) => item.id === id);
-  if (!preset) return { ok: false };
-  preset.name = uniqueCustomPatternPresetName(name, presets.filter((item) => item.id !== id));
-  preset.updatedAt = new Date().toISOString();
-  saveCustomPatternPresets(presets);
-  return { ok: true, preset: customPatternPresetPayload(preset) };
-});
-ipcMain.handle("pattern-custom-presets-export", async (_evt, id) => {
-  const allPresets = loadCustomPatternPresets();
-  const presets = typeof id === "string" && id.startsWith("custom-")
-    ? allPresets.filter((preset) => preset.id === id)
-    : allPresets;
-  if (presets.length === 0) return { ok: false, count: 0 };
-  const result = await dialog.showSaveDialog(patternWin || petWin || undefined, {
-    title: "Export custom presets",
-    defaultPath: customPatternPresetExportName(presets.length === 1 ? presets[0].name : ""),
-    filters: [{ name: "JSON", extensions: ["json"] }],
-  });
-  if (result.canceled || !result.filePath) return { ok: false, canceled: true };
-  const preset = presets[0];
-  writeJsonFile(result.filePath, {
-    schemaVersion: 2,
-    app: "kiri",
-    exportedAt: new Date().toISOString(),
-    preset: {
-      name: preset.name,
-      createdAt: preset.createdAt,
-      updatedAt: preset.updatedAt,
-      pattern: sanitizePattern(preset.pattern),
-    },
-  });
-  return { ok: true, count: 1, filePath: result.filePath };
-});
-ipcMain.handle("pattern-custom-presets-import", async () => {
-  const result = await dialog.showOpenDialog(patternWin || petWin || undefined, {
-    title: "Import custom presets",
-    properties: ["openFile"],
-    filters: [{ name: "JSON", extensions: ["json"] }],
-  });
-  if (result.canceled || !result.filePaths || !result.filePaths[0]) return { ok: false, canceled: true };
-  const data = readJsonFile(result.filePaths[0]);
-  const imported = normalizeImportedCustomPresets(data);
-  if (imported.length === 0) return { ok: false, imported: 0 };
-  const now = new Date().toISOString();
-  const existingPresets = loadCustomPatternPresets();
-  const namesInUse = [...existingPresets];
-  const nextImported = imported.map((preset) => {
-    const name = uniqueCustomPatternPresetName(preset.name, namesInUse);
-    const nextPreset = {
-      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name,
-      createdAt: preset.createdAt || now,
-      updatedAt: now,
-      pattern: preset.pattern,
-    };
-    namesInUse.push(nextPreset);
-    return nextPreset;
-  });
-  saveCustomPatternPresets([...nextImported, ...existingPresets]);
-  return { ok: true, imported: nextImported.length, selectedId: nextImported[0]?.id || null };
-});
-ipcMain.on("pattern-set", (_evt, pattern) => {
-  if (!pattern || typeof pattern !== "object") return;
-  currentPattern = sanitizePattern(pattern);
-  savePattern();
-  broadcastPattern();
-  syncActiveCharFromGlobals();
-});
-ipcMain.handle("pattern-confirm-clear-all", async (_evt, message) => {
-  const result = await dialog.showMessageBox(patternWin || petWin || undefined, {
-    type: "warning",
-    title: t("patternEditorTitle"),
-    message: typeof message === "string" && message.trim() ? message : "Clear spots from every part?",
-    buttons: [t("reset"), t("later")],
-    defaultId: 1,
-    cancelId: 1,
-    icon: nativeImage.createFromPath(APP_ICON_PATH),
-  });
-  return result.response === 0;
-});
-ipcMain.handle("pattern-confirm-delete-preset", async (_evt, message) => {
-  const result = await dialog.showMessageBox(patternWin || petWin || undefined, {
-    type: "warning",
-    title: t("patternEditorTitle"),
-    message: typeof message === "string" && message.trim() ? message : "Delete this preset?",
-    buttons: [t("delete"), t("later")],
-    defaultId: 1,
-    cancelId: 1,
-    icon: nativeImage.createFromPath(APP_ICON_PATH),
-  });
-  return result.response === 0;
-});
-ipcMain.handle("pattern-confirm-discard-changes", async (_evt, message) => {
-  const result = await dialog.showMessageBox(patternWin || petWin || undefined, {
-    type: "warning",
-    title: t("patternEditorTitle"),
-    message: typeof message === "string" && message.trim() ? message : "Discard unsaved changes?",
-    buttons: [t("reset"), t("later")],
-    defaultId: 1,
-    cancelId: 1,
-    icon: nativeImage.createFromPath(APP_ICON_PATH),
-  });
-  return result.response === 0;
-});
-ipcMain.on("open-pattern-editor", () => openPatternEditor());
-ipcMain.on("open-mapping-editor", () => openMappingEditor());
-ipcMain.handle("mapping-load", () => {
-  try {
-    return loadCellMappings();
-  } catch (error) {
-    console.warn("[Kiri] failed to load cell mappings:", error && error.message ? error.message : error);
-    return null;
-  }
-});
-ipcMain.handle("mapping-save", (_evt, mappings) => {
-  if (!mappings || typeof mappings !== "object") return { ok: false, reason: "invalid-mappings" };
-  try {
-    fs.writeFileSync(cellMappingsPath(), serializeCellMappings(mappings));
-    return { ok: true };
-  } catch (error) {
-    return { ok: false, reason: error && error.message ? error.message : "mapping-save-failed" };
-  }
-});
-ipcMain.handle("svg-load", (_evt, svgName) => {
-  const safeName = path.basename(String(svgName || "")).replace(/\.svg$/i, "");
-  if (!safeName) return null;
-  const filePath = path.join(__dirname, "svg", `${safeName}.svg`);
-  try {
-    if (!fs.existsSync(filePath)) return null;
-    return fs.readFileSync(filePath, "utf8");
-  } catch {
-    return null;
-  }
-});
-
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -2783,82 +2355,12 @@ ipcMain.handle("ai-clear-openai-key", () => {
 ipcMain.handle("ai-set-gemini-key", (_evt, key) => aiConfig.setGeminiKey(key));
 ipcMain.handle("ai-clear-gemini-key", () => aiConfig.clearGeminiKey());
 
-// ── Character appearance (sprite) editor ──
-
-function openAiCharacter() {
-  if (aiCharacterWin && !aiCharacterWin.isDestroyed()) {
-    aiCharacterWin.show();
-    aiCharacterWin.focus();
-    return;
-  }
-  aiCharacterWin = new BrowserWindow({
-    width: 380,
-    height: 640,
-    minWidth: 340,
-    minHeight: 480,
-    title: t("characterWindowTitle"),
-    frame: false,
-    backgroundColor: "#fbf4e4",
-    resizable: true,
-    alwaysOnTop: true,
-    icon: APP_ICON_PATH,
-    webPreferences: {
-      preload: path.join(__dirname, "renderer", "ai-preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  keepWindowOnTop(aiCharacterWin);
-  aiCharacterWin.loadFile(path.join(__dirname, "renderer", "ai-character.html"));
-  aiCharacterWin.on("closed", () => { aiCharacterWin = null; });
-}
-
 function broadcastCharacterArt(c) {
   const win = petWins.get(c.id);
   if (win && !win.isDestroyed()) {
     win.webContents.send("character-art", { kind: c.kind, sprite: c.sprite, set: c.set, overlay: c.overlay });
   }
 }
-
-ipcMain.handle("ai-character-get", () => {
-  const c = activeChar();
-  return c ? { name: c.name, kind: c.kind, sprite: c.sprite, set: c.set, overlay: c.overlay } : null;
-});
-ipcMain.handle("ai-character-presets", () => charStore.SPRITE_PRESETS);
-ipcMain.handle("ai-character-sets", () => charStore.POSESET_SETS);
-ipcMain.handle("ai-character-set-art", (_evt, art) => {
-  const c = activeChar();
-  if (!c) return { ok: false };
-  if (art && art.kind === "poseset") {
-    c.kind = "poseset";
-    if (charStore.POSESET_SETS.includes(art.set)) c.set = art.set;
-    else if (!c.set) c.set = charStore.POSESET_SETS[0];
-  } else if (art && art.kind === "sprite") {
-    c.kind = "sprite";
-    if (art.sprite) c.sprite = charStore.sanitizeSprite(art.sprite);
-  } else {
-    c.kind = "classic";
-  }
-  charStore.save(characters);
-  broadcastCharacterArt(c);
-  return { ok: true };
-});
-// Pixel-paint overlay (composited over the pose-set idle art).
-ipcMain.handle("ai-character-overlay-get", () => {
-  const c = activeChar();
-  return c ? { set: c.set, kind: c.kind, overlay: c.overlay } : null;
-});
-ipcMain.handle("ai-character-overlay-set", (_evt, overlay) => {
-  const c = activeChar();
-  if (!c) return { ok: false };
-  c.overlay = overlay ? charStore.sanitizeOverlay(overlay) : null;
-  charStore.save(characters);
-  broadcastCharacterArt(c);
-  return { ok: true };
-});
-ipcMain.on("ai-character-close", () => {
-  if (aiCharacterWin && !aiCharacterWin.isDestroyed()) aiCharacterWin.close();
-});
 
 // ── Pixel-overlay editor (paint over the active pose-set character) ──
 function openOverlayEditor() {

@@ -56,16 +56,9 @@ contextBridge.exposeInMainWorld("aiAPI", {
   closeJournal: () => ipcRenderer.send("ai-journal-close"),
   resizeJournal: (size) => ipcRenderer.send("ai-journal-resize", size),
 
-  // Character appearance editor (pose-set / sprite / classic)
-  characterGet: () => ipcRenderer.invoke("ai-character-get"),
-  characterPresets: () => ipcRenderer.invoke("ai-character-presets"),
-  characterSets: () => ipcRenderer.invoke("ai-character-sets"),
-  characterSetArt: (art) => ipcRenderer.invoke("ai-character-set-art", art),
-  characterOverlayGet: () => ipcRenderer.invoke("ai-character-overlay-get"),
-  characterOverlaySet: (overlay) => ipcRenderer.invoke("ai-character-overlay-set", overlay),
+  // Pixel-overlay editor window open/close
   openOverlayEditor: () => ipcRenderer.send("open-overlay-editor"),
   closeOverlay: () => ipcRenderer.send("overlay-editor-close"),
-  closeCharacter: () => ipcRenderer.send("ai-character-close"),
 
   // Pixel-overlay editor: variants + live preview + save/confirm
   overlayPresetsGet: () => ipcRenderer.invoke("overlay-presets-get"),

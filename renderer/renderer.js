@@ -1873,9 +1873,32 @@ function layoutPosePupils() {
   posePupilTravelPx = eyes.travel * dispW;
 }
 
+// The legacy classic cat's rigged stretch chain needs cell-mappings.js (~850KB).
+// Load it once, only when a classic character is actually shown.
+let cellMappingsLoad = null;
+function ensureCellMappings() {
+  if (window.cellMappings) return Promise.resolve(window.cellMappings);
+  if (cellMappingsLoad) return cellMappingsLoad;
+  cellMappingsLoad = new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "cell-mappings.js";
+    s.onload = () => {
+      // The classic SVGs may have loaded (and applied the pattern with no
+      // mappings) before this resolved — re-apply now that mappings exist.
+      applyPatternAllSvgs(currentPattern);
+      resolve(window.cellMappings || null);
+    };
+    s.onerror = () => resolve(null);
+    document.body.appendChild(s);
+  });
+  return cellMappingsLoad;
+}
+
 function applyCharacterArt(art) {
   spriteMode = !!(art && art.kind === "sprite" && art.sprite);
   poseMode = !!(art && art.kind === "poseset");
+  const classicMode = !spriteMode && !poseMode;
+  if (classicMode) ensureCellMappings();
   document.body.toggleAttribute("data-sprite", spriteMode);
   document.body.toggleAttribute("data-posemode", poseMode);
   if (spriteObj) spriteObj.hidden = !spriteMode;

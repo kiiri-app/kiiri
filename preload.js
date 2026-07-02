@@ -92,29 +92,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   taskCompleteSoundVolumeGet: () => ipcRenderer.invoke("task-complete-sound-volume-get"),
   taskCompleteSoundVolumeSet: (volume) => ipcRenderer.invoke("task-complete-sound-volume-set", volume),
 
-  // 패턴 (펫 + 에디터 양쪽에서 사용)
-  patternGet: () => ipcRenderer.invoke("pattern-get"),
-  patternSet: (pattern) => ipcRenderer.send("pattern-set", pattern),
-  patternPresetsGet: () => ipcRenderer.invoke("pattern-presets-get"),
-  patternCustomPresetSave: (payload) => ipcRenderer.invoke("pattern-custom-preset-save", payload),
-  patternCustomPresetDelete: (id) => ipcRenderer.invoke("pattern-custom-preset-delete", id),
-  patternCustomPresetRename: (payload) => ipcRenderer.invoke("pattern-custom-preset-rename", payload),
-  patternCustomPresetsExport: (id) => ipcRenderer.invoke("pattern-custom-presets-export", id),
-  patternCustomPresetsImport: () => ipcRenderer.invoke("pattern-custom-presets-import"),
-  patternConfirmClearAll: (message) => ipcRenderer.invoke("pattern-confirm-clear-all", message),
-  patternConfirmDeletePreset: (message) => ipcRenderer.invoke("pattern-confirm-delete-preset", message),
-  patternConfirmDiscardChanges: (message) => ipcRenderer.invoke("pattern-confirm-discard-changes", message),
+  // 패턴 — 펫은 main의 pattern-changed 브로드캐스트만 소비
   onPatternChanged: (callback) =>
     ipcRenderer.on("pattern-changed", (_evt, p) => callback(p)),
   onCharacterArt: (callback) =>
     ipcRenderer.on("character-art", (_evt, art) => callback(art)),
   onOverlayPreview: (callback) =>
     ipcRenderer.on("overlay-preview", (_evt, overlay) => callback(overlay)),
-  openPatternEditor: () => ipcRenderer.send("open-pattern-editor"),
-  openMappingEditor: () => ipcRenderer.send("open-mapping-editor"),
-  mappingLoad: () => ipcRenderer.invoke("mapping-load"),
-  mappingSave: (mappings) => ipcRenderer.invoke("mapping-save", mappings),
-  svgLoad: (svgName) => ipcRenderer.invoke("svg-load", svgName),
 
   languageGet: () => ipcRenderer.invoke("language-get"),
   languageSet: (language) => ipcRenderer.invoke("language-set", language),

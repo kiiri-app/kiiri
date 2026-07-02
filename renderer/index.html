@@ -151,7 +151,9 @@
   <object id="stretch-svg-end" type="image/svg+xml" data="../svg/stretch-end.svg" aria-label="stretch"></object>
   <object id="stretch-pose-default" type="image/svg+xml" data="../svg/stretch-pose-default.svg" aria-label="stretching-default"></object>
   <object id="stretch-pose-ing" type="image/svg+xml" data="../svg/stretch-pose-ing.svg" aria-label="stretching-active"></object>
-  <script src="cell-mappings.js"></script>
+  <!-- cell-mappings.js (~850KB) is only needed by the legacy "classic" rigged
+       cat; renderer.js lazy-loads it on demand so poseset/sprite windows never
+       pay the parse cost. -->
   <script src="renderer.js"></script>
 </body>
 </html>

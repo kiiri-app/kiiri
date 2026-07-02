@@ -22,12 +22,12 @@ characters or design your own.
   **Ollama** (fully local / offline / free).
 - **Knowledge Journal** — save what the character solved/explained as flashcards
   and review them on an SM-2 spaced-repetition schedule.
-- **Characters** — pick from built-in Ghibli-resembling sprites or build your
-  own in the character editor; run several characters at once, each with its own
-  name, look, and personality.
+- **Characters** — pick Kiri or Tori, paint your own look in the pixel overlay
+  editor, and run several characters at once, each with its own name, look, and
+  personality.
 - **Desktop companion** — follows your cursor, reacts to typing, pomodoro timer,
-  reminders, and a pattern editor.
-- **Multi-language UI** — English, 한국어, 日本語.
+  and reminders.
+- **Multi-language UI** — English, Türkçe, 한국어, 日本語.
 
 ## Stack
 

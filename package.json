@@ -41,7 +41,6 @@
       "hooks/**",
       "agents/**",
       "workspace/**",
-      "presets/**",
       "svg/**",
       "assets/**",
       "package.json"

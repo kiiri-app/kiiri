@@ -1,11 +1,190 @@
 "use strict";
 
-const PROVIDER_LABELS = {
-  anthropic: "Claude (Anthropic)",
-  openai: "OpenAI (GPT-4o)",
-  gemini: "Google Gemini",
-  ollama: "Ollama (yerel / offline)",
+const I18N = {
+  en: {
+    windowTitle: "Kiri AI Assistant Settings",
+    titlebar: "🐾 AI Assistant",
+    close: "Close",
+    enableAssistant: "Turn on AI Assistant",
+    anthropicKeyHeading: "Anthropic API key",
+    save: "Save",
+    remove: "Remove",
+    noKey: "No key yet",
+    keySaved: "Key saved ✓",
+    encWarning: "⚠️ No secure storage on this device — the key is stored unencrypted in a local file.",
+    providerHeading: "Provider (LLM)",
+    providerLabel: "Provider",
+    responseLanguage: "Response language",
+    modelLabel: "Model",
+    ollamaAddress: "Ollama address",
+    geminiKeyPlaceholder: "Gemini API key",
+    providerOllama: "Ollama (local / offline)",
+    hintAnthropic: "Key: the 'Anthropic API key' section above.",
+    hintOpenai: "Key: the key in the 'Voice (OpenAI)' section below (shared).",
+    hintGemini: "Key: the Gemini key here.",
+    hintOllama: "Local/offline — no key needed. Ollama must be running with a vision model pulled (e.g. `ollama pull llama3.2-vision`).",
+    autoDetect: "Detect content and suggest tasks",
+    alwaysDrop: "Analyze on every drop",
+    triggerHint: "When off: hold <b>Option/Alt</b> and drop the cat → analysis starts.",
+    voiceHeading: "Voice (OpenAI) — voice commands",
+    voiceEnable: "Enable voice commands",
+    transcribeModel: "Transcription model",
+    fastCheap: "fast/cheap",
+    better: "better",
+    voiceHint: "When on, a 🎤 button appears next to the cat. Click → speak → the command runs (it stops automatically when you stop talking).",
+    customTasksHeading: "Custom tasks",
+    noCustomTasks: "No custom tasks yet.",
+    taskNamePlaceholder: "Task name (e.g. Fix)",
+    taskPromptPlaceholder: "What should the cat do? (e.g. Fix the typos in the image and return the clean text)",
+    deepThink: "Use deep thinking (for math / logic)",
+    addTask: "Add task",
+    saveFailed: "Couldn't save: ",
+    errorWord: "error",
+  },
+  tr: {
+    windowTitle: "Kiri AI Asistan Ayarları",
+    titlebar: "🐾 AI Asistan",
+    close: "Kapat",
+    enableAssistant: "AI Asistanı aç",
+    anthropicKeyHeading: "Anthropic API anahtarı",
+    save: "Kaydet",
+    remove: "Sil",
+    noKey: "Anahtar yok",
+    keySaved: "Anahtar kayıtlı ✓",
+    encWarning: "⚠️ Bu cihazda güvenli depolama yok — anahtar yerel dosyada şifrelenmeden saklanır.",
+    providerHeading: "Sağlayıcı (LLM)",
+    providerLabel: "Sağlayıcı",
+    responseLanguage: "Yanıt dili",
+    modelLabel: "Model",
+    ollamaAddress: "Ollama adresi",
+    geminiKeyPlaceholder: "Gemini API anahtarı",
+    providerOllama: "Ollama (yerel / offline)",
+    hintAnthropic: "Anahtar: yukarıdaki 'Anthropic API anahtarı' bölümü.",
+    hintOpenai: "Anahtar: aşağıdaki 'Ses (OpenAI)' bölümündeki anahtar (paylaşılır).",
+    hintGemini: "Anahtar: buradaki Gemini anahtarı.",
+    hintOllama: "Yerel/offline — anahtar gerekmez. Ollama çalışıyor olmalı ve bir vision modeli indirilmeli (ör. `ollama pull llama3.2-vision`).",
+    autoDetect: "İçeriği algıla ve görev öner",
+    alwaysDrop: "Her bırakışta analiz et",
+    triggerHint: "Kapalıyken: <b>Option/Alt</b> tuşunu basılı tutup kediyi bırak → analiz başlar.",
+    voiceHeading: "Ses (OpenAI) — sesli komut",
+    voiceEnable: "Sesli komutu aç",
+    transcribeModel: "Transkripsiyon modeli",
+    fastCheap: "hızlı/ucuz",
+    better: "daha iyi",
+    voiceHint: "Açıkken kedinin yanında 🎤 düğmesi belirir. Tıkla → konuş → komut çalışır (konuşmayı bırakınca otomatik durur).",
+    customTasksHeading: "Özel görevler",
+    noCustomTasks: "Henüz özel görev yok.",
+    taskNamePlaceholder: "Görev adı (ör. Düzelt)",
+    taskPromptPlaceholder: "Kediye ne yapmasını söyleyeyim? (ör. Görüntüdeki yazım hatalarını düzeltip temiz metni ver)",
+    deepThink: "Derin düşünme kullan (matematik / mantık için)",
+    addTask: "Görev ekle",
+    saveFailed: "Kaydedilemedi: ",
+    errorWord: "hata",
+  },
+  ko: {
+    windowTitle: "Kiri AI 어시스턴트 설정",
+    titlebar: "🐾 AI 어시스턴트",
+    close: "닫기",
+    enableAssistant: "AI 어시스턴트 켜기",
+    anthropicKeyHeading: "Anthropic API 키",
+    save: "저장",
+    remove: "삭제",
+    noKey: "키 없음",
+    keySaved: "키 저장됨 ✓",
+    encWarning: "⚠️ 이 기기에는 보안 저장소가 없어요 — 키가 로컬 파일에 암호화 없이 저장됩니다.",
+    providerHeading: "제공자 (LLM)",
+    providerLabel: "제공자",
+    responseLanguage: "응답 언어",
+    modelLabel: "모델",
+    ollamaAddress: "Ollama 주소",
+    geminiKeyPlaceholder: "Gemini API 키",
+    providerOllama: "Ollama (로컬 / 오프라인)",
+    hintAnthropic: "키: 위의 'Anthropic API 키' 섹션.",
+    hintOpenai: "키: 아래 '음성 (OpenAI)' 섹션의 키 (공유됨).",
+    hintGemini: "키: 여기의 Gemini 키.",
+    hintOllama: "로컬/오프라인 — 키가 필요 없어요. Ollama가 실행 중이고 vision 모델이 설치되어 있어야 해요 (예: `ollama pull llama3.2-vision`).",
+    autoDetect: "내용을 인식해 작업 추천",
+    alwaysDrop: "떨어뜨릴 때마다 분석",
+    triggerHint: "꺼져 있을 때: <b>Option/Alt</b> 키를 누른 채 고양이를 놓으면 → 분석이 시작돼요.",
+    voiceHeading: "음성 (OpenAI) — 음성 명령",
+    voiceEnable: "음성 명령 켜기",
+    transcribeModel: "전사 모델",
+    fastCheap: "빠름/저렴",
+    better: "더 좋음",
+    voiceHint: "켜면 고양이 옆에 🎤 버튼이 나타나요. 클릭 → 말하기 → 명령 실행 (말을 멈추면 자동으로 멈춰요).",
+    customTasksHeading: "커스텀 작업",
+    noCustomTasks: "아직 커스텀 작업이 없어요.",
+    taskNamePlaceholder: "작업 이름 (예: 교정)",
+    taskPromptPlaceholder: "고양이에게 뭘 시킬까요? (예: 이미지의 오타를 고쳐서 깔끔한 텍스트로 줘)",
+    deepThink: "깊은 사고 사용 (수학 / 논리용)",
+    addTask: "작업 추가",
+    saveFailed: "저장 실패: ",
+    errorWord: "오류",
+  },
+  ja: {
+    windowTitle: "Kiri AI アシスタント設定",
+    titlebar: "🐾 AI アシスタント",
+    close: "閉じる",
+    enableAssistant: "AI アシスタントをオン",
+    anthropicKeyHeading: "Anthropic API キー",
+    save: "保存",
+    remove: "削除",
+    noKey: "キーなし",
+    keySaved: "キー保存済み ✓",
+    encWarning: "⚠️ このデバイスには安全なストレージがありません — キーはローカルファイルに暗号化なしで保存されます。",
+    providerHeading: "プロバイダー (LLM)",
+    providerLabel: "プロバイダー",
+    responseLanguage: "応答言語",
+    modelLabel: "モデル",
+    ollamaAddress: "Ollama アドレス",
+    geminiKeyPlaceholder: "Gemini API キー",
+    providerOllama: "Ollama (ローカル / オフライン)",
+    hintAnthropic: "キー: 上の「Anthropic API キー」セクション。",
+    hintOpenai: "キー: 下の「音声 (OpenAI)」セクションのキー（共有）。",
+    hintGemini: "キー: ここの Gemini キー。",
+    hintOllama: "ローカル/オフライン — キー不要。Ollama が起動していて vision モデルが必要です（例: `ollama pull llama3.2-vision`）。",
+    autoDetect: "内容を検出してタスクを提案",
+    alwaysDrop: "ドロップのたびに分析",
+    triggerHint: "オフのとき: <b>Option/Alt</b> を押しながら猫をドロップ → 分析が始まります。",
+    voiceHeading: "音声 (OpenAI) — 音声コマンド",
+    voiceEnable: "音声コマンドをオン",
+    transcribeModel: "文字起こしモデル",
+    fastCheap: "速い/安い",
+    better: "高精度",
+    voiceHint: "オンにすると猫のそばに 🎤 ボタンが現れます。クリック → 話す → コマンド実行（話し終わると自動で止まります）。",
+    customTasksHeading: "カスタムタスク",
+    noCustomTasks: "カスタムタスクはまだありません。",
+    taskNamePlaceholder: "タスク名（例: 修正）",
+    taskPromptPlaceholder: "猫に何をさせる？（例: 画像の誤字を直してきれいなテキストを返して）",
+    deepThink: "深い思考を使う（数学 / 論理向け）",
+    addTask: "タスクを追加",
+    saveFailed: "保存できませんでした: ",
+    errorWord: "エラー",
+  },
 };
+
+let lang = "en";
+function L(key) {
+  const table = I18N[lang] || I18N.en;
+  return table[key] || I18N.en[key] || key;
+}
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.title = L("windowTitle");
+  document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = L(node.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((node) => { node.setAttribute("aria-label", L(node.dataset.i18nAria)); });
+  document.querySelectorAll("[data-i18n-ph]").forEach((node) => { node.setAttribute("placeholder", L(node.dataset.i18nPh)); });
+  document.querySelectorAll("[data-i18n-html]").forEach((node) => { node.innerHTML = L(node.dataset.i18nHtml); });
+}
+
+function providerLabels() {
+  return {
+    anthropic: "Claude (Anthropic)",
+    openai: "OpenAI (GPT-4o)",
+    gemini: "Google Gemini",
+    ollama: L("providerOllama"),
+  };
+}
 const MODEL_FIELD = {
   anthropic: "model",
   openai: "openaiModel",
@@ -18,18 +197,20 @@ const MODEL_SUGGESTIONS = {
   gemini: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
   ollama: ["llama3.2-vision", "llava", "qwen2.5vl", "minicpm-v"],
 };
-const PROVIDER_HINT = {
-  anthropic: "Anahtar: yukarıdaki 'Anthropic API anahtarı' bölümü.",
-  openai: "Anahtar: aşağıdaki 'Ses (OpenAI)' bölümündeki anahtar (paylaşılır).",
-  gemini: "Anahtar: buradaki Gemini anahtarı.",
-  ollama: "Yerel/offline — anahtar gerekmez. Ollama çalışıyor olmalı ve bir vision modeli indirilmeli (ör. `ollama pull llama3.2-vision`).",
+const PROVIDER_HINT_KEY = {
+  anthropic: "hintAnthropic",
+  openai: "hintOpenai",
+  gemini: "hintGemini",
+  ollama: "hintOllama",
 };
 const LANG_LABELS = { tr: "Türkçe", en: "English", ko: "한국어", ja: "日本語" };
-const TRANSCRIBE_LABELS = {
-  "gpt-4o-mini-transcribe": "gpt-4o-mini-transcribe (hızlı/ucuz)",
-  "gpt-4o-transcribe": "gpt-4o-transcribe (daha iyi)",
-  "whisper-1": "whisper-1",
-};
+function transcribeLabels() {
+  return {
+    "gpt-4o-mini-transcribe": `gpt-4o-mini-transcribe (${L("fastCheap")})`,
+    "gpt-4o-transcribe": `gpt-4o-transcribe (${L("better")})`,
+    "whisper-1": "whisper-1",
+  };
+}
 
 const el = (id) => document.getElementById(id);
 const enabled = el("enabled");
@@ -76,11 +257,11 @@ function fillSelect(select, values, labels, current) {
 
 function renderKeyStatus() {
   if (config.hasApiKey) {
-    keyStatus.textContent = "Anahtar kayıtlı ✓";
+    keyStatus.textContent = L("keySaved");
     keyStatus.classList.add("ok");
     clearKey.hidden = false;
   } else {
-    keyStatus.textContent = "Anahtar yok";
+    keyStatus.textContent = L("noKey");
     keyStatus.classList.remove("ok");
     clearKey.hidden = true;
   }
@@ -93,7 +274,7 @@ function renderCustomTasks() {
   if (!tasks.length) {
     const empty = document.createElement("div");
     empty.className = "custom-empty";
-    empty.textContent = "Henüz özel görev yok.";
+    empty.textContent = L("noCustomTasks");
     customList.appendChild(empty);
     return;
   }
@@ -104,7 +285,8 @@ function renderCustomTasks() {
       <span class="ci-emoji"></span>
       <span class="ci-label"></span>
       <span class="ci-prompt"></span>
-      <button type="button" class="ci-del" aria-label="Sil">×</button>`;
+      <button type="button" class="ci-del">×</button>`;
+    item.querySelector(".ci-del").setAttribute("aria-label", L("remove"));
     item.querySelector(".ci-emoji").textContent = t.emoji || "✨";
     item.querySelector(".ci-label").textContent = t.label;
     item.querySelector(".ci-prompt").textContent = t.prompt;
@@ -118,11 +300,11 @@ function renderCustomTasks() {
 
 function renderOpenAiStatus() {
   if (config.hasOpenAiKey) {
-    openaiKeyStatus.textContent = "Anahtar kayıtlı ✓";
+    openaiKeyStatus.textContent = L("keySaved");
     openaiKeyStatus.classList.add("ok");
     clearOpenaiKey.hidden = false;
   } else {
-    openaiKeyStatus.textContent = "Anahtar yok";
+    openaiKeyStatus.textContent = L("noKey");
     openaiKeyStatus.classList.remove("ok");
     clearOpenaiKey.hidden = true;
   }
@@ -130,11 +312,11 @@ function renderOpenAiStatus() {
 
 function renderGeminiStatus() {
   if (config.hasGeminiKey) {
-    geminiKeyStatus.textContent = "Anahtar kayıtlı ✓";
+    geminiKeyStatus.textContent = L("keySaved");
     geminiKeyStatus.classList.add("ok");
     clearGeminiKey.hidden = false;
   } else {
-    geminiKeyStatus.textContent = "Anahtar yok";
+    geminiKeyStatus.textContent = L("noKey");
     geminiKeyStatus.classList.remove("ok");
     clearGeminiKey.hidden = true;
   }
@@ -149,7 +331,7 @@ function applyProviderUI() {
   ollamaBaseRow.hidden = p !== "ollama";
   ollamaBase.value = config.ollamaBaseUrl || "";
   geminiKeyRow.hidden = p !== "gemini";
-  providerHint.textContent = PROVIDER_HINT[p] || "";
+  providerHint.textContent = PROVIDER_HINT_KEY[p] ? L(PROVIDER_HINT_KEY[p]) : "";
   renderGeminiStatus();
 }
 
@@ -157,11 +339,11 @@ function render() {
   enabled.checked = config.enabled;
   autoDetect.checked = config.autoDetect;
   alwaysDrop.checked = config.alwaysAnalyzeOnDrop;
-  fillSelect(providerSel, config.supportedProviders || [], PROVIDER_LABELS, config.provider);
+  fillSelect(providerSel, config.supportedProviders || [], providerLabels(), config.provider);
   fillSelect(langSel, config.supportedResponseLanguages || [], LANG_LABELS, config.responseLanguage);
   applyProviderUI();
   vEnabled.checked = config.voiceEnabled;
-  fillSelect(transcribeModelEl, config.supportedTranscribeModels || [], TRANSCRIBE_LABELS, config.transcribeModel);
+  fillSelect(transcribeModelEl, config.supportedTranscribeModels || [], transcribeLabels(), config.transcribeModel);
   renderKeyStatus();
   renderOpenAiStatus();
   renderCustomTasks();
@@ -192,7 +374,7 @@ saveGeminiKey.addEventListener("click", async () => {
     config = await window.aiAPI.configGet();
     renderGeminiStatus();
   } else {
-    geminiKeyStatus.textContent = "Kaydedilemedi: " + ((res && res.reason) || "hata");
+    geminiKeyStatus.textContent = L("saveFailed") + ((res && res.reason) || L("errorWord"));
   }
 });
 clearGeminiKey.addEventListener("click", async () => {
@@ -211,7 +393,7 @@ saveKey.addEventListener("click", async () => {
     config = await window.aiAPI.configGet();
     renderKeyStatus();
   } else {
-    keyStatus.textContent = "Kaydedilemedi: " + ((res && res.reason) || "hata");
+    keyStatus.textContent = L("saveFailed") + ((res && res.reason) || L("errorWord"));
   }
 });
 
@@ -233,7 +415,7 @@ saveOpenaiKey.addEventListener("click", async () => {
     config = await window.aiAPI.configGet();
     renderOpenAiStatus();
   } else {
-    openaiKeyStatus.textContent = "Kaydedilemedi: " + ((res && res.reason) || "hata");
+    openaiKeyStatus.textContent = L("saveFailed") + ((res && res.reason) || L("errorWord"));
   }
 });
 
@@ -265,7 +447,20 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") window.aiAPI.closeSettings();
 });
 
+if (window.aiAPI.onLanguageChanged) {
+  window.aiAPI.onLanguageChanged((language) => {
+    if (I18N[language]) lang = language;
+    applyI18n();
+    if (config) render();
+  });
+}
+
 (async () => {
+  try {
+    const language = await window.aiAPI.languageGet();
+    if (I18N[language]) lang = language;
+  } catch {}
+  applyI18n();
   config = await window.aiAPI.configGet();
   render();
 })();

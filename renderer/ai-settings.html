@@ -1,67 +1,67 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
   <link rel="stylesheet" href="ai-settings.css" />
-  <title>Kiri AI Asistan Ayarları</title>
+  <title>Kiri AI Assistant Settings</title>
 </head>
 <body>
   <div id="titlebar">
-    <span>🐾 AI Asistan</span>
-    <button id="close-btn" type="button" aria-label="Kapat">×</button>
+    <span data-i18n="titlebar">🐾 AI Assistant</span>
+    <button id="close-btn" type="button" aria-label="Close" data-i18n-aria="close">×</button>
   </div>
 
   <main>
     <label class="row toggle-row">
-      <span>AI Asistanı aç</span>
+      <span data-i18n="enableAssistant">Turn on AI Assistant</span>
       <input type="checkbox" id="enabled" />
     </label>
 
     <section class="group">
-      <h2>Anthropic API anahtarı</h2>
+      <h2 data-i18n="anthropicKeyHeading">Anthropic API key</h2>
       <div class="key-row">
         <input type="password" id="api-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" />
-        <button id="save-key" type="button" class="primary-btn">Kaydet</button>
+        <button id="save-key" type="button" class="primary-btn" data-i18n="save">Save</button>
       </div>
       <div class="key-meta">
-        <span id="key-status" class="status">Anahtar yok</span>
-        <button id="clear-key" type="button" class="link-btn">Sil</button>
+        <span id="key-status" class="status">No key yet</span>
+        <button id="clear-key" type="button" class="link-btn" data-i18n="remove">Remove</button>
       </div>
-      <p id="enc-warning" class="warn" hidden>
-        ⚠️ Bu cihazda güvenli depolama yok — anahtar yerel dosyada şifrelenmeden saklanır.
+      <p id="enc-warning" class="warn" data-i18n="encWarning" hidden>
+        ⚠️ No secure storage on this device — the key is stored unencrypted in a local file.
       </p>
     </section>
 
     <section class="group">
-      <h2>Sağlayıcı (LLM)</h2>
+      <h2 data-i18n="providerHeading">Provider (LLM)</h2>
       <div class="two-col">
         <label class="field">
-          <span>Sağlayıcı</span>
+          <span data-i18n="providerLabel">Provider</span>
           <select id="provider"></select>
         </label>
         <label class="field">
-          <span>Yanıt dili</span>
+          <span data-i18n="responseLanguage">Response language</span>
           <select id="response-language"></select>
         </label>
       </div>
       <label class="field">
-        <span>Model</span>
+        <span data-i18n="modelLabel">Model</span>
         <input type="text" id="provider-model" list="model-suggestions" autocomplete="off" spellcheck="false" />
         <datalist id="model-suggestions"></datalist>
       </label>
       <label class="field" id="ollama-base-row" hidden>
-        <span>Ollama adresi</span>
+        <span data-i18n="ollamaAddress">Ollama address</span>
         <input type="text" id="ollama-base" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434" />
       </label>
       <div id="gemini-key-row" hidden>
         <div class="key-row">
-          <input type="password" id="gemini-key" placeholder="Gemini API anahtarı" autocomplete="off" spellcheck="false" />
-          <button id="save-gemini-key" type="button" class="primary-btn">Kaydet</button>
+          <input type="password" id="gemini-key" placeholder="Gemini API key" data-i18n-ph="geminiKeyPlaceholder" autocomplete="off" spellcheck="false" />
+          <button id="save-gemini-key" type="button" class="primary-btn" data-i18n="save">Save</button>
         </div>
         <div class="key-meta">
-          <span id="gemini-key-status" class="status">Anahtar yok</span>
-          <button id="clear-gemini-key" type="button" class="link-btn">Sil</button>
+          <span id="gemini-key-status" class="status">No key yet</span>
+          <button id="clear-gemini-key" type="button" class="link-btn" data-i18n="remove">Remove</button>
         </div>
       </div>
       <p class="hint" id="provider-hint"></p>
@@ -69,53 +69,53 @@
 
     <section class="group">
       <label class="row toggle-row">
-        <span>İçeriği algıla ve görev öner</span>
+        <span data-i18n="autoDetect">Detect content and suggest tasks</span>
         <input type="checkbox" id="auto-detect" />
       </label>
       <label class="row toggle-row">
-        <span>Her bırakışta analiz et</span>
+        <span data-i18n="alwaysDrop">Analyze on every drop</span>
         <input type="checkbox" id="always-drop" />
       </label>
-      <p class="hint" id="trigger-hint">
-        Kapalıyken: <b>Option/Alt</b> tuşunu basılı tutup kediyi bırak → analiz başlar.
+      <p class="hint" id="trigger-hint" data-i18n-html="triggerHint">
+        When off: hold <b>Option/Alt</b> and drop the cat → analysis starts.
       </p>
     </section>
 
     <section class="group">
-      <h2>Ses (OpenAI) — sesli komut</h2>
+      <h2 data-i18n="voiceHeading">Voice (OpenAI) — voice commands</h2>
       <label class="row toggle-row">
-        <span>Sesli komutu aç</span>
+        <span data-i18n="voiceEnable">Enable voice commands</span>
         <input type="checkbox" id="voice-enabled" />
       </label>
       <div class="key-row">
         <input type="password" id="openai-key" placeholder="sk-..." autocomplete="off" spellcheck="false" />
-        <button id="save-openai-key" type="button" class="primary-btn">Kaydet</button>
+        <button id="save-openai-key" type="button" class="primary-btn" data-i18n="save">Save</button>
       </div>
       <div class="key-meta">
-        <span id="openai-key-status" class="status">Anahtar yok</span>
-        <button id="clear-openai-key" type="button" class="link-btn">Sil</button>
+        <span id="openai-key-status" class="status">No key yet</span>
+        <button id="clear-openai-key" type="button" class="link-btn" data-i18n="remove">Remove</button>
       </div>
       <label class="field">
-        <span>Transkripsiyon modeli</span>
+        <span data-i18n="transcribeModel">Transcription model</span>
         <select id="transcribe-model"></select>
       </label>
-      <p class="hint">Açıkken kedinin yanında 🎤 düğmesi belirir. Tıkla → konuş → komut çalışır (konuşmayı bırakınca otomatik durur).</p>
+      <p class="hint" data-i18n="voiceHint">When on, a 🎤 button appears next to the cat. Click → speak → the command runs (it stops automatically when you stop talking).</p>
     </section>
 
     <section class="group">
-      <h2>Özel görevler</h2>
+      <h2 data-i18n="customTasksHeading">Custom tasks</h2>
       <div id="custom-list" class="custom-list"></div>
       <form id="custom-form" autocomplete="off">
         <div class="custom-form-row">
           <input type="text" id="ct-emoji" maxlength="4" placeholder="✨" class="emoji-input" />
-          <input type="text" id="ct-label" maxlength="40" placeholder="Görev adı (ör. Düzelt)" class="label-input" />
+          <input type="text" id="ct-label" maxlength="40" placeholder="Task name (e.g. Fix)" data-i18n-ph="taskNamePlaceholder" class="label-input" />
         </div>
-        <textarea id="ct-prompt" maxlength="2000" rows="3" placeholder="Kediye ne yapmasını söyleyeyim? (ör. Görüntüdeki yazım hatalarını düzeltip temiz metni ver)"></textarea>
+        <textarea id="ct-prompt" maxlength="2000" rows="3" placeholder="What should the cat do? (e.g. Fix the typos in the image and return the clean text)" data-i18n-ph="taskPromptPlaceholder"></textarea>
         <label class="row toggle-row small">
-          <span>Derin düşünme kullan (matematik / mantık için)</span>
+          <span data-i18n="deepThink">Use deep thinking (for math / logic)</span>
           <input type="checkbox" id="ct-think" />
         </label>
-        <button type="submit" class="primary-btn full">Görev ekle</button>
+        <button type="submit" class="primary-btn full" data-i18n="addTask">Add task</button>
       </form>
     </section>
   </main>

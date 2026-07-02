@@ -2,11 +2,158 @@
 
 // Pixel-overlay editor. Paints a grid of coloured cells over the active
 // pose-set character's idle art. Live (non-persisted) preview on the pet while
-// editing; changes are only saved on "Kaydet" / "Farklı kaydet" (named variant),
+// editing; changes are only saved on "Save" / "Save as" (named variant),
 // and you are asked before saving or discarding.
 
 const api = window.aiAPI;
 const $ = (id) => document.getElementById(id);
+
+const I18N = {
+  en: {
+    windowTitle: "Pixel Editor",
+    close: "Close",
+    paletteAria: "Color palette",
+    customColor: "Custom",
+    paint: "✏️ Paint",
+    erase: "🩹 Erase",
+    gridLabel: "Grid",
+    clear: "Clear",
+    notPoseset: "The pixel editor is only for the Kiri / Tori characters.<br />Pick Kiri or Tori in \"Character Appearance\" first.",
+    designLabel: "Design",
+    savedDesignsTitle: "Saved designs",
+    deleteSelectedTitle: "Delete selected design",
+    designNamePlaceholder: "Design name…",
+    saveAs: "💾 Save as",
+    saveBtn: "✓ Save",
+    unsaved: "● unsaved",
+    hint: "Left-click to paint · drag to draw · live preview on",
+    pixelCount: (n) => `${n} pixel${n === 1 ? "" : "s"}`,
+    chooseDesign: "— choose a design —",
+    noSavedDesigns: "— no saved designs —",
+    confirmDeleteDesign: "Delete this design?",
+    deleteWord: "Delete",
+    cancel: "Cancel",
+    confirmSaveTo: (name) => `Save this design to ${name}?`,
+    save: "Save",
+    defaultDesignName: "Design",
+    characterWord: "the character",
+    unsavedChanges: "You have unsaved changes.",
+    exitDetail: "Exit anyway? (The preview will be reverted)",
+    exit: "Exit",
+  },
+  tr: {
+    windowTitle: "Piksel Editörü",
+    close: "Kapat",
+    paletteAria: "Renk paleti",
+    customColor: "Özel",
+    paint: "✏️ Boya",
+    erase: "🩹 Sil",
+    gridLabel: "Izgara",
+    clear: "Temizle",
+    notPoseset: "Piksel editörü yalnızca Kiri / Tori karakterleri için.<br />Önce \"Karakter Görünümü\"nden Kiri ya da Tori seç.",
+    designLabel: "Tasarım",
+    savedDesignsTitle: "Kayıtlı tasarımlar",
+    deleteSelectedTitle: "Seçili tasarımı sil",
+    designNamePlaceholder: "Tasarım adı…",
+    saveAs: "💾 Farklı kaydet",
+    saveBtn: "✓ Kaydet",
+    unsaved: "● kaydedilmedi",
+    hint: "Sol tık ile boya · sürükleyerek çiz · canlı önizleme açık",
+    pixelCount: (n) => `${n} piksel`,
+    chooseDesign: "— tasarım seç —",
+    noSavedDesigns: "— kayıtlı tasarım yok —",
+    confirmDeleteDesign: "Bu tasarım silinsin mi?",
+    deleteWord: "Sil",
+    cancel: "Vazgeç",
+    confirmSaveTo: (name) => `Bu tasarım ${name} karakterine kaydedilsin mi?`,
+    save: "Kaydet",
+    defaultDesignName: "Tasarım",
+    characterWord: "karakter",
+    unsavedChanges: "Değişiklikler kaydedilmedi.",
+    exitDetail: "Yine de çıkılsın mı? (Önizleme geri alınır)",
+    exit: "Çık",
+  },
+  ko: {
+    windowTitle: "픽셀 편집기",
+    close: "닫기",
+    paletteAria: "색상 팔레트",
+    customColor: "커스텀",
+    paint: "✏️ 칠하기",
+    erase: "🩹 지우개",
+    gridLabel: "격자",
+    clear: "지우기",
+    notPoseset: "픽셀 편집기는 Kiri / Tori 캐릭터 전용이에요.<br />먼저 \"캐릭터 외형\"에서 Kiri나 Tori를 선택해 주세요.",
+    designLabel: "디자인",
+    savedDesignsTitle: "저장된 디자인",
+    deleteSelectedTitle: "선택한 디자인 삭제",
+    designNamePlaceholder: "디자인 이름…",
+    saveAs: "💾 다른 이름으로 저장",
+    saveBtn: "✓ 저장",
+    unsaved: "● 저장 안 됨",
+    hint: "왼쪽 클릭으로 칠하기 · 드래그로 그리기 · 실시간 미리보기 켜짐",
+    pixelCount: (n) => `${n} 픽셀`,
+    chooseDesign: "— 디자인 선택 —",
+    noSavedDesigns: "— 저장된 디자인 없음 —",
+    confirmDeleteDesign: "이 디자인을 삭제할까요?",
+    deleteWord: "삭제",
+    cancel: "취소",
+    confirmSaveTo: (name) => `이 디자인을 ${name} 캐릭터에 저장할까요?`,
+    save: "저장",
+    defaultDesignName: "디자인",
+    characterWord: "캐릭터",
+    unsavedChanges: "저장하지 않은 변경이 있어요.",
+    exitDetail: "그래도 나갈까요? (미리보기는 되돌려져요)",
+    exit: "나가기",
+  },
+  ja: {
+    windowTitle: "ピクセルエディター",
+    close: "閉じる",
+    paletteAria: "カラーパレット",
+    customColor: "カスタム",
+    paint: "✏️ 塗る",
+    erase: "🩹 消す",
+    gridLabel: "グリッド",
+    clear: "クリア",
+    notPoseset: "ピクセルエディターは Kiri / Tori キャラクター専用です。<br />先に「キャラクター外見」で Kiri か Tori を選んでください。",
+    designLabel: "デザイン",
+    savedDesignsTitle: "保存済みデザイン",
+    deleteSelectedTitle: "選択したデザインを削除",
+    designNamePlaceholder: "デザイン名…",
+    saveAs: "💾 別名で保存",
+    saveBtn: "✓ 保存",
+    unsaved: "● 未保存",
+    hint: "左クリックで塗る · ドラッグで描く · ライブプレビュー有効",
+    pixelCount: (n) => `${n} ピクセル`,
+    chooseDesign: "— デザインを選択 —",
+    noSavedDesigns: "— 保存済みデザインなし —",
+    confirmDeleteDesign: "このデザインを削除しますか？",
+    deleteWord: "削除",
+    cancel: "キャンセル",
+    confirmSaveTo: (name) => `このデザインを ${name} に保存しますか？`,
+    save: "保存",
+    defaultDesignName: "デザイン",
+    characterWord: "キャラクター",
+    unsavedChanges: "未保存の変更があります。",
+    exitDetail: "それでも閉じますか？（プレビューは元に戻ります）",
+    exit: "閉じる",
+  },
+};
+
+let lang = "en";
+function L(key, ...args) {
+  const table = I18N[lang] || I18N.en;
+  const value = table[key] || I18N.en[key] || key;
+  return typeof value === "function" ? value(...args) : value;
+}
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.title = L("windowTitle");
+  document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = L(node.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((node) => { node.setAttribute("aria-label", L(node.dataset.i18nAria)); });
+  document.querySelectorAll("[data-i18n-ph]").forEach((node) => { node.setAttribute("placeholder", L(node.dataset.i18nPh)); });
+  document.querySelectorAll("[data-i18n-title]").forEach((node) => { node.setAttribute("title", L(node.dataset.i18nTitle)); });
+  document.querySelectorAll("[data-i18n-html]").forEach((node) => { node.innerHTML = L(node.dataset.i18nHtml); });
+}
 
 const SWATCHES = [
   "#000000", "#ffffff", "#5a4636", "#8a6d3b", "#b08968", "#e7c9a0",
@@ -58,7 +205,7 @@ function setDirty(v) {
 }
 
 function schedulePreview() {
-  countEl.textContent = `${cells.size} piksel`;
+  countEl.textContent = L("pixelCount", cells.size);
   setDirty(true);
   if (previewTimer) return;
   previewTimer = setTimeout(() => {
@@ -220,7 +367,7 @@ function refreshVariantSelect(selectedId) {
   const mine = presets.filter((p) => p.set === set);
   variantSelect.innerHTML = "";
   const none = document.createElement("option");
-  none.value = ""; none.textContent = mine.length ? "— tasarım seç —" : "— kayıtlı tasarım yok —";
+  none.value = ""; none.textContent = mine.length ? L("chooseDesign") : L("noSavedDesigns");
   variantSelect.appendChild(none);
   for (const p of mine) {
     const o = document.createElement("option");
@@ -242,7 +389,7 @@ variantSelect.addEventListener("change", () => {
 $("variant-delete").addEventListener("click", async () => {
   const id = variantSelect.value;
   if (!id) return;
-  const ok = await api.overlayConfirm({ message: "Bu tasarım silinsin mi?", ok: "Sil", cancel: "Vazgeç" });
+  const ok = await api.overlayConfirm({ message: L("confirmDeleteDesign"), ok: L("deleteWord"), cancel: L("cancel") });
   if (!ok) return;
   await api.overlayPresetDelete(id);
   presets = presets.filter((p) => p.id !== id);
@@ -251,8 +398,8 @@ $("variant-delete").addEventListener("click", async () => {
 
 $("save-btn").addEventListener("click", async () => {
   const ok = await api.overlayConfirm({
-    message: `Bu tasarım ${set ? set.charAt(0).toUpperCase() + set.slice(1) : "karakter"} karakterine kaydedilsin mi?`,
-    ok: "Kaydet", cancel: "Vazgeç",
+    message: L("confirmSaveTo", set ? set.charAt(0).toUpperCase() + set.slice(1) : L("characterWord")),
+    ok: L("save"), cancel: L("cancel"),
   });
   if (!ok) return;
   await api.overlayApply(overlayFromCells());
@@ -262,7 +409,7 @@ $("save-btn").addEventListener("click", async () => {
 
 $("saveas-btn").addEventListener("click", async () => {
   if (!cells.size) return;
-  const name = (variantName.value || "").trim() || "Tasarım";
+  const name = (variantName.value || "").trim() || L("defaultDesignName");
   const res = await api.overlayPresetSave({ name, overlay: overlayFromCells(), id: variantSelect.value || undefined });
   if (res && res.ok && res.preset) {
     const i = presets.findIndex((p) => p.id === res.preset.id);
@@ -277,9 +424,9 @@ $("saveas-btn").addEventListener("click", async () => {
 async function requestClose() {
   if (dirty) {
     const ok = await api.overlayConfirm({
-      message: "Değişiklikler kaydedilmedi.",
-      detail: "Yine de çıkılsın mı? (Önizleme geri alınır)",
-      ok: "Çık", cancel: "Vazgeç",
+      message: L("unsavedChanges"),
+      detail: L("exitDetail"),
+      ok: L("exit"), cancel: L("cancel"),
     });
     if (!ok) return;
     api.overlayPreview(originalOverlay); // restore the pet to the saved state
@@ -291,7 +438,21 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") requestClo
 window.addEventListener("resize", layout);
 
 // ── Init ───────────────────────────────────────────────────────────────────
+if (api.onLanguageChanged) {
+  api.onLanguageChanged((language) => {
+    if (I18N[language]) lang = language;
+    applyI18n();
+    refreshVariantSelect(variantSelect.value);
+    countEl.textContent = L("pixelCount", cells.size);
+  });
+}
+
 (async () => {
+  try {
+    const language = await api.languageGet();
+    if (I18N[language]) lang = language;
+  } catch {}
+  applyI18n();
   buildPalette();
   const data = await api.overlayPresetsGet();
   set = data && data.set;
@@ -315,6 +476,6 @@ window.addEventListener("resize", layout);
   });
   bg.src = `../svg/${set}_noeye.png`;
   new ResizeObserver(layout).observe(stage);
-  countEl.textContent = `${cells.size} piksel`;
+  countEl.textContent = L("pixelCount", cells.size);
   setDirty(false);
 })();

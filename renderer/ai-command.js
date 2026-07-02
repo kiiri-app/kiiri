@@ -3,6 +3,146 @@
 const api = window.aiAPI;
 const $ = (id) => document.getElementById(id);
 
+const I18N = {
+  en: {
+    windowTitle: "Give Kiri a command",
+    titlebar: "🐾 Give Kiri a command",
+    close: "Close",
+    tabCommand: "Command",
+    tabSkills: "Skills",
+    commandPlaceholder: "What should I do? (e.g. make a 5-slide deck about AI)",
+    send: "Send",
+    thinking: "Thinking…",
+    cancel: "Cancel",
+    planTitle: "Here's what I'll do:",
+    approve: "Approve",
+    creating: "Creating…",
+    runFailed: "Couldn't run it.",
+    errorGeneric: "Something went wrong.",
+    openFolder: "Open folder",
+    undo: "Undo",
+    undone: "Undone",
+    errorWord: "error",
+    noSkills: "No skills yet. Describe one below to create it.",
+    deleteAria: "Delete",
+    newSkillHeading: "New skill — describe it",
+    newSkillHint: "E.g. \"When I say 'make slides', create a PowerPoint on the topic I give and save it.\"",
+    skillDescPlaceholder: "Describe the skill in plain words…",
+    create: "Create",
+    discard: "Discard",
+    save: "Save",
+    triggersLabel: "Triggers:",
+    toolsLabel: "Tools:",
+    skillCreateFailed: "Couldn't create the skill.",
+  },
+  tr: {
+    windowTitle: "Kiri'ye komut ver",
+    titlebar: "🐾 Kiri'ye komut ver",
+    close: "Kapat",
+    tabCommand: "Komut",
+    tabSkills: "Skiller",
+    commandPlaceholder: "Ne yapayım? (ör. yapay zeka hakkında 5 slaytlık sunum yap)",
+    send: "Gönder",
+    thinking: "Düşünüyorum…",
+    cancel: "İptal",
+    planTitle: "Şunu yapacağım:",
+    approve: "Onayla",
+    creating: "Oluşturuyorum…",
+    runFailed: "Çalıştırılamadı.",
+    errorGeneric: "Hata oluştu.",
+    openFolder: "Klasörü aç",
+    undo: "Geri al",
+    undone: "Geri alındı",
+    errorWord: "hata",
+    noSkills: "Henüz skill yok. Aşağıdan tarif ederek oluştur.",
+    deleteAria: "Sil",
+    newSkillHeading: "Yeni skill — tarif et",
+    newSkillHint: "Örn: \"Sana 'sunum yap' dediğimde verdiğim konuda bir PowerPoint oluştur ve kaydet.\"",
+    skillDescPlaceholder: "Skill'i doğal dille tarif et…",
+    create: "Oluştur",
+    discard: "Vazgeç",
+    save: "Kaydet",
+    triggersLabel: "Tetikler:",
+    toolsLabel: "Araçlar:",
+    skillCreateFailed: "Skill oluşturulamadı.",
+  },
+  ko: {
+    windowTitle: "캣짱에게 명령하기",
+    titlebar: "🐾 캣짱에게 명령하기",
+    close: "닫기",
+    tabCommand: "명령",
+    tabSkills: "스킬",
+    commandPlaceholder: "뭘 할까냥? (예: 인공지능에 대한 슬라이드 5장 만들기)",
+    send: "보내기",
+    thinking: "생각 중이다냥…",
+    cancel: "취소",
+    planTitle: "이렇게 할 거다냥:",
+    approve: "승인",
+    creating: "만드는 중이다냥…",
+    runFailed: "실행하지 못했어요.",
+    errorGeneric: "문제가 생겼다냥.",
+    openFolder: "폴더 열기",
+    undo: "되돌리기",
+    undone: "되돌렸어요",
+    errorWord: "오류",
+    noSkills: "아직 스킬이 없어요. 아래에서 설명해서 만들어 보세요.",
+    deleteAria: "삭제",
+    newSkillHeading: "새 스킬 — 설명하기",
+    newSkillHint: "예: \"'발표자료 만들어'라고 하면 내가 준 주제로 PowerPoint를 만들어 저장해.\"",
+    skillDescPlaceholder: "스킬을 자연스러운 말로 설명해 주세요…",
+    create: "만들기",
+    discard: "취소",
+    save: "저장",
+    triggersLabel: "트리거:",
+    toolsLabel: "도구:",
+    skillCreateFailed: "스킬을 만들지 못했어요.",
+  },
+  ja: {
+    windowTitle: "Kiri に指示する",
+    titlebar: "🐾 Kiri に指示する",
+    close: "閉じる",
+    tabCommand: "コマンド",
+    tabSkills: "スキル",
+    commandPlaceholder: "何をするにゃ？（例: AIについて5枚のスライドを作って）",
+    send: "送信",
+    thinking: "考え中だにゃ…",
+    cancel: "キャンセル",
+    planTitle: "こうするにゃ:",
+    approve: "承認",
+    creating: "作成中だにゃ…",
+    runFailed: "実行できませんでした。",
+    errorGeneric: "エラーが起きたにゃ。",
+    openFolder: "フォルダを開く",
+    undo: "元に戻す",
+    undone: "元に戻しました",
+    errorWord: "エラー",
+    noSkills: "スキルはまだありません。下で説明して作成してください。",
+    deleteAria: "削除",
+    newSkillHeading: "新しいスキル — 説明する",
+    newSkillHint: "例: 「『スライド作って』と言ったら、指定したテーマで PowerPoint を作成して保存して。」",
+    skillDescPlaceholder: "スキルを自然な言葉で説明してください…",
+    create: "作成",
+    discard: "破棄",
+    save: "保存",
+    triggersLabel: "トリガー:",
+    toolsLabel: "ツール:",
+    skillCreateFailed: "スキルを作成できませんでした。",
+  },
+};
+
+let lang = "en";
+function L(key) {
+  const table = I18N[lang] || I18N.en;
+  return table[key] || I18N.en[key] || key;
+}
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.title = L("windowTitle");
+  document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = L(node.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((node) => { node.setAttribute("aria-label", L(node.dataset.i18nAria)); });
+  document.querySelectorAll("[data-i18n-ph]").forEach((node) => { node.setAttribute("placeholder", L(node.dataset.i18nPh)); });
+}
+
 const commandTab = $("command-tab");
 const skillsTab = $("skills-tab");
 const tabCommand = $("tab-command");
@@ -42,7 +182,7 @@ function showBusy(label) {
   hideAll();
   resp.hidden = false;
   respBusy.hidden = false;
-  respBusyLabel.textContent = label || "Düşünüyorum…";
+  respBusyLabel.textContent = label || L("thinking");
   syncSize();
 }
 
@@ -85,15 +225,15 @@ function showResults(results) {
       actions.className = "ri-actions";
       const openBtn = document.createElement("button");
       openBtn.className = "primary-btn";
-      openBtn.textContent = "Klasörü aç";
+      openBtn.textContent = L("openFolder");
       openBtn.addEventListener("click", () => api.agentOpen(r.path));
       const undoBtn = document.createElement("button");
       undoBtn.className = "ghost-btn";
-      undoBtn.textContent = "Geri al";
+      undoBtn.textContent = L("undo");
       undoBtn.addEventListener("click", async () => {
         const res = await api.agentUndo({ ledgerId: r.ledgerId, filePath: r.path });
         if (res && res.ok) {
-          undoBtn.textContent = "Geri alındı";
+          undoBtn.textContent = L("undone");
           undoBtn.disabled = true;
           openBtn.disabled = true;
         }
@@ -104,7 +244,7 @@ function showResults(results) {
       item.appendChild(p);
       item.appendChild(actions);
     } else {
-      item.textContent = `✕ ${r.type}: ${r.message || "hata"}`;
+      item.textContent = `✕ ${r.type}: ${r.message || L("errorWord")}`;
     }
     resultList.appendChild(item);
   }
@@ -114,10 +254,10 @@ function showResults(results) {
 }
 
 async function submitCommand(text) {
-  showBusy("Düşünüyorum…");
+  showBusy(L("thinking"));
   const res = await api.agentRun(text);
   if (!res || res.error) {
-    showText((res && res.message) || "Hata oluştu.");
+    showText((res && res.message) || L("errorGeneric"));
     return;
   }
   if (res.type === "text") {
@@ -140,11 +280,11 @@ $("resp-cancel").addEventListener("click", () => {
 });
 
 $("plan-approve").addEventListener("click", async () => {
-  showBusy("Oluşturuyorum…");
+  showBusy(L("creating"));
   const res = await api.agentApprove(currentPlanId);
   currentPlanId = null;
   if (res && res.ok) showResults(res.results);
-  else showText((res && res.message) || "Çalıştırılamadı.");
+  else showText((res && res.message) || L("runFailed"));
 });
 
 $("plan-reject").addEventListener("click", () => {
@@ -199,7 +339,7 @@ async function loadSkills() {
   if (!skills.length) {
     const empty = document.createElement("div");
     empty.className = "skills-empty";
-    empty.textContent = "Henüz skill yok. Aşağıdan tarif ederek oluştur.";
+    empty.textContent = L("noSkills");
     skillsListEl.appendChild(empty);
   }
   for (const s of skills) {
@@ -207,7 +347,8 @@ async function loadSkills() {
     item.className = "skill-item";
     item.innerHTML = `<span class="si-emoji"></span>
       <div class="si-main"><div class="si-name"></div><div class="si-trig"></div></div>
-      <button class="si-del" aria-label="Sil">×</button>`;
+      <button class="si-del">×</button>`;
+    item.querySelector(".si-del").setAttribute("aria-label", L("deleteAria"));
     item.querySelector(".si-emoji").textContent = s.emoji || "✨";
     item.querySelector(".si-name").textContent = s.name;
     item.querySelector(".si-trig").textContent = (s.triggers || []).join(", ");
@@ -225,22 +366,22 @@ $("skill-author-btn").addEventListener("click", async () => {
   if (!desc) return;
   const btn = $("skill-author-btn");
   btn.disabled = true;
-  btn.textContent = "Oluşturuluyor…";
+  btn.textContent = L("creating");
   const res = await api.skillAuthor(desc);
   btn.disabled = false;
-  btn.textContent = "Oluştur";
+  btn.textContent = L("create");
   if (res && res.ok) {
     draftSkill = res.skill;
     skillDraft.querySelector(".draft-emoji").textContent = res.skill.emoji || "✨";
     skillDraft.querySelector(".draft-name").textContent = res.skill.name;
-    skillDraft.querySelector(".draft-triggers").innerHTML = `<b>Tetikler:</b> ${(res.skill.triggers || []).join(", ")}`;
-    skillDraft.querySelector(".draft-tools").innerHTML = `<b>Araçlar:</b> ${(res.skill.tools || []).join(", ")}`;
+    skillDraft.querySelector(".draft-triggers").innerHTML = `<b>${L("triggersLabel")}</b> ${(res.skill.triggers || []).join(", ")}`;
+    skillDraft.querySelector(".draft-tools").innerHTML = `<b>${L("toolsLabel")}</b> ${(res.skill.tools || []).join(", ")}`;
     skillDraft.querySelector(".draft-instruction").textContent = res.skill.instruction;
     skillDraft.hidden = false;
   } else {
     draftSkill = null;
     skillDraft.hidden = true;
-    alert((res && res.message) || "Skill oluşturulamadı.");
+    alert((res && res.message) || L("skillCreateFailed"));
   }
   syncSize();
 });
@@ -275,5 +416,19 @@ if (api.onVoiceRun) {
   });
 }
 
-loadChips();
-syncSize();
+if (api.onLanguageChanged) {
+  api.onLanguageChanged((language) => {
+    if (I18N[language]) lang = language;
+    applyI18n();
+  });
+}
+
+(async () => {
+  try {
+    const language = await api.languageGet();
+    if (I18N[language]) lang = language;
+  } catch {}
+  applyI18n();
+  loadChips();
+  syncSize();
+})();

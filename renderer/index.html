@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Kiri</title>
@@ -21,7 +21,7 @@
       <rect x="8" y="8" width="3" height="2" fill="currentColor"/>
     </svg>
   </button>
-  <button id="voice-listen-button" type="button" aria-label="Sesli komut" hidden>
+  <button id="voice-listen-button" type="button" aria-label="Voice command" hidden>
     <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
       <rect x="6" y="1" width="4" height="8" rx="2" fill="currentColor"/>
       <path d="M4 7v1a4 4 0 0 0 8 0V7" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -30,34 +30,34 @@
   </button>
   <section id="reminder-panel" aria-label="Reminders">
     <div class="reminder-panel-header">
-      <div id="reminder-panel-title">알림</div>
+      <div id="reminder-panel-title">Reminder</div>
       <div class="reminder-panel-header-actions">
-        <button type="button" id="reminder-add-button">추가</button>
-        <button type="button" id="reminder-panel-close">닫기</button>
+        <button type="button" id="reminder-add-button">Add</button>
+        <button type="button" id="reminder-panel-close">Close</button>
       </div>
     </div>
     <form id="reminder-form">
       <div class="reminder-schedule-row">
         <input id="reminder-time-input" type="time" required>
         <input id="reminder-repeat-input" type="hidden" value="none">
-        <div id="reminder-repeat-buttons" class="reminder-repeat-buttons" role="group" aria-label="반복 설정">
-          <button type="button" data-repeat="none" class="is-selected">한 번</button>
-          <button type="button" data-repeat="custom">요일 선택</button>
+        <div id="reminder-repeat-buttons" class="reminder-repeat-buttons" role="group" aria-label="Repeat">
+          <button type="button" data-repeat="none" class="is-selected">Once</button>
+          <button type="button" data-repeat="custom">Choose days</button>
         </div>
       </div>
-      <div id="reminder-day-picker" class="reminder-day-picker" aria-label="요일 선택">
-        <label><input type="checkbox" value="1">월</label>
-        <label><input type="checkbox" value="2">화</label>
-        <label><input type="checkbox" value="3">수</label>
-        <label><input type="checkbox" value="4">목</label>
-        <label><input type="checkbox" value="5">금</label>
-        <label><input type="checkbox" value="6">토</label>
-        <label><input type="checkbox" value="0">일</label>
+      <div id="reminder-day-picker" class="reminder-day-picker" aria-label="Choose days">
+        <label><input type="checkbox" value="1">Mon</label>
+        <label><input type="checkbox" value="2">Tue</label>
+        <label><input type="checkbox" value="3">Wed</label>
+        <label><input type="checkbox" value="4">Thu</label>
+        <label><input type="checkbox" value="5">Fri</label>
+        <label><input type="checkbox" value="6">Sat</label>
+        <label><input type="checkbox" value="0">Sun</label>
       </div>
       <div class="reminder-message-row">
-        <input id="reminder-message-input" type="text" maxlength="80" placeholder="무엇을 알려줄까냥?" required autocomplete="off">
-        <button type="button" id="reminder-cancel-button">취소</button>
-        <button type="submit" id="reminder-save-button">저장</button>
+        <input id="reminder-message-input" type="text" maxlength="80" placeholder="What should Kiri remind you?" required autocomplete="off">
+        <button type="button" id="reminder-cancel-button">Cancel</button>
+        <button type="submit" id="reminder-save-button">Save</button>
       </div>
     </form>
     <div id="reminder-list"></div>
@@ -83,9 +83,9 @@
     </button>
   </form>
   <form id="user-name-editor">
-    <p id="user-name-guide">이름을 알려주면 캣짱이 알림을 주거나 다양한 상황에서 사용자를 불러줄거예요.</p>
+    <p id="user-name-guide">Tell Kiri your name, and Kiri will call you for reminders and other moments.</p>
     <div class="user-name-row">
-      <input id="user-name-input" type="text" maxlength="24" placeholder="사용자 이름을 입력해주세요" autocomplete="off">
+      <input id="user-name-input" type="text" maxlength="24" placeholder="Enter your name" autocomplete="off">
       <button type="submit" id="user-name-save" aria-label="Save user name">
         <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false">
           <rect x="2" y="6" width="2" height="2" fill="currentColor"/>

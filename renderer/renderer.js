@@ -2470,11 +2470,13 @@ window.electronAPI.onPomodoroComplete((event) => {
 });
 window.electronAPI.languageGet().then((language) => {
   currentLanguage = normalizeLanguage(language);
+  document.documentElement.lang = currentLanguage;
   applyReminderI18n();
   applyPomodoroState(currentPomodoroState);
 }).catch(() => {});
 window.electronAPI.onLanguageChanged((language) => {
   currentLanguage = normalizeLanguage(language);
+  document.documentElement.lang = currentLanguage;
   applyReminderI18n();
   applyPomodoroState(currentPomodoroState);
 });

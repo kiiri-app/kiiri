@@ -3,6 +3,68 @@
 const api = window.aiAPI;
 const $ = (id) => document.getElementById(id);
 
+const I18N = {
+  en: {
+    windowTitle: "Character Appearance",
+    close: "Close",
+    previewAlt: "preview",
+    classicNote: "Classic cat — its pattern is edited in the \"Pattern Editor\".",
+    characterLabel: "Character",
+    editPixels: "🎨 Edit pixels",
+    apply: "Apply",
+    applied: "Applied ✓",
+    classicCat: "Classic cat",
+  },
+  tr: {
+    windowTitle: "Karakter Görünümü",
+    close: "Kapat",
+    previewAlt: "önizleme",
+    classicNote: "Klasik kedi — deseni \"Desen Editörü\"nden düzenlenir.",
+    characterLabel: "Karakter",
+    editPixels: "🎨 Pikselleri düzenle",
+    apply: "Uygula",
+    applied: "Uygulandı ✓",
+    classicCat: "Klasik kedi",
+  },
+  ko: {
+    windowTitle: "캐릭터 외형",
+    close: "닫기",
+    previewAlt: "미리보기",
+    classicNote: "클래식 고양이 — 무늬는 \"패턴 편집\"에서 수정해요.",
+    characterLabel: "캐릭터",
+    editPixels: "🎨 픽셀 편집",
+    apply: "적용",
+    applied: "적용됨 ✓",
+    classicCat: "클래식 고양이",
+  },
+  ja: {
+    windowTitle: "キャラクター外見",
+    close: "閉じる",
+    previewAlt: "プレビュー",
+    classicNote: "クラシック猫 — 模様は「パターン編集」で編集します。",
+    characterLabel: "キャラクター",
+    editPixels: "🎨 ピクセル編集",
+    apply: "適用",
+    applied: "適用済み ✓",
+    classicCat: "クラシック猫",
+  },
+};
+
+let lang = "en";
+function L(key) {
+  const table = I18N[lang] || I18N.en;
+  return table[key] || I18N.en[key] || key;
+}
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.title = L("windowTitle");
+  document.querySelectorAll("[data-i18n]").forEach((node) => { node.textContent = L(node.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((node) => { node.setAttribute("aria-label", L(node.dataset.i18nAria)); });
+  document.querySelectorAll("[data-i18n-alt]").forEach((node) => { node.setAttribute("alt", L(node.dataset.i18nAlt)); });
+  const classicBtn = setsEl.querySelector('button[data-id="classic"]');
+  if (classicBtn) classicBtn.textContent = L("classicCat");
+}
+
 const previewPose = $("preview-pose");
 const classicNote = $("classic-note");
 const setsEl = $("sets");
@@ -14,7 +76,7 @@ const paintBtn = $("paint-btn");
 const OPTIONS = [
   { id: "kiri", label: "Kiri", kind: "poseset" },
   { id: "tori", label: "Tori", kind: "poseset" },
-  { id: "classic", label: "Klasik kedi", kind: "classic" },
+  { id: "classic", labelKey: "classicCat", kind: "classic" },
 ];
 
 let kind = "poseset";
@@ -45,7 +107,7 @@ for (const o of OPTIONS) {
   b.type = "button";
   b.className = "set-btn";
   b.dataset.id = o.id;
-  b.textContent = o.label;
+  b.textContent = o.labelKey ? L(o.labelKey) : o.label;
   b.addEventListener("click", () => {
     kind = o.kind;
     if (o.kind === "poseset") set = o.id;
@@ -65,14 +127,26 @@ $("apply-btn").addEventListener("click", async () => {
   const btn = $("apply-btn");
   await api.characterSetArt({ kind, set });
   btn.classList.add("done");
-  btn.textContent = "Uygulandı ✓";
-  setTimeout(() => { btn.classList.remove("done"); btn.textContent = "Uygula"; }, 1400);
+  btn.textContent = L("applied");
+  setTimeout(() => { btn.classList.remove("done"); btn.textContent = L("apply"); }, 1400);
 });
 
 $("close-btn").addEventListener("click", () => api.closeCharacter());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") api.closeCharacter(); });
 
+if (api.onLanguageChanged) {
+  api.onLanguageChanged((language) => {
+    if (I18N[language]) lang = language;
+    applyI18n();
+  });
+}
+
 (async () => {
+  try {
+    const language = await api.languageGet();
+    if (I18N[language]) lang = language;
+  } catch {}
+  applyI18n();
   const cur = await api.characterGet();
   if (cur) {
     $("char-name").textContent = cur.name ? `· ${cur.name}` : "";

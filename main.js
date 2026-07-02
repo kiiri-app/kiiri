@@ -2920,7 +2920,7 @@ ipcMain.on("overlay-preview", (_e, overlay) => {
     win.webContents.send("overlay-preview", overlay ? charStore.sanitizeOverlay(overlay) : null);
   }
 });
-// "Kaydet" — persist onto the active character.
+// "Save" — persist onto the active character.
 ipcMain.handle("overlay-apply", (_e, overlay) => {
   const c = activeChar();
   if (!c) return { ok: false };
@@ -2929,7 +2929,7 @@ ipcMain.handle("overlay-apply", (_e, overlay) => {
   broadcastCharacterArt(c);
   return { ok: true };
 });
-// "Farklı kaydet" — store a named variant AND apply it to the character.
+// "Save as" — store a named variant AND apply it to the character.
 ipcMain.handle("overlay-preset-save", (_e, payload) => {
   const c = activeChar();
   if (!c) return { ok: false };

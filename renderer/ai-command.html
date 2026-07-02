@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
   <link rel="stylesheet" href="ai-command.css" />
-  <title>Kiri'a komut ver</title>
+  <title>Give Kiri a command</title>
 </head>
 <body>
   <div id="titlebar">
-    <span>🐾 Kiri'a komut ver</span>
-    <button id="close-btn" type="button" aria-label="Kapat">×</button>
+    <span data-i18n="titlebar">🐾 Give Kiri a command</span>
+    <button id="close-btn" type="button" aria-label="Close" data-i18n-aria="close">×</button>
   </div>
 
   <div id="tabs">
-    <button id="tab-command" type="button" class="tab active">Komut</button>
-    <button id="tab-skills" type="button" class="tab">Skiller</button>
+    <button id="tab-command" type="button" class="tab active" data-i18n="tabCommand">Command</button>
+    <button id="tab-skills" type="button" class="tab" data-i18n="tabSkills">Skills</button>
   </div>
 
   <!-- COMMAND TAB -->
@@ -22,26 +22,26 @@
     <div id="skill-chips" class="chips"></div>
 
     <form id="command-form">
-      <textarea id="command-input" rows="2" placeholder="Ne yapayım? (ör. yapay zeka hakkında 5 slaytlık sunum yap)"></textarea>
-      <button type="submit" id="command-send" class="primary-btn">Gönder</button>
+      <textarea id="command-input" rows="2" placeholder="What should I do? (e.g. make a 5-slide deck about AI)" data-i18n-ph="commandPlaceholder"></textarea>
+      <button type="submit" id="command-send" class="primary-btn" data-i18n="send">Send</button>
     </form>
 
     <!-- response area -->
     <section id="resp" hidden>
       <div id="resp-busy" class="busy" hidden>
         <div class="spinner"><span></span><span></span><span></span></div>
-        <span id="resp-busy-label">Düşünüyorum…</span>
-        <button id="resp-cancel" type="button" class="ghost-btn">İptal</button>
+        <span id="resp-busy-label" data-i18n="thinking">Thinking…</span>
+        <button id="resp-cancel" type="button" class="ghost-btn" data-i18n="cancel">Cancel</button>
       </div>
 
       <div id="resp-text" class="resp-text" hidden></div>
 
       <div id="resp-plan" hidden>
-        <div class="plan-title">Şunu yapacağım:</div>
+        <div class="plan-title" data-i18n="planTitle">Here's what I'll do:</div>
         <ul id="plan-list" class="plan-list"></ul>
         <div class="plan-actions">
-          <button id="plan-reject" type="button" class="ghost-btn">İptal</button>
-          <button id="plan-approve" type="button" class="primary-btn">Onayla</button>
+          <button id="plan-reject" type="button" class="ghost-btn" data-i18n="cancel">Cancel</button>
+          <button id="plan-approve" type="button" class="primary-btn" data-i18n="approve">Approve</button>
         </div>
       </div>
 
@@ -55,18 +55,18 @@
   <main id="skills-tab" hidden>
     <div id="skills-list" class="skills-list"></div>
     <section class="group">
-      <h2>Yeni skill — tarif et</h2>
-      <p class="hint">Örn: "Sana 'sunum yap' dediğimde verdiğim konuda bir PowerPoint oluştur ve kaydet."</p>
-      <textarea id="skill-desc" rows="3" placeholder="Skill'i doğal dille tarif et…"></textarea>
-      <button id="skill-author-btn" type="button" class="primary-btn full">Oluştur</button>
+      <h2 data-i18n="newSkillHeading">New skill — describe it</h2>
+      <p class="hint" data-i18n="newSkillHint">E.g. "When I say 'make slides', create a PowerPoint on the topic I give and save it."</p>
+      <textarea id="skill-desc" rows="3" placeholder="Describe the skill in plain words…" data-i18n-ph="skillDescPlaceholder"></textarea>
+      <button id="skill-author-btn" type="button" class="primary-btn full" data-i18n="create">Create</button>
       <div id="skill-draft" class="skill-draft" hidden>
         <div class="draft-row"><span class="draft-emoji"></span><b class="draft-name"></b></div>
         <div class="draft-triggers"></div>
         <div class="draft-tools"></div>
         <div class="draft-instruction"></div>
         <div class="draft-actions">
-          <button id="draft-discard" type="button" class="ghost-btn">Vazgeç</button>
-          <button id="draft-save" type="button" class="primary-btn">Kaydet</button>
+          <button id="draft-discard" type="button" class="ghost-btn" data-i18n="discard">Discard</button>
+          <button id="draft-save" type="button" class="primary-btn" data-i18n="save">Save</button>
         </div>
       </div>
     </section>

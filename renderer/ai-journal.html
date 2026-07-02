@@ -1,35 +1,35 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
   <link rel="stylesheet" href="ai-journal.css" />
-  <title>Bilgi Defteri</title>
+  <title>Knowledge Journal</title>
 </head>
 <body>
   <div id="titlebar">
-    <span>📚 Bilgi Defteri <small id="stats"></small></span>
-    <button id="close-btn" type="button" aria-label="Kapat">×</button>
+    <span>📚 <span data-i18n="journalName">Knowledge Journal</span> <small id="stats"></small></span>
+    <button id="close-btn" type="button" aria-label="Close" data-i18n-aria="close">×</button>
   </div>
 
   <div id="tabs">
-    <button id="tab-review" type="button" class="tab active">Tekrar</button>
-    <button id="tab-cards" type="button" class="tab">Kartlar</button>
-    <button id="tab-add" type="button" class="tab">Ekle</button>
+    <button id="tab-review" type="button" class="tab active">Review</button>
+    <button id="tab-cards" type="button" class="tab" data-i18n="tabCards">Cards</button>
+    <button id="tab-add" type="button" class="tab" data-i18n="tabAdd">Add</button>
   </div>
 
   <!-- REVIEW -->
   <main id="review-tab">
-    <div id="review-empty" class="empty" hidden>Bugün tekrar edilecek kart yok 🎉</div>
+    <div id="review-empty" class="empty" data-i18n="reviewEmpty" hidden>No cards due today 🎉</div>
     <div id="review-card" hidden>
       <div class="card-q" id="card-question"></div>
-      <button id="reveal-btn" type="button" class="primary-btn full">Cevabı göster</button>
+      <button id="reveal-btn" type="button" class="primary-btn full" data-i18n="showAnswer">Show answer</button>
       <div class="card-a" id="card-answer" hidden></div>
       <div id="rate-row" class="rate-row" hidden>
-        <button class="rate-btn again" data-q="2" type="button">Tekrar</button>
-        <button class="rate-btn hard" data-q="3" type="button">Zor</button>
-        <button class="rate-btn good" data-q="4" type="button">İyi</button>
-        <button class="rate-btn easy" data-q="5" type="button">Kolay</button>
+        <button class="rate-btn again" data-q="2" type="button" data-i18n="rateAgain">Again</button>
+        <button class="rate-btn hard" data-q="3" type="button" data-i18n="rateHard">Hard</button>
+        <button class="rate-btn good" data-q="4" type="button" data-i18n="rateGood">Good</button>
+        <button class="rate-btn easy" data-q="5" type="button" data-i18n="rateEasy">Easy</button>
       </div>
     </div>
   </main>
@@ -42,13 +42,13 @@
   <!-- ADD -->
   <main id="add-tab" hidden>
     <form id="add-form">
-      <label class="field"><span>Soru</span>
-        <textarea id="add-q" rows="2" placeholder="Kartın ön yüzü (soru)"></textarea>
+      <label class="field"><span data-i18n="questionLabel">Question</span>
+        <textarea id="add-q" rows="2" placeholder="Front of the card (question)" data-i18n-ph="questionPlaceholder"></textarea>
       </label>
-      <label class="field"><span>Cevap</span>
-        <textarea id="add-a" rows="3" placeholder="Kartın arka yüzü (cevap)"></textarea>
+      <label class="field"><span data-i18n="answerLabel">Answer</span>
+        <textarea id="add-a" rows="3" placeholder="Back of the card (answer)" data-i18n-ph="answerPlaceholder"></textarea>
       </label>
-      <button type="submit" class="primary-btn full">Kart ekle</button>
+      <button type="submit" class="primary-btn full" data-i18n="addCard">Add card</button>
     </form>
   </main>
 

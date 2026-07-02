@@ -199,7 +199,7 @@ istenirse TTS eklenir ya da speech-to-speech'e geçilir.
 
 - Kedinin yanına **mic düğmesi** (mevcut `reminder-clock-button` deseni: HTML buton +
   click handler + `shouldReceiveMouseAt`'e ekle ki şeffaf pencereden tıklanabilsin).
-- Tıkla → `getUserMedia({audio:true})` (renderer; share videoda zaten kullanılıyor) →
+- Tıkla → `getUserMedia({audio:true})` (renderer) →
   Realtime oturumu → kullanıcı konuşur → transcript → `voice-command` IPC → main
   yönlendirici → (skill/vision/genel) → onay/sonuç. Tekrar tıkla → durdur.
 - Kedi mevcut "düşünme" animasyonu + (ileri) ağız hareketi/dinleme rozeti.

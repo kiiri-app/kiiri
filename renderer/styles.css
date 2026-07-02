@@ -70,7 +70,6 @@ html, body {
   z-index: 5;
 }
 
-body[data-sharing] #share-name-badge,
 body[data-show-name] #share-name-badge {
   display: block;
 }
@@ -723,8 +722,7 @@ body[data-stretching] #cat-thinking-dots {
 #user-name-editor,
 #fixed-message-editor,
 #pomodoro-focus-editor,
-#persona-editor,
-#share-duration-editor {
+#persona-editor {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -829,17 +827,8 @@ body[data-editing-pomodoro-focus] #pomodoro-focus-editor {
   display: grid;
 }
 
-#share-duration-editor {
-  top: calc(var(--cat-top) + 28%);
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-}
 
-body[data-editing-share-duration] #share-duration-editor {
-  display: grid;
-}
-
-#pomodoro-focus-editor span,
-#share-duration-editor span {
+#pomodoro-focus-editor span {
   align-self: center;
   color: var(--gh-ink);
   font: 700 10px/1 var(--gh-font);
@@ -848,8 +837,7 @@ body[data-editing-share-duration] #share-duration-editor {
 #cat-name-input,
 #user-name-input,
 #fixed-message-input,
-#pomodoro-focus-input,
-#share-duration-input {
+#pomodoro-focus-input {
   min-width: 0;
   border: 1.5px solid var(--gh-border-soft);
   border-radius: 9px;
@@ -862,8 +850,7 @@ body[data-editing-share-duration] #share-duration-editor {
 #cat-name-editor button,
 #user-name-editor button,
 #fixed-message-editor button,
-#pomodoro-focus-editor button,
-#share-duration-editor button {
+#pomodoro-focus-editor button {
   border: 1.5px solid var(--gh-terracotta-deep);
   border-radius: 9px;
   background: var(--gh-terracotta);
@@ -873,8 +860,7 @@ body[data-editing-share-duration] #share-duration-editor {
 }
 
 #fixed-message-editor button,
-#user-name-editor button,
-#share-duration-editor button {
+#user-name-editor button {
   cursor: pointer;
 }
 

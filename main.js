@@ -16,12 +16,9 @@ const autoUpdater = {
 };
 const path = require("path");
 const fs = require("fs");
-const os = require("os");
 const http = require("http");
 const crypto = require("crypto");
 const vm = require("vm");
-const { spawn } = require("child_process");
-const bundledFfmpegPath = require("ffmpeg-static");
 const aiConfig = require("./ai/config");
 const aiAssistant = require("./ai/assistant");
 const aiAgent = require("./ai/agent");
@@ -113,9 +110,6 @@ let aiCommandPendingVoice = null;
 let aiBusy = false;
 let patternWin = null;
 let mappingWin = null;
-let shareOverlayWin = null;
-let shareControlsWin = null;
-let shareCaptureSession = null;
 let cursorPollTimer = null;
 let keyHookStarted = false;
 let keyHookListenersAttached = false;
@@ -164,20 +158,8 @@ let updateInstallPending = false;
 let pendingManualUpdateCheck = false;
 
 const SUPPORTED_LANGUAGES = ["en", "ko", "ja"];
-const SHARE_VIDEO_CROP_GUARD_X_PX = 48;
-const SHARE_VIDEO_CROP_GUARD_TOP_PX = 96;
-const SHARE_VIDEO_CROP_GUARD_BOTTOM_PX = 48;
-const SHARE_VIDEO_KEYFRAME_INTERVAL_SEC = 1 / 30;
 const REGULAR_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 let currentLanguage = "en";
-
-function resolveFfmpegPath() {
-  if (!bundledFfmpegPath) return null;
-  const unpackedPath = bundledFfmpegPath.replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`);
-  return unpackedPath;
-}
-
-const ffmpegPath = resolveFfmpegPath();
 
 const I18N = {
   en: {
@@ -197,7 +179,6 @@ const I18N = {
     stretchNow: "Start break stretch now",
     jump: "Jump",
     jumpNow: "Jump now",
-    shareCat: "Show off my Kiri",
     setUserName: "Tell my name",
     setCatName: "Set Kiri name",
     showCatName: "Show Kiri name",
@@ -258,9 +239,6 @@ const I18N = {
     inputPermissionDetail: "Some macOS environments also require Input Monitoring. Add Kiri in Input Monitoring, then restart Kiri if typing reactions do not start.",
     openInputMonitoring: "Open Input Monitoring",
     openAccessibility: "Open Accessibility",
-    shareVideoTitle: "Share video",
-    shareVideoSaveTitle: "Save share video",
-    shareRecordingFailed: "Could not make the share video.",
     globalInputPermissionTitle: "Input monitoring unavailable",
     globalInputPermissionMessage: "Kiri cannot detect keyboard or wheel input",
     globalInputPermissionDetail: "Restart Kiri and check whether Windows security software or system policy is blocking global input hooks.",
@@ -286,7 +264,6 @@ const I18N = {
     stretchNow: "지금 휴식 스트레칭",
     jump: "점프",
     jumpNow: "지금 점프",
-    shareCat: "내 캣짱 자랑 영상찍기",
     setUserName: "내 이름 알려주기",
     setCatName: "캣짱 이름 지정",
     showCatName: "캣짱 이름 표시",
@@ -347,9 +324,6 @@ const I18N = {
     inputPermissionDetail: "일부 macOS 환경에서는 입력 모니터링도 필요해요. 입력 모니터링에 Kiri을 추가한 뒤, 타이핑 반응이 시작되지 않으면 캣짱을 다시 실행해 주세요.",
     openInputMonitoring: "입력 모니터링 열기",
     openAccessibility: "손쉬운 사용 열기",
-    shareVideoTitle: "자랑 영상",
-    shareVideoSaveTitle: "자랑 영상 저장",
-    shareRecordingFailed: "자랑 영상을 만들 수 없어요.",
     globalInputPermissionTitle: "입력 감지를 사용할 수 없어요",
     globalInputPermissionMessage: "Kiri이 키보드 또는 휠 입력을 감지하지 못하고 있어요",
     globalInputPermissionDetail: "Kiri을 다시 실행해 보세요. 계속 실패하면 Windows 보안 프로그램이나 시스템 정책이 전역 입력 후킹을 막고 있는지 확인해 주세요.",
@@ -375,7 +349,6 @@ const I18N = {
     stretchNow: "今すぐ休憩ストレッチ",
     jump: "ジャンプ",
     jumpNow: "今すぐジャンプ",
-    shareCat: "Kiri を自慢する動画を撮る",
     setUserName: "自分の名前を教える",
     setCatName: "Kiri の名前を設定",
     showCatName: "Kiri の名前を表示",
@@ -436,9 +409,6 @@ const I18N = {
     inputPermissionDetail: "一部の macOS 環境では入力監視も必要です。入力監視に Kiri を追加し、タイピング反応が始まらない場合は Kiri を再起動してください。",
     openInputMonitoring: "入力監視を開く",
     openAccessibility: "アクセシビリティを開く",
-    shareVideoTitle: "自慢動画",
-    shareVideoSaveTitle: "自慢動画を保存",
-    shareRecordingFailed: "自慢動画を作成できませんでした。",
     globalInputPermissionTitle: "入力検出を使用できません",
     globalInputPermissionMessage: "Kiri がキーボードまたはホイール入力を検出できません",
     globalInputPermissionDetail: "Kiri を再起動してください。解決しない場合は、Windows のセキュリティソフトまたはシステムポリシーがグローバル入力フックをブロックしていないか確認してください。",
@@ -1713,428 +1683,6 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function shareTargetPointForBounds(bounds) {
-  return {
-    x: bounds.x + bounds.width / 2,
-    y: bounds.y + Math.round(bounds.height * 0.24),
-  };
-}
-
-function shareCropForDisplay(display, targetPoint, petBounds) {
-  const { x, y, width, height } = display.bounds;
-  const targetAspect = 9 / 16;
-  const petWidth = petBounds && petBounds.height ? petBounds.height / STRETCH_RATIO : currentPetSize;
-  let cropW = Math.round(petWidth * 4);
-  let cropH = Math.round(cropW / targetAspect);
-  const maxCropW = width;
-  const maxCropH = height;
-  if (cropW > maxCropW || cropH > maxCropH) {
-    const fitScale = Math.min(maxCropW / cropW, maxCropH / cropH);
-    cropW = Math.max(180, Math.round(cropW * fitScale));
-    cropH = Math.round(cropW / targetAspect);
-  }
-
-  const cropX = clamp(Math.round(targetPoint.x - cropW / 2), x, x + width - cropW);
-  const cropY = clamp(Math.round(targetPoint.y - cropH / 2), y, y + height - cropH);
-  return {
-    x: cropX - x,
-    y: cropY - y,
-    width: cropW,
-    height: cropH,
-  };
-}
-
-function shareControlsBoundsForCrop(display, crop) {
-  const bounds = display.bounds;
-  const controlsWidth = 118;
-  const controlsHeight = 30;
-  const controlsInsetY = 0;
-  const controlsX = bounds.x + Math.round(crop.x + crop.width / 2 - controlsWidth / 2);
-  const controlsY = bounds.y + crop.y + controlsInsetY;
-  return {
-    x: clamp(controlsX, bounds.x + 8, bounds.x + bounds.width - controlsWidth - 8),
-    y: clamp(controlsY, bounds.y + 8, bounds.y + bounds.height - controlsHeight - 8),
-    width: controlsWidth,
-    height: controlsHeight,
-  };
-}
-
-function defaultShareVideoPath(extension) {
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  return path.join(app.getPath("downloads"), `kiri-${stamp}.${extension}`);
-}
-
-function hideShareCaptureOverlay() {
-  if (shareOverlayWin && !shareOverlayWin.isDestroyed()) {
-    shareOverlayWin.close();
-  }
-  if (shareControlsWin && !shareControlsWin.isDestroyed()) {
-    shareControlsWin.close();
-  }
-  shareOverlayWin = null;
-  shareControlsWin = null;
-}
-
-function recordShareCropKeyframe(crop, { force = false } = {}) {
-  if (!shareCaptureSession || !crop) return;
-  const elapsedSec = Math.max(0, (Date.now() - shareCaptureSession.startedAt) / 1000);
-  const keyframe = {
-    t: Number(elapsedSec.toFixed(3)),
-    x: evenInt(crop.x, 0),
-    y: evenInt(crop.y, 0),
-  };
-  const prev = shareCaptureSession.cropKeyframes[shareCaptureSession.cropKeyframes.length - 1];
-  if (prev && prev.x === keyframe.x && prev.y === keyframe.y) return;
-  if (!force && prev && keyframe.t - prev.t < SHARE_VIDEO_KEYFRAME_INTERVAL_SEC) return;
-  shareCaptureSession.cropKeyframes.push(keyframe);
-}
-
-function updateShareCaptureOverlay(crop, { forceKeyframe = false } = {}) {
-  if (!shareCaptureSession || !crop) return;
-  shareCaptureSession.crop = crop;
-  recordShareCropKeyframe(crop, { force: forceKeyframe });
-
-  if (shareOverlayWin && !shareOverlayWin.isDestroyed()) {
-    const safeCrop = {
-      x: Math.max(0, Math.round(crop.x)),
-      y: Math.max(0, Math.round(crop.y)),
-      width: Math.max(0, Math.round(crop.width)),
-      height: Math.max(0, Math.round(crop.height)),
-    };
-    shareOverlayWin.webContents.send("share-crop-update", safeCrop);
-  }
-
-  if (shareControlsWin && !shareControlsWin.isDestroyed()) {
-    shareControlsWin.setBounds(shareControlsBoundsForCrop(shareCaptureSession.display, crop), false);
-  }
-}
-
-function updateShareCaptureForPetBounds(bounds, options = {}) {
-  if (!shareCaptureSession || !bounds) return;
-  const crop = shareCropForDisplay(
-    shareCaptureSession.display,
-    shareTargetPointForBounds(bounds),
-    bounds
-  );
-  updateShareCaptureOverlay(crop, options);
-}
-
-function showShareCaptureOverlay(display, crop, durationMs) {
-  hideShareCaptureOverlay();
-  if (!display || !crop) return;
-
-  const bounds = display.bounds;
-  const durationSec = Math.max(5, Math.min(30, Math.round((Number(durationMs) || 5000) / 1000)));
-  const controlsBounds = shareControlsBoundsForCrop(display, crop);
-  const overlay = new BrowserWindow({
-    x: bounds.x,
-    y: bounds.y,
-    width: bounds.width,
-    height: bounds.height,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    movable: false,
-    focusable: false,
-    skipTaskbar: true,
-    hasShadow: false,
-    alwaysOnTop: true,
-    webPreferences: {
-      preload: path.join(__dirname, "renderer", "share-overlay-preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
-  overlay.setIgnoreMouseEvents(true);
-  keepWindowOnTop(overlay);
-  overlay.loadFile(path.join(__dirname, "renderer", "share-overlay.html"));
-  overlay.webContents.once("did-finish-load", () => {
-    const safeCrop = {
-      x: Math.max(0, Math.round(crop.x)),
-      y: Math.max(0, Math.round(crop.y)),
-      width: Math.max(0, Math.round(crop.width)),
-      height: Math.max(0, Math.round(crop.height)),
-    };
-    overlay.webContents.send("share-overlay-init", safeCrop);
-  });
-  shareOverlayWin = overlay;
-
-  const controls = new BrowserWindow({
-    x: controlsBounds.x,
-    y: controlsBounds.y,
-    width: controlsBounds.width,
-    height: controlsBounds.height,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    movable: false,
-    focusable: false,
-    skipTaskbar: true,
-    hasShadow: false,
-    alwaysOnTop: true,
-    webPreferences: {
-      preload: path.join(__dirname, "renderer", "share-controls-preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
-  keepWindowOnTop(controls);
-  controls.loadFile(path.join(__dirname, "renderer", "share-controls.html"));
-  controls.webContents.once("did-finish-load", () => {
-    controls.webContents.send("share-controls-init", { durationSec });
-  });
-  shareControlsWin = controls;
-}
-
-function evenInt(value, fallback) {
-  const next = Math.max(0, Math.round(Number(value) || fallback || 0));
-  return next % 2 === 0 ? next : next - 1;
-}
-
-function ffmpegFilterForShareVideo(crop, output) {
-  const sourceW = Math.max(2, evenInt(crop && crop.width, 1080));
-  const sourceH = Math.max(2, evenInt(crop && crop.height, 1920));
-  const videoW = Math.max(sourceW, evenInt(crop && crop.source && crop.source.width, sourceW));
-  const videoH = Math.max(sourceH, evenInt(crop && crop.source && crop.source.height, sourceH));
-  const guardX = Math.min(SHARE_VIDEO_CROP_GUARD_X_PX, Math.floor(sourceW / 20));
-  const guardTop = Math.min(SHARE_VIDEO_CROP_GUARD_TOP_PX, Math.floor(sourceH / 12));
-  const guardBottom = Math.min(SHARE_VIDEO_CROP_GUARD_BOTTOM_PX, Math.floor(sourceH / 20));
-  const targetAspect = 9 / 16;
-  const usableH = Math.max(2, sourceH - guardTop - guardBottom);
-  const cropW = Math.max(2, evenInt(sourceW - guardX * 2, sourceW));
-  const cropH = Math.max(2, evenInt(Math.min(usableH, cropW / targetAspect), usableH));
-  const xOffset = evenInt((sourceW - cropW) / 2, guardX);
-  const yOffset = evenInt(guardTop + (usableH - cropH) / 2, guardTop);
-  const maxX = Math.max(0, videoW - cropW);
-  const maxY = Math.max(0, videoH - cropH);
-  const keyframes = Array.isArray(crop && crop.keyframes) && crop.keyframes.length > 0
-    ? crop.keyframes
-    : [{ t: 0, x: crop && crop.x, y: crop && crop.y }];
-  const cropX = ffmpegCropExpression(keyframes, "x", xOffset, maxX);
-  const cropY = ffmpegCropExpression(keyframes, "y", yOffset, maxY);
-  const outputW = Math.max(2, evenInt(output && output.width, 1080));
-  const outputH = Math.max(2, evenInt(output && output.height, 1920));
-  return `crop=${cropW}:${cropH}:${cropX}:${cropY}:exact=1,scale=${outputW}:${outputH}:flags=lanczos,fps=30`;
-}
-
-function ffmpegCropExpression(keyframes, axis, offset = 0, maxValue = Number.POSITIVE_INFINITY) {
-  const maxEvenValue = Number.isFinite(maxValue) ? evenInt(maxValue, 0) : Number.POSITIVE_INFINITY;
-  const normalized = keyframes
-    .map((keyframe) => ({
-      t: Math.max(0, Number(keyframe.t) || 0),
-      value: evenInt(Math.min(maxEvenValue, Math.max(0, evenInt((Number(keyframe[axis]) || 0) + offset, 0))), 0),
-    }))
-    .sort((a, b) => a.t - b.t);
-  if (normalized.length === 0) return "'0'";
-
-  const unique = [];
-  for (const keyframe of normalized) {
-    const prev = unique[unique.length - 1];
-    if (prev && Math.abs(prev.t - keyframe.t) < 0.001) {
-      prev.value = keyframe.value;
-    } else {
-      unique.push(keyframe);
-    }
-  }
-
-  let expression = String(unique[unique.length - 1].value);
-  for (let i = unique.length - 2; i >= 0; i--) {
-    const current = unique[i];
-    const next = unique[i + 1];
-    const duration = Math.max(0.001, next.t - current.t);
-    const delta = next.value - current.value;
-    const linear = delta === 0
-      ? String(current.value)
-      : `(${current.value}+${delta}*(t-${current.t.toFixed(3)})/${duration.toFixed(3)})`;
-    const evenLinear = `trunc((${linear})/2)*2`;
-    expression = `if(lt(t,${next.t.toFixed(3)}),${evenLinear},${expression})`;
-  }
-  return `'${expression}'`;
-}
-
-function fallbackShareCrop(crop) {
-  if (!crop) return crop;
-  return {
-    ...crop,
-    keyframes: null,
-  };
-}
-
-function convertShareVideoToMp4(inputPath, outputPath, options = {}) {
-  if (!ffmpegPath) {
-    return Promise.reject(new Error("ffmpeg binary is not available."));
-  }
-  if (!fs.existsSync(ffmpegPath)) {
-    return Promise.reject(new Error(`ffmpeg binary does not exist: ${ffmpegPath}`));
-  }
-
-  const filter = ffmpegFilterForShareVideo(options.crop, options.output);
-  const args = [
-    "-y",
-    "-i", inputPath,
-    "-an",
-    "-vf", filter,
-    "-c:v", "libx264",
-    "-preset", "medium",
-    "-crf", "18",
-    "-pix_fmt", "yuv420p",
-    "-movflags", "+faststart",
-    outputPath,
-  ];
-
-  return new Promise((resolve, reject) => {
-    const child = spawn(ffmpegPath, args, { windowsHide: true });
-    let stderr = "";
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${stderr.trim() || `ffmpeg exited with code ${code}`}\nffmpeg: ${ffmpegPath}\nFilter: ${filter}`));
-    });
-  });
-}
-
-ipcMain.handle("share-capture-options", async (_evt, request = {}) => {
-  if (!petWin || petWin.isDestroyed()) return null;
-  const durationMs = Math.max(5000, Math.min(30000, Math.round(Number(request.durationMs) || 5000)));
-  const b = petWin.getBounds();
-  const targetPoint = shareTargetPointForBounds(b);
-  const display = screen.getDisplayNearestPoint(targetPoint);
-  const sources = await desktopCapturer.getSources({
-    types: ["screen"],
-    thumbnailSize: { width: 0, height: 0 },
-  });
-  const source = sources.find((s) => String(s.display_id) === String(display.id)) || sources[0];
-  if (!source) return null;
-  const crop = shareCropForDisplay(display, targetPoint, b);
-  shareCaptureSession = {
-    display,
-    startedAt: Date.now(),
-    crop,
-    cropKeyframes: [{
-      t: 0,
-      x: evenInt(crop.x, 0),
-      y: evenInt(crop.y, 0),
-    }],
-  };
-  showShareCaptureOverlay(display, crop, durationMs);
-  return {
-    sourceId: source.id,
-    crop,
-    displayBounds: display.bounds,
-    petBounds: b,
-    output: { width: 1080, height: 1920 },
-    durationMs,
-  };
-});
-
-ipcMain.handle("share-capture-overlay-hide", () => {
-  hideShareCaptureOverlay();
-  return { ok: true };
-});
-
-ipcMain.handle("share-capture-started", () => {
-  if (shareCaptureSession) {
-    shareCaptureSession.startedAt = Date.now();
-    shareCaptureSession.cropKeyframes = [{
-      t: 0,
-      x: evenInt(shareCaptureSession.crop && shareCaptureSession.crop.x, 0),
-      y: evenInt(shareCaptureSession.crop && shareCaptureSession.crop.y, 0),
-    }];
-  }
-  return { ok: true };
-});
-
-ipcMain.handle("share-error-dialog", async (_evt, message) => {
-  await dialog.showMessageBox(petWin || undefined, {
-    type: "warning",
-    title: t("shareVideoTitle"),
-    message: typeof message === "string" && message.trim()
-      ? message
-      : t("shareRecordingFailed"),
-    buttons: ["OK"],
-    defaultId: 0,
-    cancelId: 0,
-    icon: nativeImage.createFromPath(APP_ICON_PATH),
-  });
-  return { ok: true };
-});
-
-ipcMain.on("share-capture-cancel", () => {
-  if (petWin && !petWin.isDestroyed()) {
-    petWin.webContents.send("share-capture-cancel");
-  }
-  shareCaptureSession = null;
-});
-
-ipcMain.handle("share-video-save", async (_evt, payload) => {
-  if (!payload || !payload.bytes) return { ok: false, reason: "missing-data" };
-  const { canceled, filePath } = await dialog.showSaveDialog(petWin || undefined, {
-    title: t("shareVideoSaveTitle"),
-    defaultPath: defaultShareVideoPath("mp4"),
-    filters: [
-      { name: "MP4 Video", extensions: ["mp4"] },
-    ],
-  });
-  if (canceled || !filePath) return { ok: false, canceled: true };
-
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "kiri-share-"));
-  const inputPath = path.join(tempDir, `source.${payload.extension === "mp4" ? "mp4" : "webm"}`);
-  try {
-    fs.writeFileSync(inputPath, Buffer.from(payload.bytes));
-    const scaleX = Number(payload.scale && payload.scale.x) || 1;
-    const scaleY = Number(payload.scale && payload.scale.y) || 1;
-    if (shareCaptureSession && shareCaptureSession.crop) {
-      recordShareCropKeyframe(shareCaptureSession.crop, { force: true });
-    }
-    const cropKeyframes = shareCaptureSession && Array.isArray(shareCaptureSession.cropKeyframes)
-      ? shareCaptureSession.cropKeyframes.map((keyframe) => ({
-        t: keyframe.t,
-        x: keyframe.x * scaleX,
-        y: keyframe.y * scaleY,
-      }))
-      : null;
-    const convertOptions = {
-      crop: {
-        ...payload.crop,
-        source: payload.source,
-        keyframes: cropKeyframes,
-      },
-      output: payload.output,
-    };
-    try {
-      try {
-        await convertShareVideoToMp4(inputPath, filePath, convertOptions);
-      } catch (primaryError) {
-        console.error("Share video conversion failed, retrying with static crop:", primaryError);
-        await convertShareVideoToMp4(inputPath, filePath, {
-          crop: fallbackShareCrop(convertOptions.crop),
-          output: payload.output,
-        });
-      }
-      return { ok: true, filePath };
-    } catch (error) {
-      console.error("Share video conversion failed:", error);
-      return {
-        ok: false,
-        reason: "conversion-failed",
-        message: error && error.message ? error.message : "ffmpeg conversion failed",
-      };
-    }
-  } finally {
-    try {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    } catch {
-      // ignore cleanup errors
-    }
-    shareCaptureSession = null;
-  }
-});
-
 ipcMain.handle("language-get", () => currentLanguage);
 ipcMain.handle("language-set", (_evt, language) => {
   setLanguage(language);
@@ -2207,7 +1755,6 @@ ipcMain.on("drag-window", (evt, dx, dy) => {
   win.setBounds(nextBounds);
   if (win === petWin) {
     currentPetPosition = { x: nextBounds.x, y: nextBounds.y };
-    updateShareCaptureForPetBounds(nextBounds, { forceKeyframe: true });
   }
 });
 
@@ -2331,10 +1878,6 @@ ipcMain.on("show-context-menu", (evt) => {
       ],
     },
     { type: "separator" },
-    {
-      label: t("shareCat"),
-      click: () => petWin.webContents.send("share-record"),
-    },
     {
       label: t("setUserName"),
       click: () => petWin.webContents.send("user-name-edit", userName),

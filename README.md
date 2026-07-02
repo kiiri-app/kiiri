@@ -35,7 +35,6 @@ characters or design your own.
 - `@anthropic-ai/sdk` + OpenAI-compatible HTTP for the LLM providers
 - `pptxgenjs` / `docx` for document generation
 - `uiohook-napi` for global keyboard / wheel hooks
-- `ffmpeg-static` for the share-video mp4 conversion
 - `electron-builder` for packaged builds
 
 ## Quick start

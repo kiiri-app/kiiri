@@ -113,9 +113,6 @@ const reminderListEl = document.getElementById("reminder-list");
 const pomodoroFocusEditor = document.getElementById("pomodoro-focus-editor");
 const pomodoroFocusInput = document.getElementById("pomodoro-focus-input");
 const pomodoroFocusCancel = document.getElementById("pomodoro-focus-cancel");
-const shareDurationEditor = document.getElementById("share-duration-editor");
-const shareDurationInput = document.getElementById("share-duration-input");
-const shareDurationCancel = document.getElementById("share-duration-cancel");
 let svgDoc = null;
 const trackingInitializedDocs = new WeakSet();
 let layers = null;
@@ -194,10 +191,6 @@ const I18N = {
     reminderEmpty: "Add a reminder and Kiri will tell you on time.",
     reminderEdit: "Edit",
     reminderDelete: "Delete",
-    sharePermissionFailed: "Could not record the screen. Please check macOS screen recording permission.",
-    sharePermissionFailedWindows: "Could not record the screen. Please check Windows privacy or security settings for screen capture.",
-    shareConversionFailed: "Could not convert the share video to MP4.",
-    shareRecordingFailed: "Could not make the share video.",
   },
   ko: {
     agentComplete: "작업 완료냥!",
@@ -238,10 +231,6 @@ const I18N = {
     reminderEmpty: "알림을 등록하면 시간 맞춰 알려주겠다냥.",
     reminderEdit: "수정",
     reminderDelete: "삭제",
-    sharePermissionFailed: "화면을 녹화할 수 없어요. macOS 화면 기록 권한을 확인해 주세요.",
-    sharePermissionFailedWindows: "화면을 녹화할 수 없어요. Windows 개인정보 또는 보안 설정에서 화면 캡처 권한을 확인해 주세요.",
-    shareConversionFailed: "자랑 영상을 MP4로 변환할 수 없어요.",
-    shareRecordingFailed: "자랑 영상을 만들 수 없어요.",
   },
   ja: {
     agentComplete: "タスク完了にゃ！",
@@ -282,10 +271,6 @@ const I18N = {
     reminderEmpty: "通知を登録したら時間に合わせて知らせるにゃ。",
     reminderEdit: "編集",
     reminderDelete: "削除",
-    sharePermissionFailed: "画面を録画できませんでした。macOS の画面収録権限を確認してください。",
-    sharePermissionFailedWindows: "画面を録画できませんでした。Windows のプライバシーまたはセキュリティ設定で画面キャプチャ権限を確認してください。",
-    shareConversionFailed: "自慢動画を MP4 に変換できませんでした。",
-    shareRecordingFailed: "自慢動画を作成できませんでした。",
   },
 };
 
@@ -1225,20 +1210,6 @@ function closePomodoroFocusEditor() {
   delete document.body.dataset.editingPomodoroFocus;
 }
 
-function openShareDurationEditor() {
-  if (!shareDurationEditor || !shareDurationInput || shareRecording) return;
-  shareDurationInput.value = shareDurationInput.value || "5";
-  document.body.dataset.editingShareDuration = "1";
-  requestAnimationFrame(() => {
-    shareDurationInput.focus();
-    shareDurationInput.select();
-  });
-}
-
-function closeShareDurationEditor() {
-  delete document.body.dataset.editingShareDuration;
-}
-
 function reminderRepeatLabel(repeat) {
   if (repeat === "daily") return tr("reminderDaily");
   if (repeat === "weekdays") return tr("reminderWeekdays");
@@ -1568,19 +1539,6 @@ if (pomodoroFocusEditor && pomodoroFocusInput) {
 
 if (pomodoroFocusCancel) {
   pomodoroFocusCancel.addEventListener("click", () => closePomodoroFocusEditor());
-}
-
-if (shareDurationEditor && shareDurationInput) {
-  shareDurationEditor.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const durationSec = Math.max(5, Math.min(30, Math.round(Number(shareDurationInput.value) || 5)));
-    closeShareDurationEditor();
-    startShareRecording(durationSec);
-  });
-}
-
-if (shareDurationCancel) {
-  shareDurationCancel.addEventListener("click", () => closeShareDurationEditor());
 }
 
 window.electronAPI.catNameGet().then(applyCatNameSettings).catch(() => {});
@@ -2465,159 +2423,6 @@ window.electronAPI.onLanguageChanged((language) => {
   applyPomodoroState(currentPomodoroState);
 });
 
-// ── Share recording: current desktop crop + Kiri name → vertical video ──
-let shareRecording = false;
-let shareCancelRequested = false;
-let activeShareRecorder = null;
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function preferredRecordingMime() {
-  const candidates = [
-    "video/mp4;codecs=h264",
-    "video/mp4",
-    "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8",
-    "video/webm",
-  ];
-  if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
-  return candidates.find((mime) => MediaRecorder.isTypeSupported(mime)) || "";
-}
-
-function blobToUint8Array(blob) {
-  return blob.arrayBuffer().then((buffer) => new Uint8Array(buffer));
-}
-
-function isSharePermissionError(error) {
-  const name = error && error.name ? String(error.name) : "";
-  const message = error && error.message ? String(error.message) : "";
-  return name === "NotAllowedError" ||
-    name === "SecurityError" ||
-    /permission|not allowed|denied|No desktop capture source/i.test(message);
-}
-
-function isWindowsRuntime() {
-  return /Windows/i.test(navigator.userAgent || navigator.platform || "");
-}
-
-function shareFailureMessage(error) {
-  if (isSharePermissionError(error)) return tr(isWindowsRuntime() ? "sharePermissionFailedWindows" : "sharePermissionFailed");
-  if (error && /conversion-failed|ffmpeg|MP4/i.test(String(error.message || ""))) {
-    return tr("shareConversionFailed");
-  }
-  return tr("shareRecordingFailed");
-}
-
-async function startShareRecording(durationSec = 5) {
-  if (shareRecording) return;
-  shareRecording = true;
-  shareCancelRequested = false;
-  const durationMs = Math.max(5000, Math.min(30000, Math.round(Number(durationSec) || 5) * 1000));
-
-  const catName = currentCatName || "Kiri";
-
-  if (shareNameBadge) shareNameBadge.textContent = catName;
-  document.body.dataset.sharing = "1";
-
-  let desktopStream = null;
-
-  try {
-    await sleep(250);
-    const options = await window.electronAPI.shareCaptureOptions({ durationMs });
-    if (!options || !options.sourceId) throw new Error("No desktop capture source.");
-
-    desktopStream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        mandatory: {
-          chromeMediaSource: "desktop",
-          chromeMediaSourceId: options.sourceId,
-          maxFrameRate: 30,
-        },
-      },
-    });
-
-    const video = document.createElement("video");
-    video.muted = true;
-    video.srcObject = desktopStream;
-    await new Promise((resolve) => {
-      video.onloadedmetadata = resolve;
-    });
-    await video.play();
-
-    const scaleX = video.videoWidth / options.displayBounds.width;
-    const scaleY = video.videoHeight / options.displayBounds.height;
-    const cropX = Math.max(0, Math.min(video.videoWidth - 2, options.crop.x * scaleX));
-    const cropY = Math.max(0, Math.min(video.videoHeight - 2, options.crop.y * scaleY));
-    const crop = {
-      x: cropX,
-      y: cropY,
-      width: Math.min(options.crop.width * scaleX, video.videoWidth - cropX),
-      height: Math.min(options.crop.height * scaleY, video.videoHeight - cropY),
-    };
-
-    const mimeType = preferredRecordingMime();
-    const recorderOptions = {
-      videoBitsPerSecond: 24_000_000,
-    };
-    if (mimeType) recorderOptions.mimeType = mimeType;
-    const recorder = new MediaRecorder(desktopStream, recorderOptions);
-    activeShareRecorder = recorder;
-    const chunks = [];
-    recorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) chunks.push(event.data);
-    };
-
-    const stopped = new Promise((resolve) => {
-      recorder.onstop = resolve;
-    });
-    recorder.start();
-    await window.electronAPI.shareCaptureStarted().catch(() => {});
-    await sleep(options.durationMs || durationMs);
-    if (recorder.state !== "inactive") recorder.stop();
-    await stopped;
-    await window.electronAPI.shareCaptureOverlayHide().catch(() => {});
-    if (shareCancelRequested) return;
-
-    const blob = new Blob(chunks, { type: recorder.mimeType || mimeType || "video/webm" });
-    const bytes = await blobToUint8Array(blob);
-    const extension = (blob.type || "").includes("mp4") ? "mp4" : "webm";
-    const result = await window.electronAPI.shareVideoSave({
-      bytes,
-      extension,
-      crop,
-      scale: { x: scaleX, y: scaleY },
-      source: { width: video.videoWidth, height: video.videoHeight },
-      output: options.output,
-    });
-    if (result && result.ok === false && !result.canceled) {
-      throw new Error(result.reason || "share-save-failed");
-    }
-  } catch (error) {
-    console.error("Share recording failed:", error);
-    await window.electronAPI.shareErrorDialog(shareFailureMessage(error)).catch(() => {
-      window.alert(shareFailureMessage(error));
-    });
-  } finally {
-    await window.electronAPI.shareCaptureOverlayHide().catch(() => {});
-    if (desktopStream) desktopStream.getTracks().forEach((track) => track.stop());
-    delete document.body.dataset.sharing;
-    activeShareRecorder = null;
-    shareCancelRequested = false;
-    shareRecording = false;
-  }
-}
-
-window.electronAPI.onShareRecord(() => openShareDurationEditor());
-window.electronAPI.onShareCaptureCancel(() => {
-  shareCancelRequested = true;
-  if (activeShareRecorder && activeShareRecorder.state !== "inactive") {
-    activeShareRecorder.stop();
-  }
-});
-
 // ── Drag (좌클릭) + Context menu (우클릭) ──
 
 const dragHandle = document.getElementById("drag-handle");
@@ -2894,9 +2699,6 @@ function shouldReceiveMouseAt(x, y) {
     return true;
   }
   if (pomodoroFocusEditor && getComputedStyle(pomodoroFocusEditor).display !== "none" && rectContains(pomodoroFocusEditor.getBoundingClientRect(), x, y)) {
-    return true;
-  }
-  if (shareDurationEditor && getComputedStyle(shareDurationEditor).display !== "none" && rectContains(shareDurationEditor.getBoundingClientRect(), x, y)) {
     return true;
   }
   if (reminderClockButton && getComputedStyle(reminderClockButton).display !== "none" && rectContains(reminderClockButton.getBoundingClientRect(), x, y)) {

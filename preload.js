@@ -13,10 +13,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("do-stretch", () => callback()),
   onDoJump: (callback) =>
     ipcRenderer.on("do-jump", () => callback()),
-  onShareRecord: (callback) =>
-    ipcRenderer.on("share-record", () => callback()),
-  onShareCaptureCancel: (callback) =>
-    ipcRenderer.on("share-capture-cancel", () => callback()),
   onCatNameEdit: (callback) =>
     ipcRenderer.on("cat-name-edit", (_evt, name) => callback(name)),
   onCatNameChanged: (callback) =>
@@ -74,11 +70,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   showContextMenu: () => ipcRenderer.send("show-context-menu"),
   setStretchMode: (enabled) => ipcRenderer.send("set-stretch-mode", enabled),
   setHuntingMode: (enabled) => ipcRenderer.send("set-hunting-mode", enabled),
-  shareCaptureOptions: (options) => ipcRenderer.invoke("share-capture-options", options),
-  shareCaptureStarted: () => ipcRenderer.invoke("share-capture-started"),
-  shareCaptureOverlayHide: () => ipcRenderer.invoke("share-capture-overlay-hide"),
-  shareVideoSave: (payload) => ipcRenderer.invoke("share-video-save", payload),
-  shareErrorDialog: (message) => ipcRenderer.invoke("share-error-dialog", message),
   userNameGet: () => ipcRenderer.invoke("user-name-get"),
   userNameSet: (name) => ipcRenderer.invoke("user-name-set", name),
   onPersonaEdit: (callback) =>

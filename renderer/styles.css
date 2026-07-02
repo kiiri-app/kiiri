@@ -722,6 +722,7 @@ body[data-stretching] #cat-thinking-dots {
 #user-name-editor,
 #fixed-message-editor,
 #pomodoro-focus-editor,
+#screen-ask-editor,
 #persona-editor {
   position: absolute;
   left: 50%;
@@ -827,6 +828,16 @@ body[data-editing-pomodoro-focus] #pomodoro-focus-editor {
   display: grid;
 }
 
+#screen-ask-editor {
+  top: calc(var(--cat-top) + 28%);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  width: min(92vw, 320px);
+}
+
+body[data-editing-screen-ask] #screen-ask-editor {
+  display: grid;
+}
+
 
 #pomodoro-focus-editor span {
   align-self: center;
@@ -837,7 +848,8 @@ body[data-editing-pomodoro-focus] #pomodoro-focus-editor {
 #cat-name-input,
 #user-name-input,
 #fixed-message-input,
-#pomodoro-focus-input {
+#pomodoro-focus-input,
+#screen-ask-input {
   min-width: 0;
   border: 1.5px solid var(--gh-border-soft);
   border-radius: 9px;
@@ -850,7 +862,8 @@ body[data-editing-pomodoro-focus] #pomodoro-focus-editor {
 #cat-name-editor button,
 #user-name-editor button,
 #fixed-message-editor button,
-#pomodoro-focus-editor button {
+#pomodoro-focus-editor button,
+#screen-ask-editor button {
   border: 1.5px solid var(--gh-terracotta-deep);
   border-radius: 9px;
   background: var(--gh-terracotta);
@@ -860,7 +873,8 @@ body[data-editing-pomodoro-focus] #pomodoro-focus-editor {
 }
 
 #fixed-message-editor button,
-#user-name-editor button {
+#user-name-editor button,
+#screen-ask-editor button {
   cursor: pointer;
 }
 

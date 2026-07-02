@@ -95,6 +95,9 @@ const personaCancel = document.getElementById("persona-cancel");
 const fixedMessageEditor = document.getElementById("fixed-message-editor");
 const fixedMessageInput = document.getElementById("fixed-message-input");
 const fixedMessageCancel = document.getElementById("fixed-message-cancel");
+const screenAskEditor = document.getElementById("screen-ask-editor");
+const screenAskInput = document.getElementById("screen-ask-input");
+const screenAskCancel = document.getElementById("screen-ask-cancel");
 const reminderClockButton = document.getElementById("reminder-clock-button");
 const voiceListenButton = document.getElementById("voice-listen-button");
 const reminderPanel = document.getElementById("reminder-panel");
@@ -205,6 +208,7 @@ const I18N = {
     reminderDelete: "Delete",
     personaGuide: "Give this cat a personality — it shapes how it answers in AI tasks.",
     personaPlaceholder: "e.g. a cheerful and concise tutor",
+    screenAskPlaceholder: "Ask about your screen…",
     micDenied: "Couldn't access the microphone.",
     voiceListening: "Listening…",
   },
@@ -249,6 +253,7 @@ const I18N = {
     reminderDelete: "삭제",
     personaGuide: "이 고양이에게 성격을 부여하세요. AI 작업 응답 방식에 반영됩니다.",
     personaPlaceholder: "예: 밝고 간결한 튜터",
+    screenAskPlaceholder: "화면에 대해 물어보세요…",
     micDenied: "마이크에 접근할 수 없다냥.",
     voiceListening: "듣고 있다냥…",
   },
@@ -293,6 +298,7 @@ const I18N = {
     reminderDelete: "削除",
     personaGuide: "この猫に性格を与えます。AIタスクでの応答の仕方に反映されます。",
     personaPlaceholder: "例: 明るく簡潔なチューター",
+    screenAskPlaceholder: "画面について聞いてください…",
     micDenied: "マイクにアクセスできないにゃ。",
     voiceListening: "聞いてるにゃ…",
   },
@@ -337,6 +343,7 @@ const I18N = {
     reminderDelete: "Sil",
     personaGuide: "Bu kediye bir kişilik ver — AI görevlerinde nasıl yanıt vereceğini etkiler.",
     personaPlaceholder: "ör. neşeli ve özlü bir hoca",
+    screenAskPlaceholder: "Ekranın hakkında bir şey sor…",
     micDenied: "Mikrofona erişilemedi.",
     voiceListening: "Dinliyorum…",
   },
@@ -1648,6 +1655,34 @@ if (window.electronAPI.onPersonaEdit) {
   window.electronAPI.onPersonaEdit((persona) => openPersonaEditor(persona));
 }
 
+// ── Ask about my screen (typed): text twin of push-to-talk. Type a question →
+//    main captures the whole screen and answers with a bubble + paw point. ──
+function openScreenAskEditor() {
+  if (!screenAskEditor || !screenAskInput) return;
+  screenAskInput.value = "";
+  screenAskInput.setAttribute("placeholder", tr("screenAskPlaceholder"));
+  document.body.dataset.editingScreenAsk = "1";
+  requestAnimationFrame(() => { screenAskInput.focus(); });
+}
+function closeScreenAskEditor() {
+  delete document.body.dataset.editingScreenAsk;
+}
+if (screenAskEditor && screenAskInput) {
+  screenAskEditor.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const q = screenAskInput.value.trim();
+    closeScreenAskEditor();
+    if (!q) return;
+    try { await window.electronAPI.askScreen(q); } catch {}
+  });
+}
+if (screenAskCancel) {
+  screenAskCancel.addEventListener("click", () => closeScreenAskEditor());
+}
+if (window.electronAPI.onScreenAskOpen) {
+  window.electronAPI.onScreenAskOpen(() => openScreenAskEditor());
+}
+
 // ── Sprite character path (Ghibli-resembling flat characters) ──
 // Additive: when the active character's kind is "sprite", we show a single
 // self-contained SVG and drive idle/thinking/note/happy via :root classes +
@@ -2869,6 +2904,9 @@ function shouldReceiveMouseAt(x, y) {
     return true;
   }
   if (pomodoroFocusEditor && getComputedStyle(pomodoroFocusEditor).display !== "none" && rectContains(pomodoroFocusEditor.getBoundingClientRect(), x, y)) {
+    return true;
+  }
+  if (screenAskEditor && getComputedStyle(screenAskEditor).display !== "none" && rectContains(screenAskEditor.getBoundingClientRect(), x, y)) {
     return true;
   }
   if (reminderClockButton && getComputedStyle(reminderClockButton).display !== "none" && rectContains(reminderClockButton.getBoundingClientRect(), x, y)) {

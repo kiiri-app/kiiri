@@ -174,6 +174,7 @@ const I18N = {
     setCatName: "Set Kiri name",
     showCatName: "Show Kiri name",
     aiAssistant: "🐾 AI Assistant…",
+    askScreen: "🔍 Ask about my screen…",
     aiCommand: "💬 Give Kiri a command…",
     aiJournal: "📚 Knowledge Journal…",
     setCatPersona: "Set this cat's personality…",
@@ -256,6 +257,7 @@ const I18N = {
     setCatName: "캣짱 이름 지정",
     showCatName: "캣짱 이름 표시",
     aiAssistant: "🐾 AI 어시스턴트…",
+    askScreen: "🔍 내 화면에 대해 묻기…",
     aiCommand: "💬 캣짱에게 명령하기…",
     aiJournal: "📚 지식 노트…",
     setCatPersona: "이 고양이의 성격 설정…",
@@ -338,6 +340,7 @@ const I18N = {
     setCatName: "Kiri の名前を設定",
     showCatName: "Kiri の名前を表示",
     aiAssistant: "🐾 AI アシスタント…",
+    askScreen: "🔍 画面について聞く…",
     aiCommand: "💬 Kiri に指示する…",
     aiJournal: "📚 ナレッジノート…",
     setCatPersona: "この猫の性格を設定…",
@@ -420,6 +423,7 @@ const I18N = {
     setCatName: "Kiri'nin adını değiştir",
     showCatName: "Kiri'nin adını göster",
     aiAssistant: "🐾 AI Asistan…",
+    askScreen: "🔍 Ekranımı sor…",
     aiCommand: "💬 Kiri'ye komut ver…",
     aiJournal: "📚 Bilgi Defteri…",
     setCatPersona: "Bu kedinin kişiliğini ayarla…",
@@ -1532,6 +1536,12 @@ ipcMain.on("show-context-menu", (evt) => {
   const menu = Menu.buildFromTemplate([
     { label: `${t("contextTitle")} v${app.getVersion()}`, enabled: false },
     { type: "separator" },
+    {
+      label: t("askScreen"),
+      click: () => {
+        if (petWin && !petWin.isDestroyed()) petWin.webContents.send("screen-ask-open");
+      },
+    },
     {
       label: t("aiCommand"),
       click: () => openAiCommand(),
@@ -2931,6 +2941,40 @@ ipcMain.handle("ptt-audio", async (evt, payload) => {
     });
     if (answer && answer.ok) {
       sendScreenAnswer({ question: stt.text, text: answer.text, point: answer.point });
+      return { ok: true };
+    }
+    if (answer && answer.error !== "aborted") {
+      sendCatNotice((answer && answer.message) || t("aiError"));
+    }
+    return answer || { error: "unknown" };
+  } finally {
+    sendCatThinking(false);
+  }
+});
+
+// Typed "ask about my screen": text twin of push-to-talk. Captures the whole
+// screen and answers with a bubble + paw point. Only needs a vision provider
+// (no OpenAI/STT), so it works on Ollama / any provider.
+ipcMain.handle("ask-screen", async (evt, question) => {
+  const q = String(question || "").trim();
+  if (!q) return { error: "empty" };
+  const cfg = aiConfig.loadConfig();
+  if (!cfg.enabled || !aiConfig.providerReady()) {
+    sendCatNotice(t("aiKeyRequired"));
+    openAiSettings();
+    return { error: "no_key" };
+  }
+  const ch = charForSender(evt.sender);
+  if (ch) setActiveChar(ch.id);
+  sendCatThinking(true);
+  try {
+    const answer = await aiAssistant.askAboutScreen(petWin, {
+      question: q,
+      catName,
+      persona: activeChar() && activeChar().persona,
+    });
+    if (answer && answer.ok) {
+      sendScreenAnswer({ question: q, text: answer.text, point: answer.point });
       return { ok: true };
     }
     if (answer && answer.error !== "aborted") {

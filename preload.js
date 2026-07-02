@@ -71,6 +71,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onPttStop: (callback) => ipcRenderer.on("ptt-stop", () => callback()),
   pttSendAudio: (payload) => ipcRenderer.invoke("ptt-audio", payload),
   onScreenAnswer: (callback) => ipcRenderer.on("screen-answer", (_evt, data) => callback(data)),
+  // Ask about my screen (typed)
+  askScreen: (question) => ipcRenderer.invoke("ask-screen", question),
+  onScreenAskOpen: (callback) => ipcRenderer.on("screen-ask-open", () => callback()),
   setMouseEventsEnabled: (enabled) => ipcRenderer.send("set-mouse-events-enabled", enabled),
   showContextMenu: () => ipcRenderer.send("show-context-menu"),
   setStretchMode: (enabled) => ipcRenderer.send("set-stretch-mode", enabled),

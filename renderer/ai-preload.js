@@ -5,6 +5,10 @@ const { contextBridge, ipcRenderer } = require("electron");
 // Surface for the AI panel + AI settings windows. Mirrors only the AI IPC; the
 // API key is never exposed (only `hasApiKey` boolean comes back via config).
 contextBridge.exposeInMainWorld("aiAPI", {
+  // App language (shared with the pet windows)
+  languageGet: () => ipcRenderer.invoke("language-get"),
+  onLanguageChanged: (cb) => ipcRenderer.on("language-changed", (_e, language) => cb(language)),
+
   // Panel (task menu → result)
   onMenuShow: (cb) => ipcRenderer.on("ai-menu-show", (_e, data) => cb(data)),
   onBusy: (cb) => ipcRenderer.on("ai-panel-busy", (_e, data) => cb(data)),

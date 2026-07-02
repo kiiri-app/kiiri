@@ -191,6 +191,10 @@ const I18N = {
     reminderEmpty: "Add a reminder and Kiri will tell you on time.",
     reminderEdit: "Edit",
     reminderDelete: "Delete",
+    personaGuide: "Give this cat a personality — it shapes how it answers in AI tasks.",
+    personaPlaceholder: "e.g. a cheerful and concise tutor",
+    micDenied: "Couldn't access the microphone.",
+    voiceListening: "Listening…",
   },
   ko: {
     agentComplete: "작업 완료냥!",
@@ -231,6 +235,10 @@ const I18N = {
     reminderEmpty: "알림을 등록하면 시간 맞춰 알려주겠다냥.",
     reminderEdit: "수정",
     reminderDelete: "삭제",
+    personaGuide: "이 고양이에게 성격을 부여하세요. AI 작업 응답 방식에 반영됩니다.",
+    personaPlaceholder: "예: 밝고 간결한 튜터",
+    micDenied: "마이크에 접근할 수 없다냥.",
+    voiceListening: "듣고 있다냥…",
   },
   ja: {
     agentComplete: "タスク完了にゃ！",
@@ -271,6 +279,54 @@ const I18N = {
     reminderEmpty: "通知を登録したら時間に合わせて知らせるにゃ。",
     reminderEdit: "編集",
     reminderDelete: "削除",
+    personaGuide: "この猫に性格を与えます。AIタスクでの応答の仕方に反映されます。",
+    personaPlaceholder: "例: 明るく簡潔なチューター",
+    micDenied: "マイクにアクセスできないにゃ。",
+    voiceListening: "聞いてるにゃ…",
+  },
+  tr: {
+    agentComplete: "Görev tamam, miyav!",
+    needsAttention: (name) => `${name || "Dostum"}, bir bakman lazım!`,
+    agentApproval: (name, who) => `${who || "Bir ajan"} onayını bekliyor${name ? ", " + name : ""}!`,
+    focusLabel: "Odak",
+    restLabel: "Mola",
+    startBreak: (name) => `${name || "Dostum"}, mola zamanı!`,
+    startFocus: (name) => `${name || "Dostum"}, hadi odaklanalım!`,
+    updateChecking: "Kontrol ediliyor...",
+    updateAvailable: "Güncelle",
+    updateNone: "Zaten güncel miyav!",
+    updateDownloading: (percent) => percent === null ? "Güncelleniyor..." : `Güncelleniyor %${percent}`,
+    updateRestarting: "Yeniden başlıyor...",
+    userNameGuide: "Adını söylersen Kiri hatırlatmalarda ve başka anlarda sana adınla seslenir.",
+    userNamePlaceholder: "Adını yaz",
+    userGreeting: (name) => `Merhaba, ${name}!`,
+    pomodoroPause: "Duraklat",
+    pomodoroResume: "Devam et",
+    pomodoroReset: "Sıfırla",
+    reminderOnce: "Bir kez",
+    reminderCustomDays: "Gün seç",
+    reminderDaily: "Her gün",
+    reminderWeekdays: "Hafta içi",
+    reminderWeekends: "Hafta sonu",
+    reminderDaysShort: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"],
+    reminderOpen: "Hatırlatıcıları aç",
+    reminderTitle: "Hatırlatıcı",
+    reminderPanelLabel: "Hatırlatıcılar",
+    reminderRepeatGroupLabel: "Tekrar",
+    reminderDayPickerLabel: "Gün seç",
+    reminderMessagePlaceholder: "Kiri sana neyi hatırlatsın?",
+    reminderAdd: "Ekle",
+    reminderCancel: "Vazgeç",
+    reminderSave: "Kaydet",
+    reminderUpdate: "Güncelle",
+    reminderClose: "Kapat",
+    reminderEmpty: "Bir hatırlatıcı ekle, Kiri zamanı gelince miyavlayıp haber verir.",
+    reminderEdit: "Düzenle",
+    reminderDelete: "Sil",
+    personaGuide: "Bu kediye bir kişilik ver — AI görevlerinde nasıl yanıt vereceğini etkiler.",
+    personaPlaceholder: "ör. neşeli ve özlü bir hoca",
+    micDenied: "Mikrofona erişilemedi.",
+    voiceListening: "Dinliyorum…",
   },
 };
 
@@ -1551,8 +1607,8 @@ window.electronAPI.onUserNameEdit((name) => openUserNameEditor(name));
 function openPersonaEditor(initialPersona) {
   if (!personaEditor || !personaInput) return;
   personaInput.value = String(initialPersona || "");
-  if (personaGuideEl) personaGuideEl.textContent = "Bu kediye bir kişilik ver — AI görevlerinde nasıl yanıt vereceğini etkiler.";
-  personaInput.setAttribute("placeholder", "ör. neşeli ve özlü bir hoca");
+  if (personaGuideEl) personaGuideEl.textContent = tr("personaGuide");
+  personaInput.setAttribute("placeholder", tr("personaPlaceholder"));
   document.body.dataset.editingPersona = "1";
   requestAnimationFrame(() => { personaInput.focus(); });
 }
@@ -2313,14 +2369,14 @@ async function startVoiceListening() {
   try {
     voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch {
-    showSpeech("Mikrofona erişilemedi.", { duration: 3200, kind: "notice" });
+    showSpeech(tr("micDenied"), { duration: 3200, kind: "notice" });
     return;
   }
   voiceRecording = true;
   voiceHadSpeech = false;
   voiceChunks = [];
   document.body.dataset.listening = "1";
-  showSpeech("Dinliyorum…", { duration: 1600, kind: "notice" });
+  showSpeech(tr("voiceListening"), { duration: 1600, kind: "notice" });
 
   const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
   voiceRecorder = mime

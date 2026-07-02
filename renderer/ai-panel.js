@@ -1,5 +1,79 @@
 "use strict";
 
+const I18N = {
+  en: {
+    close: "Close",
+    busyLooking: "Taking a look…",
+    busyThinking: "Thinking…",
+    cancel: "Cancel",
+    backToTasks: "← Tasks",
+    copy: "Copy",
+    copied: "Copied ✓",
+    addToJournal: "📚 Add to journal",
+    adding: "Adding…",
+    added: "📚 Added ✓",
+    errorGeneric: "Something went wrong.",
+    errorPrefix: "Error: ",
+    recommended: "Recommended",
+  },
+  tr: {
+    close: "Kapat",
+    busyLooking: "Bakıyorum…",
+    busyThinking: "Düşünüyorum…",
+    cancel: "İptal",
+    backToTasks: "← Görevler",
+    copy: "Kopyala",
+    copied: "Kopyalandı ✓",
+    addToJournal: "📚 Deftere ekle",
+    adding: "Ekleniyor…",
+    added: "📚 Eklendi ✓",
+    errorGeneric: "Bir hata oluştu.",
+    errorPrefix: "Hata: ",
+    recommended: "Önerilen",
+  },
+  ko: {
+    close: "닫기",
+    busyLooking: "보는 중이다냥…",
+    busyThinking: "생각 중이다냥…",
+    cancel: "취소",
+    backToTasks: "← 작업",
+    copy: "복사",
+    copied: "복사됨 ✓",
+    addToJournal: "📚 노트에 추가",
+    adding: "추가 중…",
+    added: "📚 추가됨 ✓",
+    errorGeneric: "문제가 생겼다냥.",
+    errorPrefix: "오류: ",
+    recommended: "추천",
+  },
+  ja: {
+    close: "閉じる",
+    busyLooking: "見てるにゃ…",
+    busyThinking: "考え中だにゃ…",
+    cancel: "キャンセル",
+    backToTasks: "← タスク",
+    copy: "コピー",
+    copied: "コピー済み ✓",
+    addToJournal: "📚 ノートに追加",
+    adding: "追加中…",
+    added: "📚 追加済み ✓",
+    errorGeneric: "エラーが起きたにゃ。",
+    errorPrefix: "エラー: ",
+    recommended: "おすすめ",
+  },
+};
+
+let lang = "en";
+function L(key) {
+  const table = I18N[lang] || I18N.en;
+  return table[key] || I18N.en[key] || key;
+}
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = L(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => { el.setAttribute("aria-label", L(el.dataset.i18nAria)); });
+}
+
 const card = document.getElementById("card");
 const titleText = document.getElementById("title-text");
 const menuView = document.getElementById("menu-view");
@@ -58,7 +132,7 @@ function renderMenu(data) {
     if (task.id === data.recommendedTaskId) {
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.textContent = "Önerilen";
+      badge.textContent = L("recommended");
       btn.appendChild(badge);
     }
     btn.addEventListener("click", () => runTask(task));
@@ -68,7 +142,7 @@ function renderMenu(data) {
 }
 
 async function runTask(task) {
-  busyLabel.textContent = task.think ? "Düşünüyorum…" : "Bakıyorum…";
+  busyLabel.textContent = task.think ? L("busyThinking") : L("busyLooking");
   show("busy");
   const res = await window.aiAPI.runTask({ captureId: state.captureId, taskId: task.id });
   resultTask.textContent = `${task.emoji || "✨"} ${task.label}`;
@@ -82,28 +156,28 @@ async function runTask(task) {
     return;
   } else {
     resultText.classList.add("error");
-    resultText.textContent = (res && res.message) || "Bir hata oluştu.";
+    resultText.textContent = (res && res.message) || L("errorGeneric");
     copyBtn.disabled = true;
     journalBtn.hidden = true;
   }
   copyBtn.classList.remove("done");
-  copyBtn.textContent = "Kopyala";
+  copyBtn.textContent = L("copy");
   journalBtn.classList.remove("done");
   journalBtn.disabled = false;
-  journalBtn.textContent = "📚 Deftere ekle";
+  journalBtn.textContent = L("addToJournal");
   show("result");
 }
 
 journalBtn.addEventListener("click", async () => {
   journalBtn.disabled = true;
-  journalBtn.textContent = "Ekleniyor…";
+  journalBtn.textContent = L("adding");
   const res = await window.aiAPI.journalAddFromText(resultText.textContent || "");
   if (res && res.ok) {
     journalBtn.classList.add("done");
-    journalBtn.textContent = "📚 Eklendi ✓";
+    journalBtn.textContent = L("added");
   } else {
     journalBtn.disabled = false;
-    journalBtn.textContent = (res && res.message) ? "Hata: " + res.message.slice(0, 24) : "📚 Deftere ekle";
+    journalBtn.textContent = (res && res.message) ? L("errorPrefix") + res.message.slice(0, 24) : L("addToJournal");
   }
 });
 
@@ -111,10 +185,10 @@ copyBtn.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(resultText.textContent || "");
     copyBtn.classList.add("done");
-    copyBtn.textContent = "Kopyalandı ✓";
+    copyBtn.textContent = L("copied");
     setTimeout(() => {
       copyBtn.classList.remove("done");
-      copyBtn.textContent = "Kopyala";
+      copyBtn.textContent = L("copy");
     }, 1500);
   } catch {}
 });
@@ -131,3 +205,16 @@ document.addEventListener("keydown", (e) => {
 });
 
 window.aiAPI.onMenuShow(renderMenu);
+
+if (window.aiAPI.languageGet) {
+  window.aiAPI.languageGet().then((language) => {
+    if (I18N[language]) lang = language;
+    applyI18n();
+  }).catch(() => {});
+}
+if (window.aiAPI.onLanguageChanged) {
+  window.aiAPI.onLanguageChanged((language) => {
+    if (I18N[language]) lang = language;
+    applyI18n();
+  });
+}

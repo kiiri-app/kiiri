@@ -157,7 +157,7 @@ let regularCheckRunning = false;
 let updateInstallPending = false;
 let pendingManualUpdateCheck = false;
 
-const SUPPORTED_LANGUAGES = ["en", "ko", "ja"];
+const SUPPORTED_LANGUAGES = ["en", "ko", "ja", "tr"];
 const REGULAR_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 let currentLanguage = "en";
 
@@ -231,6 +231,7 @@ const I18N = {
     english: "English",
     korean: "Korean",
     japanese: "Japanese",
+    turkish: "Turkish",
     accessibilityPermissionTitle: "Accessibility permission needed",
     accessibilityPermissionMessage: "Allow Kiri to react to typing",
     accessibilityPermissionDetail: "Turn on Kiri in Accessibility, then restart Kiri if typing reactions do not start.",
@@ -246,6 +247,19 @@ const I18N = {
     clear: "Clear",
     delete: "Delete",
     later: "Later",
+    aiKeyRequired: "API key needed — add one in AI Assistant settings.",
+    aiAnalyzeFailed: "Analysis failed.",
+    aiError: "AI error.",
+    voiceNotUnderstood: "I didn't catch that — try again.",
+    voiceTranscribeFailed: "Couldn't understand the audio.",
+    journalDueNudge: (due) => `📚 ${due} card${due === 1 ? "" : "s"} ready to review`,
+    characterWindowTitle: "Character Appearance",
+    overlayEditorTitle: "Pixel Editor",
+    journalWindowTitle: "Knowledge Journal",
+    overlayDefaultName: "Design",
+    confirmYes: "Yes",
+    confirmCancel: "Cancel",
+    confirmQuestion: "Are you sure?",
   },
   ko: {
     patternEditorTitle: "캣짱 패턴 편집기",
@@ -316,6 +330,7 @@ const I18N = {
     english: "영어",
     korean: "한국어",
     japanese: "일본어",
+    turkish: "터키어",
     accessibilityPermissionTitle: "손쉬운 사용 권한이 필요해요",
     accessibilityPermissionMessage: "캣짱이 타이핑에 반응하도록 허용해 주세요",
     accessibilityPermissionDetail: "손쉬운 사용에서 Kiri을 켜 주세요. 타이핑 반응이 바로 시작되지 않으면 캣짱을 다시 실행해 주세요.",
@@ -331,6 +346,19 @@ const I18N = {
     clear: "지우기",
     delete: "삭제",
     later: "나중에",
+    aiKeyRequired: "API 키가 필요해요 — AI 어시스턴트 설정에서 추가해 주세요.",
+    aiAnalyzeFailed: "분석에 실패했어요.",
+    aiError: "AI 오류가 났어요.",
+    voiceNotUnderstood: "못 알아들었다냥, 다시 말해줘냥.",
+    voiceTranscribeFailed: "음성을 알아듣지 못했어요.",
+    journalDueNudge: (due) => `📚 카드 ${due}장 복습할 시간이다냥`,
+    characterWindowTitle: "캐릭터 외형",
+    overlayEditorTitle: "픽셀 편집기",
+    journalWindowTitle: "지식 노트",
+    overlayDefaultName: "디자인",
+    confirmYes: "네",
+    confirmCancel: "취소",
+    confirmQuestion: "진행할까요?",
   },
   ja: {
     patternEditorTitle: "Kiri パターンエディター",
@@ -401,6 +429,7 @@ const I18N = {
     english: "英語",
     korean: "韓国語",
     japanese: "日本語",
+    turkish: "トルコ語",
     accessibilityPermissionTitle: "アクセシビリティ権限が必要です",
     accessibilityPermissionMessage: "Kiri がタイピングに反応できるよう許可してください",
     accessibilityPermissionDetail: "アクセシビリティで Kiri をオンにしてください。タイピング反応が始まらない場合は Kiri を再起動してください。",
@@ -416,6 +445,118 @@ const I18N = {
     clear: "クリア",
     delete: "削除",
     later: "後で",
+    aiKeyRequired: "API キーが必要です — AI アシスタント設定で追加してください。",
+    aiAnalyzeFailed: "分析に失敗しました。",
+    aiError: "AI エラーです。",
+    voiceNotUnderstood: "聞き取れなかったにゃ、もう一度言ってにゃ。",
+    voiceTranscribeFailed: "音声を聞き取れませんでした。",
+    journalDueNudge: (due) => `📚 カード${due}枚の復習時間だにゃ`,
+    characterWindowTitle: "キャラクター外見",
+    overlayEditorTitle: "ピクセルエディター",
+    journalWindowTitle: "ナレッジノート",
+    overlayDefaultName: "デザイン",
+    confirmYes: "はい",
+    confirmCancel: "キャンセル",
+    confirmQuestion: "よろしいですか？",
+  },
+  tr: {
+    patternEditorTitle: "Kiri Desen Editörü",
+    mappingEditorTitle: "Kiri Hücre Eşleme Editörü",
+    appMenuAbout: "Kiri Hakkında",
+    appMenuQuit: "Çıkış",
+    checkForUpdates: "Güncellemeleri Denetle",
+    editMenu: "Düzen",
+    contextTitle: "Kiri",
+    size: "Boyut",
+    smaller: "Biraz küçült (-20)",
+    larger: "Biraz büyüt (+20)",
+    resetSize: "Boyutu sıfırla (100 × 100)",
+    petSizePixels: (size) => `${size} × ${size}`,
+    stretch: "Mola Esnemesi",
+    stretchNow: "Şimdi esneme molası ver",
+    jump: "Zıpla",
+    jumpNow: "Şimdi zıpla",
+    setUserName: "Adımı söyle",
+    setCatName: "Kiri'nin adını değiştir",
+    showCatName: "Kiri'nin adını göster",
+    aiAssistant: "🐾 AI Asistan…",
+    aiCommand: "💬 Kiri'ye komut ver…",
+    aiJournal: "📚 Bilgi Defteri…",
+    setCatPersona: "Bu kedinin kişiliğini ayarla…",
+    characterAppearance: "🎨 Karakter görünümü…",
+    pixelEditor: "🖌️ Pikselleri düzenle…",
+    addCharacter: "➕ Karakter ekle",
+    removeCharacter: "➖ Bu karakteri kaldır",
+    newCharacterName: "Kedi",
+    tasks: "Görevler",
+    agentMonitoring: "AI ajanlarını izle (Claude Code…)",
+    aiAgents: "AI ajanları",
+    noActiveAgents: "Aktif ajan yok",
+    agentWorking: "çalışıyor…",
+    personaGuide: "Bu kediye bir kişilik ver — AI görevlerinde nasıl yanıt vereceğini etkiler.",
+    personaPlaceholder: "ör. neşeli ve özlü bir hoca",
+    fixedMessage: "Sabit mesaj",
+    reminders: "Hatırlatıcılar",
+    remindersOpen: "Hatırlatıcıları aç",
+    showReminderButtonOutside: "Düğmeyi dışarıda göster",
+    pomodoro: "Pomodoro",
+    pomodoroStart: "Başlat",
+    pomodoroPause: "Duraklat",
+    pomodoroResume: "Devam et",
+    pomodoroReset: "Sıfırla",
+    pomodoroFocusTime: "Odak süresi",
+    pomodoroRestTime: "Mola süresi",
+    pomodoroFocusLabel: "Odak",
+    pomodoroRestLabel: "Mola",
+    pomodoroMinutes: (min) => `${min} dk`,
+    pomodoroCustom: "Özel",
+    patternEditor: "Desen Editörü",
+    mappingEditor: "Hücre Eşleme Editörü",
+    taskCompleteSound: "Bildirim sesi",
+    soundOff: "Kapalı",
+    soundLow: "Kısık",
+    soundNormal: "Normal",
+    soundHigh: "Yüksek",
+    autoStretch: "Otomatik Mola Esnemesi",
+    off: "Kapalı",
+    everyMinuteTest: "Her 1 dakikada (test)",
+    everyMinutes: (min) => `Her ${min} dakikada`,
+    everyHour: "Her saat başı",
+    everyHourAndHalf: "Her 1 saat 30 dakikada",
+    everyTwoHours: "Her 2 saatte",
+    language: "Dil",
+    english: "İngilizce",
+    korean: "Korece",
+    japanese: "Japonca",
+    turkish: "Türkçe",
+    accessibilityPermissionTitle: "Erişilebilirlik izni gerekiyor",
+    accessibilityPermissionMessage: "Kiri'nin yazmana tepki verebilmesi için izin ver",
+    accessibilityPermissionDetail: "Erişilebilirlik'te Kiri'yi aç; yazma tepkileri başlamazsa Kiri'yi yeniden başlat.",
+    inputPermissionTitle: "Giriş İzleme de gerekebilir",
+    inputPermissionMessage: "Kiri hâlâ yazdığını algılayamıyor",
+    inputPermissionDetail: "Bazı macOS ortamlarında Giriş İzleme izni de gerekir. Kiri'yi Giriş İzleme'ye ekle; yazma tepkileri yine başlamazsa Kiri'yi yeniden başlat.",
+    openInputMonitoring: "Giriş İzleme'yi aç",
+    openAccessibility: "Erişilebilirlik'i aç",
+    globalInputPermissionTitle: "Giriş algılama kullanılamıyor",
+    globalInputPermissionMessage: "Kiri klavye veya tekerlek girişini algılayamıyor",
+    globalInputPermissionDetail: "Kiri'yi yeniden başlat; sorun sürerse Windows güvenlik yazılımının veya sistem politikasının genel giriş kancalarını engelleyip engellemediğini kontrol et.",
+    reset: "Sıfırla",
+    clear: "Temizle",
+    delete: "Sil",
+    later: "Sonra",
+    aiKeyRequired: "API anahtarı gerekli — AI Asistan ayarlarından ekle.",
+    aiAnalyzeFailed: "Analiz başarısız oldu.",
+    aiError: "AI hatası.",
+    voiceNotUnderstood: "Anlamadım, tekrar dene.",
+    voiceTranscribeFailed: "Ses çözümlenemedi.",
+    journalDueNudge: (due) => `📚 ${due} kart tekrar zamanı`,
+    characterWindowTitle: "Karakter Görünümü",
+    overlayEditorTitle: "Piksel Editörü",
+    journalWindowTitle: "Bilgi Defteri",
+    overlayDefaultName: "Tasarım",
+    confirmYes: "Evet",
+    confirmCancel: "Vazgeç",
+    confirmQuestion: "Onaylıyor musun?",
   },
 };
 
@@ -927,6 +1068,21 @@ function setLanguage(language) {
     mappingWin.setTitle(t("mappingEditorTitle"));
   }
   broadcastAll("language-changed", currentLanguage);
+  // Keep any open AI / editor windows in sync too.
+  const aiWindows = [
+    [aiPanelWin, null],
+    [aiSettingsWin, null],
+    [aiCommandWin, null],
+    [aiJournalWin, "journalWindowTitle"],
+    [aiCharacterWin, "characterWindowTitle"],
+    [overlayWin, "overlayEditorTitle"],
+  ];
+  for (const [win, titleKey] of aiWindows) {
+    if (win && !win.isDestroyed()) {
+      if (titleKey) win.setTitle(t(titleKey));
+      win.webContents.send("language-changed", currentLanguage);
+    }
+  }
 }
 
 function broadcastCatNameSettings() {
@@ -1954,6 +2110,7 @@ ipcMain.on("show-context-menu", (evt) => {
         { label: t("english"), type: "radio", checked: currentLanguage === "en", click: () => setLanguage("en") },
         { label: t("korean"), type: "radio", checked: currentLanguage === "ko", click: () => setLanguage("ko") },
         { label: t("japanese"), type: "radio", checked: currentLanguage === "ja", click: () => setLanguage("ja") },
+        { label: t("turkish"), type: "radio", checked: currentLanguage === "tr", click: () => setLanguage("tr") },
       ],
     },
     { type: "separator" },
@@ -2368,7 +2525,7 @@ async function handleAiDrop(payload) {
   const shouldRun = cfg.alwaysAnalyzeOnDrop || !!(payload && payload.alt);
   if (!shouldRun) return;
   if (!aiConfig.providerReady()) {
-    sendCatNotice("API anahtarı gerekli — AI Asistan ayarlarından ekle.");
+    sendCatNotice(t("aiKeyRequired"));
     openAiSettings();
     return;
   }
@@ -2381,10 +2538,10 @@ async function handleAiDrop(payload) {
     if (data && data.ok) {
       showAiPanel(data);
     } else if (data && data.error && data.error !== "aborted" && data.error !== "disabled") {
-      sendCatNotice(data.message || "Analiz başarısız oldu.");
+      sendCatNotice(data.message || t("aiAnalyzeFailed"));
     }
   } catch (err) {
-    sendCatNotice((err && err.message) || "AI hatası.");
+    sendCatNotice((err && err.message) || t("aiError"));
   } finally {
     aiBusy = false;
     sendCatThinking(false);
@@ -2571,16 +2728,16 @@ function broadcastVoiceConfig() {
 }
 
 function runVoiceTranscript(text) {
-  const t = String(text || "").trim();
-  if (!t) {
-    sendCatNotice("Anlamadım, tekrar dene.");
+  const spoken = String(text || "").trim();
+  if (!spoken) {
+    sendCatNotice(t("voiceNotUnderstood"));
     return;
   }
-  sendCatNotice(`🎤 "${t.length > 48 ? t.slice(0, 48) + "…" : t}"`);
+  sendCatNotice(`🎤 "${spoken.length > 48 ? spoken.slice(0, 48) + "…" : spoken}"`);
   openAiCommand();
   if (aiCommandWin && !aiCommandWin.isDestroyed()) {
-    if (aiCommandReady) aiCommandWin.webContents.send("ai-voice-run", t);
-    else aiCommandPendingVoice = t;
+    if (aiCommandReady) aiCommandWin.webContents.send("ai-voice-run", spoken);
+    else aiCommandPendingVoice = spoken;
   }
 }
 
@@ -2605,7 +2762,7 @@ ipcMain.handle("voice-audio", async (evt, payload) => {
       return { ok: true, text: result.text };
     }
     if (result && result.error !== "too_short") {
-      sendCatNotice((result && result.message) || "Ses çözümlenemedi.");
+      sendCatNotice((result && result.message) || t("voiceTranscribeFailed"));
     }
     return result || { error: "unknown" };
   } finally {
@@ -2639,7 +2796,7 @@ function openAiCharacter() {
     height: 640,
     minWidth: 340,
     minHeight: 480,
-    title: "Karakter Görünümü",
+    title: t("characterWindowTitle"),
     frame: false,
     backgroundColor: "#fbf4e4",
     resizable: true,
@@ -2715,7 +2872,7 @@ function openOverlayEditor() {
     height: 760,
     minWidth: 520,
     minHeight: 560,
-    title: "Piksel Editörü",
+    title: t("overlayEditorTitle"),
     frame: false,
     backgroundColor: "#16181c",
     resizable: true,
@@ -2778,7 +2935,7 @@ ipcMain.handle("overlay-preset-save", (_e, payload) => {
   if (!c) return { ok: false };
   const overlay = charStore.sanitizeOverlay(payload && payload.overlay);
   if (!overlay) return { ok: false, error: "empty" };
-  const name = String((payload && payload.name) || "").trim().slice(0, 40) || "Tasarım";
+  const name = String((payload && payload.name) || "").trim().slice(0, 40) || t("overlayDefaultName");
   const list = loadOverlayPresets();
   const id = (payload && payload.id && list.find((p) => p.id === payload.id)) ? payload.id : `ov-${Date.now()}`;
   const prev = list.find((p) => p.id === id);
@@ -2801,10 +2958,10 @@ ipcMain.handle("overlay-confirm", async (_e, opts) => {
   const win = (overlayWin && !overlayWin.isDestroyed()) ? overlayWin : petWin;
   const r = await dialog.showMessageBox(win, {
     type: "question",
-    buttons: [o.ok || "Evet", o.cancel || "Vazgeç"],
+    buttons: [o.ok || t("confirmYes"), o.cancel || t("confirmCancel")],
     defaultId: 0,
     cancelId: 1,
-    message: String(o.message || "Onaylıyor musun?"),
+    message: String(o.message || t("confirmQuestion")),
     detail: o.detail ? String(o.detail) : undefined,
   });
   return r.response === 0;
@@ -2823,7 +2980,7 @@ function openAiJournal() {
     height: 480,
     minWidth: 360,
     minHeight: 320,
-    title: "Bilgi Defteri",
+    title: t("journalWindowTitle"),
     frame: false,
     backgroundColor: "#fbf4e4",
     resizable: true,
@@ -2878,7 +3035,7 @@ function checkJournalDue() {
     const due = aiJournal.dueCount();
     if (due > 0 && Date.now() - lastJournalNudgeAt > 4 * 60 * 60 * 1000) {
       lastJournalNudgeAt = Date.now();
-      sendCatNotice(`📚 ${due} kart tekrar zamanı`);
+      sendCatNotice(t("journalDueNudge", due));
     }
   } catch {}
 }

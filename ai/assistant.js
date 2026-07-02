@@ -189,10 +189,17 @@ async function captureScreen(petWin) {
   }
 }
 
+// Displayed-text form of a partial stream: drop a trailing (possibly unclosed)
+// [POINT:...] so the coordinate tag never flashes in the bubble mid-stream.
+function stripPointForDisplay(text) {
+  return String(text || "").replace(/\[POINT:[^\]]*\]?\s*$/i, "").trimEnd();
+}
+
 // Ask the vision model about an already-captured full screen. Returns
 // { ok, text, point, display }. `point` (if any) carries absolute screen coords
-// for the paw overlay plus the normalized position.
-async function answerScreenQuestion(capture, { question, catName, persona } = {}) {
+// for the paw overlay plus the normalized position. When `onDelta` is given, the
+// answer streams: onDelta(cleanTextSoFar) fires as tokens arrive.
+async function answerScreenQuestion(capture, { question, catName, persona } = {}, onDelta) {
   const cfg = config.loadConfig();
   if (!config.providerReady()) {
     return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
@@ -200,16 +207,28 @@ async function answerScreenQuestion(capture, { question, catName, persona } = {}
   if (!capture || !capture.base64) return { error: "capture", message: "Ekran yakalanamadı." };
 
   const controller = newController();
+  const callOpts = {
+    system: screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat),
+    userText: screenQuestionUser(question, cfg.responseLanguage),
+    imageBase64: capture.base64,
+    mediaType: capture.mediaType,
+    maxTokens: 1024,
+    think: false,
+    signal: controller.signal,
+  };
   try {
-    const { text } = await llm.callVision({
-      system: screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat),
-      userText: screenQuestionUser(question, cfg.responseLanguage),
-      imageBase64: capture.base64,
-      mediaType: capture.mediaType,
-      maxTokens: 1024,
-      think: false,
-      signal: controller.signal,
-    });
+    let text;
+    if (typeof onDelta === "function") {
+      let acc = "";
+      const res = await llm.callVisionStream(callOpts, (piece) => {
+        acc += piece;
+        onDelta(stripPointForDisplay(acc));
+      });
+      text = res.text;
+    } else {
+      const res = await llm.callVision(callOpts);
+      text = res.text;
+    }
     const { text: answer, point } = extractPoint(text);
     let absPoint = null;
     if (point && capture.display) {
@@ -231,10 +250,10 @@ async function answerScreenQuestion(capture, { question, catName, persona } = {}
 }
 
 // Convenience: capture + answer in one call (typed question path).
-async function askAboutScreen(petWin, opts = {}) {
+async function askAboutScreen(petWin, opts = {}, onDelta) {
   const cap = await captureScreen(petWin);
   if (!cap.ok) return cap;
-  return answerScreenQuestion(cap.capture, opts);
+  return answerScreenQuestion(cap.capture, opts, onDelta);
 }
 
 module.exports = {

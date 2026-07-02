@@ -21,8 +21,9 @@ characters or design your own.
 - **Ask about my screen** — either hold the push-to-talk hotkey (default
   Ctrl+Alt) and ask out loud, or right-click → **Ask about my screen…** and type
   it. The cat reads your whole screen — weighted toward whatever it's sitting
-  next to — answers in a speech bubble, and points at the spot with a 🐾 when it
-  helps. Typed mode needs no OpenAI key, so it works on local Ollama too.
+  next to — and the answer **streams** into its speech bubble word by word,
+  pointing at the spot with a 🐾 when it helps. Typed mode needs no OpenAI key,
+  so it works on local Ollama too.
 - **Multi-provider** — Claude (Anthropic), OpenAI (GPT-4o), Google Gemini, or
   **Ollama** (fully local / offline / free).
 - **Knowledge Journal** — save what the character solved/explained as flashcards

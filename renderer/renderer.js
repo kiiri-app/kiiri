@@ -2250,6 +2250,27 @@ function setBaseSpeech(text, kind = "timer") {
   if (!speechTimer) renderSpeech(baseSpeech);
 }
 
+// Live-updating speech for streaming answers: updates the bubble text in place
+// (only the first call "pops"), and holds it open with a long safety timer so
+// mid-stream pauses don't collapse the bubble. Call showSpeech() at the end to
+// give it a normal auto-close duration.
+function streamSpeech(text) {
+  if (activeSpeechKind === "reminder") return;
+  if (speechTimer) clearTimeout(speechTimer);
+  if (activeSpeechKind !== "stream") {
+    activeSpeechKind = "stream";
+    delete document.body.dataset.speech;
+    void document.body.offsetWidth;
+  }
+  renderSpeech({ text, kind: "notice" });
+  // Safety net: if the stream stalls/dies without an "end", don't hang forever.
+  speechTimer = setTimeout(() => {
+    speechTimer = null;
+    activeSpeechKind = null;
+    renderSpeech(baseSpeech);
+  }, 30000);
+}
+
 function setThinkingDotsVisible(visible) {
   document.body.toggleAttribute("data-thinking", !!visible);
   if (catThinkingDots) catThinkingDots.setAttribute("aria-hidden", visible ? "false" : "true");
@@ -2587,13 +2608,24 @@ if (window.electronAPI.onPttStart) {
   window.electronAPI.onPttStop(pttStop);
 }
 
-// Screen-question answer: show it in the speech bubble and briefly aim the cat's
-// gaze at the pointed element (if any).
+// Screen-question answer: streams into the speech bubble (phase start/delta),
+// then finalizes (phase end) with a normal auto-close + a brief gaze toward the
+// pointed element. Legacy single-shot payloads (no phase) still work.
 if (window.electronAPI.onScreenAnswer) {
   window.electronAPI.onScreenAnswer((data) => {
     if (!data) return;
+    if (data.phase === "start") {
+      streamSpeech("");
+      return;
+    }
+    if (data.phase === "delta") {
+      streamSpeech(data.text || "");
+      return;
+    }
+    // "end" (or legacy no-phase): final text with auto-close, then gaze.
     if (data.text) {
-      const secs = Math.min(14000, Math.max(5000, data.text.length * 90));
+      const secs = Math.min(16000, Math.max(5000, data.text.length * 90));
+      activeSpeechKind = "notice"; // let showSpeech replace the stream bubble
       showSpeech(data.text, { duration: secs, kind: "notice" });
     }
     if (data.gaze && Number.isFinite(data.gaze.dx)) {

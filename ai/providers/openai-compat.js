@@ -49,6 +49,62 @@ async function callVision({ baseUrl, apiKey, model, system, userText, imageBase6
   return { text, model: (data && data.model) || model };
 }
 
+// Streaming vision (stream:true SSE). Emits text deltas via onDelta; resolves
+// with the full text. Serves OpenAI/Gemini/Ollama alike.
+async function callVisionStream({ baseUrl, apiKey, model, system, userText, imageBase64, mediaType, maxTokens, signal }, onDelta) {
+  const content = [{ type: "text", text: userText }];
+  if (imageBase64) content.push(imageContent(imageBase64, mediaType));
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: authHeaders(apiKey),
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens || 1024,
+      stream: true,
+      messages: [
+        ...(system ? [{ role: "system", content: system }] : []),
+        { role: "user", content },
+      ],
+    }),
+    signal,
+  });
+  if (!res.ok || !res.body) {
+    const errText = await res.text().catch(() => "");
+    const err = new Error(`provider ${res.status}: ${errText.slice(0, 300)}`);
+    err.status = res.status;
+    throw err;
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+  const handleLine = (line) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) return;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") return;
+    let json;
+    try { json = JSON.parse(payload); } catch { return; }
+    const delta = json.choices && json.choices[0] && json.choices[0].delta;
+    const piece = delta && typeof delta.content === "string" ? delta.content : "";
+    if (piece) {
+      full += piece;
+      if (typeof onDelta === "function") onDelta(piece);
+    }
+  };
+
+  for await (const chunk of res.body) {
+    buffer += decoder.decode(chunk, { stream: true });
+    let nl;
+    while ((nl = buffer.indexOf("\n")) >= 0) {
+      handleLine(buffer.slice(0, nl));
+      buffer = buffer.slice(nl + 1);
+    }
+  }
+  if (buffer) handleLine(buffer);
+  return { text: full.trim(), model };
+}
+
 // Tool-use (planning). Returns { text, toolUses, stopReason, model }.
 async function callWithTools({ baseUrl, apiKey, model, system, userText, imageBase64, mediaType, maxTokens, tools, signal }) {
   const content = [{ type: "text", text: userText }];
@@ -83,4 +139,4 @@ async function callWithTools({ baseUrl, apiKey, model, system, userText, imageBa
   return { text: text.trim(), toolUses, stopReason: choice && choice.finish_reason, model: (data && data.model) || model };
 }
 
-module.exports = { callVision, callWithTools };
+module.exports = { callVision, callVisionStream, callWithTools };

@@ -67,6 +67,41 @@ async function callVision({ apiKey, model, system, userText, imageBase64, mediaT
   return { text, model: message.model, usage: message.usage };
 }
 
+// Streaming vision call: same as callVision but emits text deltas via onDelta as
+// they arrive, and resolves with the full concatenated text. Thinking deltas are
+// not surfaced (only final text). Falls back cleanly if the stream errors.
+async function callVisionStream({ apiKey, model, system, userText, imageBase64, mediaType, maxTokens, think, signal }, onDelta) {
+  const SDK = loadSDK();
+  const client = new SDK({ apiKey, maxRetries: 1 });
+  const content = [];
+  if (imageBase64) {
+    content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/png", data: imageBase64 } });
+  }
+  content.push({ type: "text", text: userText });
+  const params = {
+    model,
+    max_tokens: maxTokens || 1024,
+    system,
+    messages: [{ role: "user", content }],
+  };
+  if (think && supportsAdaptiveThinking(model)) {
+    params.thinking = { type: "adaptive" };
+  }
+  const stream = client.messages.stream(params, { signal });
+  if (typeof onDelta === "function") {
+    stream.on("text", (delta) => {
+      if (delta) onDelta(delta);
+    });
+  }
+  const message = await stream.finalMessage();
+  const text = (message.content || [])
+    .filter((b) => b && b.type === "text")
+    .map((b) => b.text)
+    .join("")
+    .trim();
+  return { text, model: message.model, usage: message.usage };
+}
+
 // Tool-use (planning) call. Returns the assistant's text plus any tool calls it
 // wants to make. We do NOT auto-execute — the caller previews + gets approval,
 // then runs the executors. Optional image lets a command also see the screen.
@@ -98,4 +133,4 @@ async function callWithTools({ apiKey, model, system, userText, tools, imageBase
   return { text, toolUses, stopReason: message.stop_reason, model: message.model };
 }
 
-module.exports = { callVision, callWithTools, classifyError, supportsAdaptiveThinking };
+module.exports = { callVision, callVisionStream, callWithTools, classifyError, supportsAdaptiveThinking };

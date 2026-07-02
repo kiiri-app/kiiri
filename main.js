@@ -2032,6 +2032,15 @@ function sendCatNotice(message) {
   }
 }
 
+// Streaming screen-answer phases: "start" opens an empty bubble, "delta" replaces
+// its text with the clean-so-far answer as tokens arrive. The final answer +
+// paw point is delivered by sendScreenAnswer ("end").
+function sendScreenStream(phase, text) {
+  if (petWin && !petWin.isDestroyed()) {
+    petWin.webContents.send("screen-answer", { phase, text: text || "" });
+  }
+}
+
 // Deliver a screen-question answer to the pet (speech bubble) and, if the model
 // pointed at a UI element, draw the paw overlay there + have the cat look at it.
 function sendScreenAnswer({ question, text, point } = {}) {
@@ -2934,10 +2943,14 @@ ipcMain.handle("ptt-audio", async (evt, payload) => {
       return { error: (capResult && capResult.error) || "capture" };
     }
     const c = activeChar();
+    let started = false;
     const answer = await aiAssistant.answerScreenQuestion(capResult.capture, {
       question: stt.text,
       catName,
       persona: c && c.persona,
+    }, (textSoFar) => {
+      if (!started) { sendScreenStream("start"); started = true; }
+      sendScreenStream("delta", textSoFar);
     });
     if (answer && answer.ok) {
       sendScreenAnswer({ question: stt.text, text: answer.text, point: answer.point });
@@ -2967,11 +2980,15 @@ ipcMain.handle("ask-screen", async (evt, question) => {
   const ch = charForSender(evt.sender);
   if (ch) setActiveChar(ch.id);
   sendCatThinking(true);
+  let started = false;
   try {
     const answer = await aiAssistant.askAboutScreen(petWin, {
       question: q,
       catName,
       persona: activeChar() && activeChar().persona,
+    }, (textSoFar) => {
+      if (!started) { sendScreenStream("start"); started = true; }
+      sendScreenStream("delta", textSoFar);
     });
     if (answer && answer.ok) {
       sendScreenAnswer({ question: q, text: answer.text, point: answer.point });

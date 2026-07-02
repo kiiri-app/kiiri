@@ -90,4 +90,63 @@ async function captureRegion(petWin, { captureWidth, captureHeight }) {
   return { base64: buffer.toString("base64"), mediaType: "image/png", rect };
 }
 
-module.exports = { captureRegion, regionForPet };
+// Full-screen capture of the display the cat sits on. Used by the "ask about my
+// screen" flow (push-to-talk / typed question): the whole screen is the context,
+// but the cat's position is returned so the prompt can tell the model the user
+// most likely means the area near the cat. Returns
+// { base64, mediaType, display, cat, scale } where `cat` is the cat's position
+// normalized to 0..1 within the captured display.
+async function captureFullScreen(petWin) {
+  if (!petWin || petWin.isDestroyed()) throw new Error("pet window unavailable");
+  const petBounds = petWin.getBounds();
+  const cx = petBounds.x + petBounds.width / 2;
+  const cy = petBounds.y + petBounds.height * 0.6;
+  const display = screen.getDisplayNearestPoint({ x: Math.round(cx), y: Math.round(cy) });
+  const b = display.bounds;
+  const scale = display.scaleFactor || 1;
+
+  const prevOpacity = petWin.getOpacity();
+  petWin.setOpacity(0);
+  let source = null;
+  try {
+    await delay(140);
+    const sources = await desktopCapturer.getSources({
+      types: ["screen"],
+      thumbnailSize: {
+        width: Math.round(display.size.width * scale),
+        height: Math.round(display.size.height * scale),
+      },
+    });
+    source = sources.find((s) => String(s.display_id) === String(display.id)) || sources[0];
+  } finally {
+    petWin.setOpacity(prevOpacity || 1);
+  }
+  if (!source || !source.thumbnail || source.thumbnail.isEmpty()) {
+    throw new Error("screen capture returned no image (check screen-recording permission)");
+  }
+
+  let img = source.thumbnail;
+  const size = img.getSize();
+  const longEdge = Math.max(size.width, size.height);
+  if (longEdge > MAX_LONG_EDGE) {
+    if (size.width >= size.height) img = img.resize({ width: MAX_LONG_EDGE, quality: "good" });
+    else img = img.resize({ height: MAX_LONG_EDGE, quality: "good" });
+  }
+
+  const catNormX = clamp01((cx - b.x) / Math.max(1, b.width));
+  const catNormY = clamp01((cy - b.y) / Math.max(1, b.height));
+
+  const buffer = img.toPNG();
+  return {
+    base64: buffer.toString("base64"),
+    mediaType: "image/png",
+    display: { id: display.id, bounds: b, scaleFactor: scale },
+    cat: { x: catNormX, y: catNormY },
+  };
+}
+
+function clamp01(v) {
+  return Math.max(0, Math.min(1, v));
+}
+
+module.exports = { captureRegion, regionForPet, captureFullScreen };

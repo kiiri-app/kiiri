@@ -5,11 +5,17 @@
 // different task on the same drop doesn't re-screenshot or re-classify.
 
 const config = require("./config");
-const { captureRegion } = require("./capture");
+const { captureRegion, captureFullScreen } = require("./capture");
 const llm = require("./llm");
 const { classifyError } = llm;
 const { localizedTasks, resolveTask } = require("./tasks");
-const { systemPrompt, classifyUserText, taskUserText } = require("./prompts");
+const {
+  systemPrompt,
+  classifyUserText,
+  taskUserText,
+  screenQuestionSystem,
+  screenQuestionUser,
+} = require("./prompts");
 
 const CAPTURE_TTL_MS = 5 * 60 * 1000;
 const pendingCaptures = new Map(); // id -> { base64, mediaType, rect, ts }
@@ -152,4 +158,91 @@ function dropCapture(captureId) {
   pendingCaptures.delete(captureId);
 }
 
-module.exports = { analyzeDrop, runTask, cancel, dropCapture };
+// Pull a trailing [POINT:x,y] (normalized 0..1) out of the answer and strip it
+// from the displayed text. Returns { text, point|null }.
+function extractPoint(raw) {
+  const text = String(raw || "");
+  const m = text.match(/\[POINT:\s*([0-9]*\.?[0-9]+)\s*,\s*([0-9]*\.?[0-9]+)\s*\]/i);
+  if (!m) return { text: text.trim(), point: null };
+  let x = parseFloat(m[1]);
+  let y = parseFloat(m[2]);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return { text: text.replace(m[0], "").trim(), point: null };
+  x = Math.max(0, Math.min(1, x));
+  y = Math.max(0, Math.min(1, y));
+  const cleaned = text.replace(m[0], "").trim();
+  return { text: cleaned, point: { x, y } };
+}
+
+// Grab the whole display the cat sits on (for the "ask about my screen" flow).
+// Split out so push-to-talk can capture at the moment the user starts talking
+// and reuse that same frame for the vision call.
+async function captureScreen(petWin) {
+  const cfg = config.loadConfig();
+  if (!cfg.enabled) return { error: "disabled" };
+  if (!config.providerReady()) {
+    return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+  }
+  try {
+    return { ok: true, capture: await captureFullScreen(petWin) };
+  } catch (err) {
+    return { error: "capture", message: (err && err.message) || "Ekran yakalanamadı." };
+  }
+}
+
+// Ask the vision model about an already-captured full screen. Returns
+// { ok, text, point, display }. `point` (if any) carries absolute screen coords
+// for the paw overlay plus the normalized position.
+async function answerScreenQuestion(capture, { question, catName, persona } = {}) {
+  const cfg = config.loadConfig();
+  if (!config.providerReady()) {
+    return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+  }
+  if (!capture || !capture.base64) return { error: "capture", message: "Ekran yakalanamadı." };
+
+  const controller = newController();
+  try {
+    const { text } = await llm.callVision({
+      system: screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat),
+      userText: screenQuestionUser(question, cfg.responseLanguage),
+      imageBase64: capture.base64,
+      mediaType: capture.mediaType,
+      maxTokens: 1024,
+      think: false,
+      signal: controller.signal,
+    });
+    const { text: answer, point } = extractPoint(text);
+    let absPoint = null;
+    if (point && capture.display) {
+      const b = capture.display.bounds;
+      absPoint = {
+        x: Math.round(b.x + point.x * b.width),
+        y: Math.round(b.y + point.y * b.height),
+        norm: point,
+        displayId: capture.display.id,
+      };
+    }
+    return { ok: true, text: answer || "(boş yanıt)", point: absPoint, display: capture.display };
+  } catch (err) {
+    const info = classifyError(err);
+    return { error: info.code, message: info.message };
+  } finally {
+    if (activeController === controller) activeController = null;
+  }
+}
+
+// Convenience: capture + answer in one call (typed question path).
+async function askAboutScreen(petWin, opts = {}) {
+  const cap = await captureScreen(petWin);
+  if (!cap.ok) return cap;
+  return answerScreenQuestion(cap.capture, opts);
+}
+
+module.exports = {
+  analyzeDrop,
+  runTask,
+  cancel,
+  dropCapture,
+  captureScreen,
+  answerScreenQuestion,
+  askAboutScreen,
+};

@@ -80,8 +80,9 @@ process.on("unhandledRejection", (reason) => {
 });
 
 let uIOhook = null;
+let UiohookKey = null;
 try {
-  ({ uIOhook } = require("uiohook-napi"));
+  ({ uIOhook, UiohookKey } = require("uiohook-napi"));
 } catch (error) {
   logWarn("[Kiri] uiohook-napi is unavailable:", error && error.message ? error.message : error);
 }
@@ -2021,6 +2022,29 @@ function sendCatNotice(message) {
   }
 }
 
+// Deliver a screen-question answer to the pet (speech bubble) and, if the model
+// pointed at a UI element, draw the paw overlay there + have the cat look at it.
+function sendScreenAnswer({ question, text, point } = {}) {
+  let gaze = null;
+  if (point && Number.isFinite(point.x) && Number.isFinite(point.y) && petWin && !petWin.isDestroyed()) {
+    // Normalized direction from the cat toward the pointed element, so the pet's
+    // eyes/lean aim at it (same -1..1 convention as cursor tracking).
+    const b = petWin.getBounds();
+    const cx = b.x + b.width / 2;
+    const cy = b.y + b.height * 0.4;
+    const vx = point.x - cx;
+    const vy = point.y - cy;
+    const mag = Math.hypot(vx, vy) || 1;
+    gaze = { dx: vx / mag, dy: vy / mag };
+  }
+  if (petWin && !petWin.isDestroyed()) {
+    petWin.webContents.send("screen-answer", { question, text, point, gaze });
+  }
+  if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
+    showPawPoint(point);
+  }
+}
+
 function createAiPanelWindow() {
   if (aiPanelWin && !aiPanelWin.isDestroyed()) return aiPanelWin;
   aiPanelReady = false;
@@ -2363,6 +2387,54 @@ function broadcastCharacterArt(c) {
 }
 
 // ── Pixel-overlay editor (paint over the active pose-set character) ──
+// ── Paw-point overlay: a transparent, click-through full-screen window that
+// draws a paw + pulse ring where the vision answer pointed, then fades. ──
+let pawWin = null;
+let pawHideTimer = null;
+
+function showPawPoint(point) {
+  const display = screen.getDisplayNearestPoint({ x: point.x, y: point.y });
+  const b = display.bounds;
+  const local = { x: point.x - b.x, y: point.y - b.y };
+  const send = () => {
+    if (pawWin && !pawWin.isDestroyed()) pawWin.webContents.send("paw-point", local);
+  };
+  if (pawWin && !pawWin.isDestroyed()) {
+    pawWin.setBounds(b);
+    send();
+  } else {
+    pawWin = new BrowserWindow({
+      x: b.x, y: b.y, width: b.width, height: b.height,
+      frame: false,
+      transparent: true,
+      resizable: false,
+      movable: false,
+      focusable: false,
+      skipTaskbar: true,
+      hasShadow: false,
+      alwaysOnTop: true,
+      fullscreenable: false,
+      webPreferences: {
+        preload: path.join(__dirname, "renderer", "paw-overlay-preload.js"),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    pawWin.setIgnoreMouseEvents(true, { forward: true });
+    keepWindowOnTop(pawWin);
+    pawWin.on("closed", () => { pawWin = null; });
+    pawWin.loadFile(path.join(__dirname, "renderer", "paw-overlay.html"));
+    pawWin.webContents.once("did-finish-load", send);
+  }
+  // The paw animation runs ~2.6s; close a bit after so it never lingers.
+  if (pawHideTimer) clearTimeout(pawHideTimer);
+  pawHideTimer = setTimeout(() => {
+    if (pawWin && !pawWin.isDestroyed()) pawWin.close();
+    pawWin = null;
+    pawHideTimer = null;
+  }, 3200);
+}
+
 function openOverlayEditor() {
   if (overlayWin && !overlayWin.isDestroyed()) {
     overlayWin.show();
@@ -2789,6 +2861,87 @@ function showGlobalInputPermissionGuideOnce() {
   }, 800);
 }
 
+// ── Push-to-talk: hold a modifier combo → ask about the whole screen ──
+// The combo is evaluated on every modifier-key transition from the global input
+// hook. On hold-start we snapshot the screen (so it reflects what the user is
+// asking about) and tell the pet to start recording; on release the pet stops
+// and sends the audio, which we transcribe and answer against that snapshot.
+let pttActive = false;
+let pttCapturePromise = null;
+
+function pttComboFromHotkey(hotkey) {
+  switch (hotkey) {
+    case "ctrl+shift": return (e) => e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey;
+    case "alt+shift": return (e) => e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey;
+    case "cmd+alt": return (e) => e.metaKey && e.altKey && !e.ctrlKey && !e.shiftKey;
+    case "ctrl+alt":
+    default: return (e) => e.ctrlKey && e.altKey && !e.shiftKey && !e.metaKey;
+  }
+}
+
+function evaluatePttCombo(event) {
+  if (!event || !aiConfig.pttUsable()) {
+    if (pttActive) stopPtt();
+    return;
+  }
+  const held = pttComboFromHotkey(aiConfig.loadConfig().pttHotkey)(event);
+  if (held && !pttActive) startPtt();
+  else if (!held && pttActive) stopPtt();
+}
+
+function startPtt() {
+  if (pttActive) return;
+  pttActive = true;
+  // Snapshot the screen now (async), stash the promise for the audio handler.
+  pttCapturePromise = aiAssistant.captureScreen(petWin).catch((err) => ({
+    error: "capture",
+    message: (err && err.message) || "capture failed",
+  }));
+  if (petWin && !petWin.isDestroyed()) petWin.webContents.send("ptt-start");
+}
+
+function stopPtt() {
+  if (!pttActive) return;
+  pttActive = false;
+  if (petWin && !petWin.isDestroyed()) petWin.webContents.send("ptt-stop");
+}
+
+ipcMain.handle("ptt-audio", async (evt, payload) => {
+  if (!aiConfig.pttUsable()) return { error: "disabled" };
+  const ch = charForSender(evt.sender);
+  if (ch) setActiveChar(ch.id);
+  const capResult = pttCapturePromise ? await pttCapturePromise : null;
+  pttCapturePromise = null;
+  sendCatThinking(true);
+  try {
+    const stt = await aiVoice.transcribe(payload && payload.bytes, payload && payload.mime);
+    if (!stt || !stt.ok) {
+      if (stt && stt.error !== "too_short") sendCatNotice((stt && stt.message) || t("voiceTranscribeFailed"));
+      return stt || { error: "unknown" };
+    }
+    if (!capResult || !capResult.ok) {
+      sendCatNotice((capResult && capResult.message) || t("aiAnalyzeFailed"));
+      return { error: (capResult && capResult.error) || "capture" };
+    }
+    const c = activeChar();
+    const answer = await aiAssistant.answerScreenQuestion(capResult.capture, {
+      question: stt.text,
+      catName,
+      persona: c && c.persona,
+    });
+    if (answer && answer.ok) {
+      sendScreenAnswer({ question: stt.text, text: answer.text, point: answer.point });
+      return { ok: true };
+    }
+    if (answer && answer.error !== "aborted") {
+      sendCatNotice((answer && answer.message) || t("aiError"));
+    }
+    return answer || { error: "unknown" };
+  } finally {
+    sendCatThinking(false);
+  }
+});
+
 function startKeyHook() {
   if (keyHookStarted) return;
   if (!uIOhook) {
@@ -2800,8 +2953,12 @@ function startKeyHook() {
     const accessibilityTrusted = requestAccessibilityPermission();
     if (!accessibilityTrusted) showAccessibilityPermissionGuideOnce();
     if (!keyHookListenersAttached) {
-      uIOhook.on("keydown", () => {
+      uIOhook.on("keydown", (event) => {
         broadcastAll("key-pressed");
+        evaluatePttCombo(event);
+      });
+      uIOhook.on("keyup", (event) => {
+        evaluatePttCombo(event);
       });
       uIOhook.on("wheel", (event) => {
         broadcastAll("mouse-wheel", {

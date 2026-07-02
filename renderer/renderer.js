@@ -118,6 +118,18 @@ const trackingInitializedDocs = new WeakSet();
 let layers = null;
 let targetDx = 0;
 let targetDy = 0;
+// Temporary gaze override (screen-answer "look at the pointed element"): while
+// active it wins over cursor tracking so the cat looks where it's pointing.
+let gazeOverrideUntil = 0;
+let gazeOverrideDx = 0;
+let gazeOverrideDy = 0;
+function setGazeOverride(dx, dy, ms) {
+  gazeOverrideDx = Math.max(-1, Math.min(1, dx));
+  gazeOverrideDy = Math.max(-1, Math.min(1, dy));
+  gazeOverrideUntil = performance.now() + (ms || 3000);
+  targetDx = gazeOverrideDx;
+  targetDy = gazeOverrideDy;
+}
 let currentCatName = "Kiri";
 let currentUserName = "";
 let isCatNameVisible = false;
@@ -1101,6 +1113,13 @@ function updateShakeDetection(dx, dy) {
 }
 
 window.electronAPI.onCursorPos(({ dx, dy }) => {
+  // While a gaze override is active (cat is "looking at" a pointed element),
+  // ignore cursor tracking so it holds the look-at direction.
+  if (performance.now() < gazeOverrideUntil) {
+    targetDx = gazeOverrideDx;
+    targetDy = gazeOverrideDy;
+    return;
+  }
   // 스트레칭 중에는 마우스 추적 정지 — layers가 자연스럽게 0으로 수렴
   if (isStretching()) {
     targetDx = 0;
@@ -2476,6 +2495,76 @@ if (voiceListenButton) {
 if (window.electronAPI.voiceConfigGet) {
   window.electronAPI.voiceConfigGet().then(applyVoiceConfig).catch(() => {});
   window.electronAPI.onVoiceConfigChanged(applyVoiceConfig);
+}
+
+// ── Push-to-talk: main sends ptt-start/ptt-stop as the hotkey is held/released.
+//    We record the mic while held, then hand the audio to main which transcribes
+//    it and answers against the screen it snapshotted at ptt-start. ──
+let pttStream = null;
+let pttRecorder = null;
+let pttChunks = [];
+let pttRecording = false;
+
+async function pttStart() {
+  if (pttRecording) return;
+  try { if (window.electronAPI.voiceRequestMic) await window.electronAPI.voiceRequestMic(); } catch {}
+  try {
+    pttStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    showSpeech(tr("micDenied"), { duration: 3000, kind: "notice" });
+    return;
+  }
+  pttRecording = true;
+  pttChunks = [];
+  poseListening = true;
+  updatePoseState();
+  document.body.dataset.listening = "1";
+  showSpeech(tr("voiceListening"), { duration: 1400, kind: "notice" });
+  const mime = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+  pttRecorder = mime ? new MediaRecorder(pttStream, { mimeType: mime }) : new MediaRecorder(pttStream);
+  pttRecorder.ondataavailable = (e) => { if (e.data && e.data.size) pttChunks.push(e.data); };
+  pttRecorder.onstop = onPttRecorderStop;
+  pttRecorder.start();
+}
+
+function pttStop() {
+  if (!pttRecording) return;
+  pttRecording = false;
+  poseListening = false;
+  updatePoseState();
+  delete document.body.dataset.listening;
+  try { if (pttRecorder && pttRecorder.state !== "inactive") pttRecorder.stop(); } catch {}
+}
+
+async function onPttRecorderStop() {
+  const chunks = pttChunks.slice();
+  const mime = (pttRecorder && pttRecorder.mimeType) || "audio/webm";
+  if (pttStream) { pttStream.getTracks().forEach((t) => t.stop()); pttStream = null; }
+  pttRecorder = null;
+  if (!chunks.length) return;
+  const blob = new Blob(chunks, { type: mime });
+  const bytes = await blob.arrayBuffer();
+  try { await window.electronAPI.pttSendAudio({ bytes, mime }); } catch {}
+}
+
+if (window.electronAPI.onPttStart) {
+  window.electronAPI.onPttStart(pttStart);
+  window.electronAPI.onPttStop(pttStop);
+}
+
+// Screen-question answer: show it in the speech bubble and briefly aim the cat's
+// gaze at the pointed element (if any).
+if (window.electronAPI.onScreenAnswer) {
+  window.electronAPI.onScreenAnswer((data) => {
+    if (!data) return;
+    if (data.text) {
+      const secs = Math.min(14000, Math.max(5000, data.text.length * 90));
+      showSpeech(data.text, { duration: secs, kind: "notice" });
+    }
+    if (data.gaze && Number.isFinite(data.gaze.dx)) {
+      setGazeOverride(data.gaze.dx, data.gaze.dy, 3000);
+    }
+  });
 }
 function applyTaskCompleteSoundVolume(volume) {
   completionMeowVolume = Math.max(0, Math.min(1, Number(volume) || 0));

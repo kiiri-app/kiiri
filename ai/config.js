@@ -15,6 +15,8 @@ const SUPPORTED_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-
 const SUPPORTED_RESPONSE_LANGUAGES = ["tr", "en", "ko", "ja"];
 const DEFAULT_TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe";
 const SUPPORTED_TRANSCRIBE_MODELS = ["gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1"];
+// Push-to-talk hold combos (modifier pairs, evaluated on the global input hook).
+const SUPPORTED_PTT_HOTKEYS = ["ctrl+alt", "ctrl+shift", "alt+shift", "cmd+alt"];
 
 // Multi-provider: Claude (Anthropic), OpenAI, Gemini, and Ollama (local/offline).
 // OpenAI/Gemini/Ollama all speak the OpenAI Chat Completions format.
@@ -45,6 +47,10 @@ const DEFAULTS = Object.freeze({
   // Voice (OpenAI STT). Independent toggle; needs its own OpenAI key.
   voiceEnabled: false,
   transcribeModel: DEFAULT_TRANSCRIBE_MODEL,
+  // Push-to-talk: hold a hotkey → ask about the whole screen (spoken). Needs
+  // voice usable (STT). Hotkey is a modifier combo held down.
+  pttEnabled: false,
+  pttHotkey: "ctrl+alt",
 });
 
 let cached = null;
@@ -102,6 +108,8 @@ function sanitizeConfig(raw) {
     transcribeModel: SUPPORTED_TRANSCRIBE_MODELS.includes(data.transcribeModel)
       ? data.transcribeModel
       : DEFAULT_TRANSCRIBE_MODEL,
+    pttEnabled: !!data.pttEnabled,
+    pttHotkey: SUPPORTED_PTT_HOTKEYS.includes(data.pttHotkey) ? data.pttHotkey : "ctrl+alt",
   };
 }
 
@@ -240,6 +248,8 @@ function redactedConfig() {
     supportedProviders: SUPPORTED_PROVIDERS,
     supportedResponseLanguages: SUPPORTED_RESPONSE_LANGUAGES,
     supportedTranscribeModels: SUPPORTED_TRANSCRIBE_MODELS,
+    supportedPttHotkeys: SUPPORTED_PTT_HOTKEYS,
+    pttUsable: pttUsable(),
   };
 }
 
@@ -247,6 +257,13 @@ function redactedConfig() {
 function voiceUsable() {
   const c = loadConfig();
   return !!(c.voiceEnabled && hasOpenAiKey());
+}
+
+// Push-to-talk usable: its own toggle + STT (OpenAI key) + a ready vision
+// provider to answer the screen question.
+function pttUsable() {
+  const c = loadConfig();
+  return !!(c.pttEnabled && hasOpenAiKey() && providerReady());
 }
 
 module.exports = {
@@ -272,6 +289,8 @@ module.exports = {
   resolveProvider,
   providerReady,
   SUPPORTED_PROVIDERS,
+  SUPPORTED_PTT_HOTKEYS,
   voiceUsable,
+  pttUsable,
   redactedConfig,
 };

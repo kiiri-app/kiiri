@@ -18,6 +18,10 @@ characters or design your own.
   approval card → a real `.pptx`/`.docx`/file under `~/Documents/Kiri/`, with a
   30-second undo. Teach reusable skills in plain language and re-run them.
 - **Voice (STT)** — a mic button: click, speak, and the command runs.
+- **Ask about my screen (push-to-talk)** — hold a hotkey (default Ctrl+Alt),
+  ask out loud about anything on screen, release. The cat reads your whole
+  screen — weighted toward whatever it's sitting next to — answers in a speech
+  bubble, and points at the spot with a 🐾 when it helps.
 - **Multi-provider** — Claude (Anthropic), OpenAI (GPT-4o), Google Gemini, or
   **Ollama** (fully local / offline / free).
 - **Knowledge Journal** — save what the character solved/explained as flashcards

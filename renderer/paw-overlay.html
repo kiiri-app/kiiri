@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <style>
+    :root { color-scheme: light dark; }
+    html, body {
+      margin: 0; width: 100%; height: 100%;
+      overflow: hidden; background: transparent;
+      pointer-events: none; user-select: none;
+    }
+    #paw {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      line-height: 1;
+      opacity: 0;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
+      will-change: transform, opacity;
+    }
+    #ring {
+      position: absolute;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      border: 3px solid #ff7a59;
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+      opacity: 0;
+    }
+    body.show #paw { animation: pawIn 2.6s ease forwards; }
+    body.show #ring { animation: ringPulse 2.6s ease-out forwards; }
+    @keyframes pawIn {
+      0%   { opacity: 0; transform: translate(-50%, -80%) rotate(-12deg) scale(0.6); }
+      14%  { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(1.15); }
+      26%  { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+      70%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    }
+    @keyframes ringPulse {
+      0%   { opacity: 0.9; width: 12px; height: 12px; }
+      60%  { opacity: 0.35; width: 74px; height: 74px; }
+      100% { opacity: 0; width: 104px; height: 104px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="ring"></div>
+  <div id="paw">🐾</div>
+  <script src="paw-overlay.js"></script>
+</body>
+</html>

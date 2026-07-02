@@ -32,6 +32,9 @@ const I18N = {
     fastCheap: "fast/cheap",
     better: "better",
     voiceHint: "When on, a 🎤 button appears next to the cat. Click → speak → the command runs (it stops automatically when you stop talking).",
+    pttEnable: "Push-to-talk: ask about my screen",
+    pttHotkey: "Push-to-talk hotkey",
+    pttHint: "Hold the hotkey, ask out loud about what's on your screen, release — the cat looks at your screen (especially near where it sits) and answers, pointing with a 🐾 when helpful. Needs voice on + an OpenAI key.",
     customTasksHeading: "Custom tasks",
     noCustomTasks: "No custom tasks yet.",
     taskNamePlaceholder: "Task name (e.g. Fix)",
@@ -72,6 +75,9 @@ const I18N = {
     fastCheap: "hızlı/ucuz",
     better: "daha iyi",
     voiceHint: "Açıkken kedinin yanında 🎤 düğmesi belirir. Tıkla → konuş → komut çalışır (konuşmayı bırakınca otomatik durur).",
+    pttEnable: "Bas-konuş: ekranımı sor",
+    pttHotkey: "Bas-konuş kısayolu",
+    pttHint: "Kısayolu basılı tut, ekranındaki şey hakkında sesli sor, bırak — kedi ekranına (özellikle durduğu yerin yakınına) bakıp yanıtlar, gerekince 🐾 ile gösterir. Ses açık + OpenAI anahtarı gerekir.",
     customTasksHeading: "Özel görevler",
     noCustomTasks: "Henüz özel görev yok.",
     taskNamePlaceholder: "Görev adı (ör. Düzelt)",
@@ -112,6 +118,9 @@ const I18N = {
     fastCheap: "빠름/저렴",
     better: "더 좋음",
     voiceHint: "켜면 고양이 옆에 🎤 버튼이 나타나요. 클릭 → 말하기 → 명령 실행 (말을 멈추면 자동으로 멈춰요).",
+    pttEnable: "푸시투토크: 내 화면에 대해 묻기",
+    pttHotkey: "푸시투토크 단축키",
+    pttHint: "단축키를 누른 채 화면에 있는 것을 소리내어 묻고 놓으면, 고양이가 화면(특히 자기가 앉은 근처)을 보고 답하며 필요하면 🐾로 가리켜요. 음성 켜기 + OpenAI 키가 필요해요.",
     customTasksHeading: "커스텀 작업",
     noCustomTasks: "아직 커스텀 작업이 없어요.",
     taskNamePlaceholder: "작업 이름 (예: 교정)",
@@ -152,6 +161,9 @@ const I18N = {
     fastCheap: "速い/安い",
     better: "高精度",
     voiceHint: "オンにすると猫のそばに 🎤 ボタンが現れます。クリック → 話す → コマンド実行（話し終わると自動で止まります）。",
+    pttEnable: "プッシュトゥトーク: 画面について聞く",
+    pttHotkey: "プッシュトゥトークのキー",
+    pttHint: "キーを押しながら画面のことを声で尋ね、離すと、猫が画面（特に自分のいる近く）を見て答え、必要なら 🐾 で指し示します。音声オン + OpenAI キーが必要です。",
     customTasksHeading: "カスタムタスク",
     noCustomTasks: "カスタムタスクはまだありません。",
     taskNamePlaceholder: "タスク名（例: 修正）",
@@ -241,6 +253,15 @@ const saveOpenaiKey = el("save-openai-key");
 const clearOpenaiKey = el("clear-openai-key");
 const openaiKeyStatus = el("openai-key-status");
 const transcribeModelEl = el("transcribe-model");
+const pttEnabledEl = el("ptt-enabled");
+const pttHotkeyEl = el("ptt-hotkey");
+
+const PTT_HOTKEY_LABELS = {
+  "ctrl+alt": "Ctrl + Alt",
+  "ctrl+shift": "Ctrl + Shift",
+  "alt+shift": "Alt + Shift",
+  "cmd+alt": "Cmd + Alt",
+};
 
 let config = null;
 
@@ -344,6 +365,8 @@ function render() {
   applyProviderUI();
   vEnabled.checked = config.voiceEnabled;
   fillSelect(transcribeModelEl, config.supportedTranscribeModels || [], transcribeLabels(), config.transcribeModel);
+  if (pttEnabledEl) pttEnabledEl.checked = !!config.pttEnabled;
+  if (pttHotkeyEl) fillSelect(pttHotkeyEl, config.supportedPttHotkeys || [], PTT_HOTKEY_LABELS, config.pttHotkey);
   renderKeyStatus();
   renderOpenAiStatus();
   renderCustomTasks();
@@ -405,6 +428,8 @@ clearKey.addEventListener("click", async () => {
 
 vEnabled.addEventListener("change", () => patch({ voiceEnabled: vEnabled.checked }));
 transcribeModelEl.addEventListener("change", () => patch({ transcribeModel: transcribeModelEl.value }));
+if (pttEnabledEl) pttEnabledEl.addEventListener("change", () => patch({ pttEnabled: pttEnabledEl.checked }));
+if (pttHotkeyEl) pttHotkeyEl.addEventListener("change", () => patch({ pttHotkey: pttHotkeyEl.value }));
 
 saveOpenaiKey.addEventListener("click", async () => {
   const value = openaiKeyEl.value.trim();

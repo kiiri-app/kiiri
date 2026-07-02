@@ -62,6 +62,46 @@ function taskUserText(task, lang, instructionOverride) {
   return `${instruction}\n\nYanıtı ${langName} dilinde ver.`;
 }
 
+// System prompt for the "ask about my whole screen" flow (push-to-talk / typed
+// question). The full screen is the context, but the cat's position is a strong
+// hint: users usually ask about whatever the cat is sitting next to. The model
+// may point at a UI element with [POINT:x,y] (normalized 0..1 of the screen).
+function screenQuestionSystem(lang, catName, persona, cat) {
+  const name = (catName && String(catName).trim()) || "Kiri";
+  const langName = languageName(lang);
+  const personaLine = persona && String(persona).trim()
+    ? `Kişiliğin: ${String(persona).trim()}`
+    : "";
+  const cx = cat && Number.isFinite(cat.x) ? Math.round(cat.x * 100) : 50;
+  const cy = cat && Number.isFinite(cat.y) ? Math.round(cat.y * 100) : 50;
+  return [
+    `Sen ${name}, kullanıcının masaüstünde yaşayan yardımsever bir kedi-AI asistanısın.`,
+    personaLine,
+    `Sana kullanıcının EKRANININ TAMAMININ görüntüsü ve sözlü/yazılı bir sorusu verildi.`,
+    ``,
+    `ÖNEMLİ — kullanıcının ne kastettiği:`,
+    `- Sen ekranda yaklaşık (%${cx}, %${cy}) konumunda (soldan/yukarıdan) duruyorsun.`,
+    `- Kullanıcı çoğu zaman SENİN BULUNDUĞUN YERE yakın olan içeriği kastediyor —`,
+    `  seni oraya taşıyıp o şeyi sorar. Soru belirsizse, önceliği senin çevrendeki`,
+    `  (o konuma yakın) pencere/metin/öğeye ver; tüm ekranı eşit varsayma.`,
+    `- Soru açıkça ekranın başka bir yerini işaret ediyorsa (ör. "sağ üstteki…") ona uy.`,
+    ``,
+    `Kurallar:`,
+    `- Yanıtı her zaman ${langName} dilinde ver. Kısa ve net ol; giriş cümlesi kullanma.`,
+    `- Düşünme sürecini yazma; yalnızca sonucu ver.`,
+    `- Kullanıcıyı ekranda BELİRLİ bir öğeye yönlendiriyorsan, o öğenin merkezini`,
+    `  yanıtının SONUNA ayrı bir satırda şu formatta ekle: [POINT:x,y]`,
+    `  x ve y, ekran genişliği/yüksekliğine göre 0 ile 1 arası ondalık olsun`,
+    `  (ör. sol-üst [POINT:0.12,0.08]). Yalnızca gerçekten bir yeri gösteriyorsan ekle.`,
+  ].filter(Boolean).join("\n");
+}
+
+function screenQuestionUser(question, lang) {
+  const langName = languageName(lang);
+  const q = String(question || "").trim() || "Ekranımda ne var, ne yapmalıyım?";
+  return `Soru: ${q}\n\nYanıtı ${langName} dilinde ver.`;
+}
+
 // System prompt for the action/command agent (text-driven, may use tools).
 function agentSystemPrompt(lang, catName, persona) {
   const name = (catName && String(catName).trim()) || "Kiri";
@@ -112,6 +152,8 @@ module.exports = {
   systemPrompt,
   classifyUserText,
   taskUserText,
+  screenQuestionSystem,
+  screenQuestionUser,
   agentSystemPrompt,
   skillAuthorSystem,
   skillAuthorUser,

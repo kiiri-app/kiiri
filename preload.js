@@ -66,6 +66,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("voice-config-changed", (_evt, cfg) => callback(cfg)),
   voiceRequestMic: () => ipcRenderer.invoke("voice-request-mic"),
   voiceSendAudio: (payload) => ipcRenderer.invoke("voice-audio", payload),
+  // Push-to-talk (hold hotkey → ask about the whole screen)
+  onPttStart: (callback) => ipcRenderer.on("ptt-start", () => callback()),
+  onPttStop: (callback) => ipcRenderer.on("ptt-stop", () => callback()),
+  pttSendAudio: (payload) => ipcRenderer.invoke("ptt-audio", payload),
+  onScreenAnswer: (callback) => ipcRenderer.on("screen-answer", (_evt, data) => callback(data)),
   setMouseEventsEnabled: (enabled) => ipcRenderer.send("set-mouse-events-enabled", enabled),
   showContextMenu: () => ipcRenderer.send("show-context-menu"),
   setStretchMode: (enabled) => ipcRenderer.send("set-stretch-mode", enabled),

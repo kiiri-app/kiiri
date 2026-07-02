@@ -100,6 +100,15 @@
         <select id="transcribe-model"></select>
       </label>
       <p class="hint" data-i18n="voiceHint">When on, a 🎤 button appears next to the cat. Click → speak → the command runs (it stops automatically when you stop talking).</p>
+      <label class="row toggle-row">
+        <span data-i18n="pttEnable">Push-to-talk: ask about my screen</span>
+        <input type="checkbox" id="ptt-enabled" />
+      </label>
+      <label class="field">
+        <span data-i18n="pttHotkey">Push-to-talk hotkey</span>
+        <select id="ptt-hotkey"></select>
+      </label>
+      <p class="hint" data-i18n="pttHint">Hold the hotkey, ask a question out loud about what's on your screen, release — the cat looks at your screen (especially near where it sits) and answers, pointing with a 🐾 when helpful. Needs voice on + an OpenAI key.</p>
     </section>
 
     <section class="group">

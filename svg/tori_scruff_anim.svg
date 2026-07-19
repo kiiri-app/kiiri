@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 1100" overflow="visible">
+  <!-- Tori scruff-hold drag: the painterly stretch frames from tori_move.png
+       (3 cells of 300x998) cross-faded by drag energy, hung from the grab
+       point with a pendulum sway. Same driver vars as kiri's scruff:
+         --ks-sway (deg string), --ks-stretch (0..1 number). Prefix: ts-
+       Frame art is not centered inside its cell (content centers measured at
+       x=140 / 186 / 150) — each frame carries its own x offset so the head
+       stays put during the cross-fade. -->
+  <style>
+    #ts-root {
+      transform-box: fill-box;
+      transform-origin: 50% 2%;                  /* grab point above the head */
+      transform: rotate(var(--ks-sway, 0deg));
+    }
+    #ts-pend {
+      transform-box: fill-box;
+      transform-origin: 50% 2%;
+      animation: ts-pend 5s ease-in-out infinite;
+    }
+    @keyframes ts-pend {
+      0%, 100% { transform: rotate(1.4deg); }
+      50%      { transform: rotate(-1.4deg); }
+    }
+    #ts-stretch {                                /* continuous elongation on top of frame swaps */
+      transform-box: fill-box;
+      transform-origin: 50% 0%;
+      transform: scale(1, calc(1 + var(--ks-stretch, 0) * 0.05));
+    }
+    /* Painterly frame cross-fade driven directly by the stretch amount:
+       f0 fades out as f1 fades in, f1 out as f2 in. */
+    .ts-f0 { opacity: calc(1 - clamp(0, var(--ks-stretch, 0) * 3 - 0.45, 1)); }
+    .ts-f1 { opacity: calc(clamp(0, var(--ks-stretch, 0) * 3 - 0.45, 1) - clamp(0, var(--ks-stretch, 0) * 3 - 1.55, 1)); }
+    .ts-f2 { opacity: clamp(0, calc(var(--ks-stretch, 0) * 3 - 1.55), 1); }
+    #ts-feet {                                   /* tiny leg dangle */
+      transform-box: fill-box;
+      transform-origin: 50% 0%;
+      animation: ts-feet 3.8s ease-in-out infinite;
+    }
+    @keyframes ts-feet {
+      0%, 100% { transform: rotate(1deg); }
+      50%      { transform: rotate(-1deg); }
+    }
+  </style>
+
+  <g id="ts-root">
+    <g id="ts-pend">
+      <g id="ts-stretch">
+        <g id="ts-feet">
+          <!-- f0 compact hang: content center x=140 -> shift +10 -->
+          <svg class="ts-f0" x="10" y="60" width="300" height="998" viewBox="0 0 300 998">
+            <image href="../svg/tori_move.png" width="900" height="998"/>
+          </svg>
+          <!-- f1 mid stretch: content center x=186 -> shift -36 -->
+          <svg class="ts-f1" x="-36" y="60" width="300" height="998" viewBox="300 0 300 998">
+            <image href="../svg/tori_move.png" width="900" height="998"/>
+          </svg>
+          <!-- f2 full stretch: content center x=150 -> no shift -->
+          <svg class="ts-f2" x="0" y="60" width="300" height="998" viewBox="600 0 300 998">
+            <image href="../svg/tori_move.png" width="900" height="998"/>
+          </svg>
+        </g>
+      </g>
+      <!-- pinched scruff fold at the grab point, in tori's watercolor blues -->
+      <path d="M150 8 C136 26 122 46 116 66 C138 56 162 56 184 66 C178 46 164 26 150 8 Z" fill="#5f8cb0" stroke="#33566f" stroke-width="4" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>

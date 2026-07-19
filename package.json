@@ -10,6 +10,7 @@
   "scripts": {
     "start": "electron .",
     "smoke": "electron . --kiri-smoke-test",
+    "build:posesvgs": "node scripts/build-pose-svgs.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "dist:win": "electron-builder --win",

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 594 932" overflow="visible">
+  <!-- Tori listening: the painterly idle art bobbing gently toward the sound,
+       with floating music notes + sound ripples in tori's slate blue.
+       Prefix: tl- -->
+  <style>
+    #tl-body {
+      transform-box: fill-box;
+      transform-origin: 50% 96%;
+      animation: tl-bob 4.6s ease-in-out infinite;
+    }
+    @keyframes tl-bob {                          /* lean/tilt left-right, like tracking a sound */
+      0%, 10%   { transform: rotate(-2.2deg) translateY(0px); }
+      40%, 60%  { transform: rotate(2.4deg) translateY(-6px); }
+      90%, 100% { transform: rotate(-2.2deg) translateY(0px); }
+    }
+    #tl-breathe {
+      transform-box: fill-box;
+      transform-origin: 50% 100%;
+      animation: tl-breathe 3.2s ease-in-out infinite;
+    }
+    @keyframes tl-breathe {
+      0%, 100% { transform: scale(1, 1); }
+      50%      { transform: scale(1.006, 1.018); }
+    }
+    .tl-note { opacity: 0; animation: tl-note 4.6s ease-in-out infinite; }
+    .tl-note2 { animation-delay: -1.5s; }
+    .tl-note3 { animation-delay: -3.1s; }
+    @keyframes tl-note {
+      0%       { opacity: 0; transform: translate(0px, 26px) rotate(-6deg); }
+      18%      { opacity: 0.9; }
+      55%      { opacity: 0.5; }
+      80%, 100%{ opacity: 0; transform: translate(10px, -110px) rotate(8deg); }
+    }
+    .tl-arc {
+      opacity: 0;
+      animation: tl-arc 2.7s ease-out infinite;
+      fill: none;
+      stroke: #4a6f94;
+      stroke-linecap: round;
+    }
+    .tl-arc2 { animation-delay: -0.9s; }
+    .tl-arc3 { animation-delay: -1.8s; }
+    @keyframes tl-arc {
+      0%       { opacity: 0; transform: scale(0.84); }
+      25%      { opacity: 0.7; }
+      70%, 100%{ opacity: 0; transform: scale(1.1); }
+    }
+    #tl-arcs { transform-box: fill-box; transform-origin: 0% 100%; }
+  </style>
+
+  <g id="tl-body">
+    <g id="tl-breathe">
+      <image href="../svg/tori_noeye.png" width="594" height="932"/>
+    </g>
+    <!-- sound ripples by the right ear -->
+    <g id="tl-arcs">
+      <path class="tl-arc"         d="M478 96 C496 118 506 144 505 173" stroke-width="8"/>
+      <path class="tl-arc tl-arc2" d="M510 74 C534 102 546 138 543 177" stroke-width="8"/>
+      <path class="tl-arc tl-arc3" d="M542 52 C572 86 587 132 582 181" stroke-width="8"/>
+    </g>
+  </g>
+
+  <!-- floating music notes, left of the head -->
+  <g fill="#4a6f94">
+    <g class="tl-note" transform="translate(74, 150)">
+      <ellipse cx="0" cy="34" rx="14" ry="10" transform="rotate(-18 0 34)"/>
+      <path d="M12 31 L12 -24 L44 -32 L44 -13 L19 -7 L19 31 Z"/>
+    </g>
+    <g class="tl-note tl-note2" transform="translate(36, 270)">
+      <ellipse cx="0" cy="26" rx="12" ry="9" transform="rotate(-18 0 26)"/>
+      <rect x="9" y="-28" width="6" height="56" rx="3"/>
+      <path d="M9 -28 C27 -23 35 -12 32 3 C28 -5 20 -10 9 -12 Z"/>
+    </g>
+    <g class="tl-note tl-note3" transform="translate(118, 300)">
+      <ellipse cx="0" cy="22" rx="11" ry="8" transform="rotate(-18 0 22)"/>
+      <rect x="7" y="-24" width="6" height="48" rx="3"/>
+    </g>
+  </g>
+</svg>

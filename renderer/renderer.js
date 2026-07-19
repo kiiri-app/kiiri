@@ -78,6 +78,25 @@ let poseListeningTimer = null;
 let poseLeanX = 0, poseLeanY = 0;
 let poseEyeX = 0, poseEyeY = 0;
 let posePupilTravelPx = 0;
+// Animated inline-SVG poses (new vector/painterly art, one file per state).
+// Injected into #pose-svg from the lazy-loaded pose-anim-svgs.js bundle; the
+// legacy sprite sheets above stay as the fallback if the bundle fails to load.
+const poseSvgEl = document.getElementById("pose-svg");
+const POSE_SVG_KEYS = {
+  kiri: { move: 1, listening: 1, working: 1, pointing: 1 },
+  tori: { move: 1, listening: 1, working: 1, pointing: 1 },
+};
+// viewBox aspect of each SVG file — used for layout before/without injection.
+const POSE_SVG_VIEW = {
+  kiri: { move: [1065, 2000], listening: [1065, 1439], working: [1065, 1439], pointing: [1065, 1439] },
+  tori: { move: [300, 1100], listening: [594, 932], working: [567, 1150], pointing: [594, 932] },
+};
+let poseSvgShown = null;      // "set/state" currently injected into #pose-svg
+// Scruff-drag pendulum: horizontal drag impulses swing the hanging body.
+let poseSwayAngle = 0, poseSwayVel = 0;
+// Pointing at a screen spot (paw overlay flow): {dir: 1 right | -1 left}.
+let posePointing = null;
+let posePointingTimer = null;
 const shareNameBadge = document.getElementById("share-name-badge");
 const catSpeechBubble = document.getElementById("cat-speech-bubble");
 const catThinkingDots = document.getElementById("cat-thinking-dots");
@@ -1800,6 +1819,22 @@ function poseFrameIndex(cfg, elapsedMs) {
 function poseAnimTick(now) {
   poseAnimRaf = null;
   if (!poseMode || !poseAnimState) return;
+  // Animated-SVG path: CSS runs the loops; JS only feeds the scruff drag with
+  // its stretch amount + a damped pendulum swung by horizontal drag impulses.
+  if (document.body.dataset.poseSvg) {
+    if (poseAnimState === "move" && poseSvgEl) {
+      poseDragEnergy *= 0.85;
+      const target = Math.min(1, poseDragEnergy / POSE_STRETCH_FULL);
+      poseStretchT += (target - poseStretchT) * 0.25;
+      poseSwayVel += -poseSwayAngle * 0.055;   // spring back to plumb
+      poseSwayVel *= 0.9;                      // damping
+      poseSwayAngle = Math.max(-16, Math.min(16, poseSwayAngle + poseSwayVel));
+      poseSvgEl.style.setProperty("--ks-stretch", poseStretchT.toFixed(3));
+      poseSvgEl.style.setProperty("--ks-sway", `${poseSwayAngle.toFixed(2)}deg`);
+    }
+    poseAnimRaf = requestAnimationFrame(poseAnimTick);
+    return;
+  }
   const cfg = POSE_SHEETS[poseSet] && POSE_SHEETS[poseSet][poseAnimState];
   const el = poseAnimEls[poseAnimState];
   if (cfg && el) {
@@ -1827,9 +1862,102 @@ function startPoseAnim(state) {
   poseAnimState = state;
   poseAnimStartedAt = performance.now();
   poseAnimFrameShown = -1;
-  if (state === "move") { poseDragEnergy = 0; poseStretchT = 0; }
+  if (state === "move") { poseDragEnergy = 0; poseStretchT = 0; poseSwayAngle = 0; poseSwayVel = 0; }
   sizePoseAnim(state);
   if (!poseAnimRaf) poseAnimRaf = requestAnimationFrame(poseAnimTick);
+}
+
+// ── Animated inline-SVG poses ──────────────────────────────────────────────
+// The SVG markup ships in pose-anim-svgs.js (generated from svg/*_anim.svg by
+// scripts/build-pose-svgs.js) because fetch() cannot read file:// siblings.
+let poseSvgLibLoad = null;
+function ensurePoseSvgLib() {
+  if (window.POSE_ANIM_SVGS) return Promise.resolve(window.POSE_ANIM_SVGS);
+  if (poseSvgLibLoad) return poseSvgLibLoad;
+  poseSvgLibLoad = new Promise((resolve) => {
+    const s = document.createElement("script");
+    s.src = "pose-anim-svgs.js";
+    s.onload = () => resolve(window.POSE_ANIM_SVGS || null);
+    s.onerror = () => resolve(null);
+    document.body.appendChild(s);
+  });
+  return poseSvgLibLoad;
+}
+
+function clearPoseSvg() {
+  delete document.body.dataset.poseSvg;
+  if (poseSvgEl) { poseSvgEl.innerHTML = ""; poseSvgEl.style.transform = ""; }
+  poseSvgShown = null;
+}
+
+// Inject (or clear) the animated SVG for the active state. Async because the
+// bundle loads lazily — re-checks the state after the load resolves.
+function applyPoseSvgState(state) {
+  if (!poseSvgEl) return;
+  const hasSvg = state !== "idle" && POSE_SVG_KEYS[poseSet] && POSE_SVG_KEYS[poseSet][state];
+  if (!hasSvg) { clearPoseSvg(); return; }
+  const key = `${poseSet}/${state}`;
+  ensurePoseSvgLib().then((lib) => {
+    if (!poseMode || (document.body.dataset.poseState || "idle") !== state) return;
+    const markup = lib && lib[key];
+    if (!markup) { clearPoseSvg(); return; } // bundle missing → legacy sheets show
+    if (poseSvgShown !== key) {
+      poseSvgEl.innerHTML = markup;
+      poseSvgShown = key;
+    }
+    document.body.dataset.poseSvg = "1";
+    if (state === "move") {
+      poseSvgEl.style.setProperty("--ks-sway", "0deg");
+      poseSvgEl.style.setProperty("--ks-stretch", "0");
+    }
+    // Pointing art faces right; mirror the whole SVG when the target is left.
+    poseSvgEl.style.transform =
+      state === "pointing" && posePointing && posePointing.dir < 0 ? "scaleX(-1)" : "";
+    sizePoseSvg(state);
+  });
+}
+
+// Geometry for #pose-svg — same conventions as the legacy sheets: "move" hangs
+// head-pinned at the idle head position (overflowing downward), the sitting
+// states contain-fit with feet at the box bottom.
+function sizePoseSvg(state) {
+  const view = POSE_SVG_VIEW[poseSet] && POSE_SVG_VIEW[poseSet][state];
+  if (!view || !poseSvgEl || !posesetEl || !poseEls) return;
+  const [vw, vh] = view;
+  const box = posesetEl.getBoundingClientRect();
+  if (box.width <= 0 || box.height <= 0) return;
+  if (state === "move") {
+    const idleImg = poseEls.noeye;
+    const inW = idleImg.naturalWidth, inH = idleImg.naturalHeight;
+    if (!inW || !inH) return;
+    const idleScale = Math.min(box.width / inW, box.height / inH);
+    const idleDispW = inW * idleScale;
+    const idleOffY = box.height - inH * idleScale; // idle is bottom-anchored
+    const dispW = idleDispW, dispH = (vh / vw) * dispW;
+    poseSvgEl.style.width = `${dispW}px`;
+    poseSvgEl.style.height = `${dispH}px`;
+    poseSvgEl.style.left = `${(box.width - dispW) / 2}px`;
+    poseSvgEl.style.top = `${idleOffY}px`;
+    return;
+  }
+  const scale = Math.min(box.width / vw, box.height / vh);
+  const dispW = vw * scale, dispH = vh * scale;
+  poseSvgEl.style.width = `${dispW}px`;
+  poseSvgEl.style.height = `${dispH}px`;
+  poseSvgEl.style.left = `${(box.width - dispW) / 2}px`;
+  poseSvgEl.style.top = `${box.height - dispH}px`;
+}
+
+// Brief "pointing at that spot" pose alongside the paw overlay (screen-answer).
+function triggerPosePointing(dir) {
+  if (!poseMode) return;
+  posePointing = { dir: dir < 0 ? -1 : 1 };
+  updatePoseState();
+  clearTimeout(posePointingTimer);
+  posePointingTimer = setTimeout(() => {
+    posePointing = null;
+    updatePoseState();
+  }, 3600);
 }
 
 function stopPoseAnim() {
@@ -1838,14 +1966,16 @@ function stopPoseAnim() {
 }
 
 // Resolve the current pose-set state from active conditions and reflect it on
-// <body> (CSS swaps the visible <img>). Priority: drag > click > AI > idle.
+// <body> (CSS swaps the visible <img>). Priority: drag > listen > point > AI > idle.
 function updatePoseState() {
   if (!poseMode) return;
   let st = "idle";
   if (dragging) st = "move";
   else if (poseListening) st = "listening";
+  else if (posePointing) st = "pointing";
   else if (poseAiActive) st = "working";
   document.body.dataset.poseState = st;
+  applyPoseSvgState(st);
   if (st === "idle") stopPoseAnim();
   else if (poseAnimState !== st) startPoseAnim(st);
   renderPosesetOverlay();
@@ -1958,6 +2088,7 @@ function applyCharacterArt(art) {
   if (spriteObj) spriteObj.hidden = !spriteMode;
   if (obj) obj.hidden = spriteMode || poseMode;
   if (posesetEl) posesetEl.hidden = !poseMode;
+  if (!poseMode) clearPoseSvg();
   if (poseMode) {
     poseSet = art && art.set === "tori" ? "tori" : "kiri";
     poseOverlay = (art && art.overlay) || null;
@@ -1979,6 +2110,7 @@ window.addEventListener("resize", () => {
   renderPosesetOverlay();
   layoutPosePupils();
   if (poseAnimState) sizePoseAnim(poseAnimState);
+  if (poseSvgShown && poseAnimState) sizePoseSvg(poseAnimState);
 });
 
 if (spriteObj) {
@@ -2630,7 +2762,22 @@ if (window.electronAPI.onScreenAnswer) {
     }
     if (data.gaze && Number.isFinite(data.gaze.dx)) {
       setGazeOverride(data.gaze.dx, data.gaze.dy, 3000);
+      // Pose-set characters also strike the pointing pose toward the target.
+      triggerPosePointing(data.gaze.dx);
     }
+  });
+}
+
+// Spoken answers (TTS): play the synthesized audio from main. Volume follows
+// the single "Notification sound" slider (0 = user muted everything → skip).
+let ttsPlayer = null;
+if (window.electronAPI.onTtsAudio) {
+  window.electronAPI.onTtsAudio((payload) => {
+    if (!payload || !payload.audio || completionMeowVolume <= 0) return;
+    try { if (ttsPlayer) ttsPlayer.pause(); } catch {}
+    ttsPlayer = new Audio(`data:${payload.mime || "audio/mpeg"};base64,${payload.audio}`);
+    ttsPlayer.volume = completionMeowVolume;
+    ttsPlayer.play().catch(() => {});
   });
 }
 function applyTaskCompleteSoundVolume(volume) {
@@ -3538,6 +3685,8 @@ window.addEventListener("mousemove", (e) => {
     if (poseMode) {
       const pull = Math.hypot(dx, dy) + Math.max(0, dy) * 0.8;
       poseDragEnergy = Math.min(POSE_STRETCH_FULL * 2.2, poseDragEnergy + pull);
+      // Scruff pendulum: the hanging body lags behind horizontal movement.
+      poseSwayVel = Math.max(-6, Math.min(6, poseSwayVel - dx * 0.12));
     }
     // impulse from acceleration (delta-velocity); power-law so fast drags swing much more
     const delta = dx - prevDragDx;

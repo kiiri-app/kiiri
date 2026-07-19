@@ -35,6 +35,9 @@ const I18N = {
     pttEnable: "Push-to-talk: ask about my screen",
     pttHotkey: "Push-to-talk hotkey",
     pttHint: "Hold the hotkey, ask out loud about what's on your screen, release — the cat looks at your screen (especially near where it sits) and answers, pointing with a 🐾 when helpful. Needs voice on + an OpenAI key.",
+    ttsEnable: "Spoken answers (the cat reads them aloud)",
+    ttsVoice: "Speaking voice",
+    ttsHint: "Screen-question answers are also spoken. Uses OpenAI voices when a key is set; otherwise the built-in macOS voice for your language. Volume follows the notification-sound slider.",
     customTasksHeading: "Custom tasks",
     noCustomTasks: "No custom tasks yet.",
     taskNamePlaceholder: "Task name (e.g. Fix)",
@@ -78,6 +81,9 @@ const I18N = {
     pttEnable: "Bas-konuş: ekranımı sor",
     pttHotkey: "Bas-konuş kısayolu",
     pttHint: "Kısayolu basılı tut, ekranındaki şey hakkında sesli sor, bırak — kedi ekranına (özellikle durduğu yerin yakınına) bakıp yanıtlar, gerekince 🐾 ile gösterir. Ses açık + OpenAI anahtarı gerekir.",
+    ttsEnable: "Sesli yanıt (kedi cevabı okur)",
+    ttsVoice: "Konuşma sesi",
+    ttsHint: "Ekran sorusu yanıtları sesli de okunur. OpenAI anahtarı varsa OpenAI sesleri, yoksa diline uygun yerleşik macOS sesi kullanılır. Ses düzeyi bildirim sesi ayarını izler.",
     customTasksHeading: "Özel görevler",
     noCustomTasks: "Henüz özel görev yok.",
     taskNamePlaceholder: "Görev adı (ör. Düzelt)",
@@ -121,6 +127,9 @@ const I18N = {
     pttEnable: "푸시투토크: 내 화면에 대해 묻기",
     pttHotkey: "푸시투토크 단축키",
     pttHint: "단축키를 누른 채 화면에 있는 것을 소리내어 묻고 놓으면, 고양이가 화면(특히 자기가 앉은 근처)을 보고 답하며 필요하면 🐾로 가리켜요. 음성 켜기 + OpenAI 키가 필요해요.",
+    ttsEnable: "음성 답변 (고양이가 소리내어 읽어요)",
+    ttsVoice: "말하는 목소리",
+    ttsHint: "화면 질문의 답변을 소리로도 읽어줘요. OpenAI 키가 있으면 OpenAI 음성을, 없으면 언어에 맞는 macOS 내장 음성을 사용해요. 볼륨은 알림음 설정을 따라요.",
     customTasksHeading: "커스텀 작업",
     noCustomTasks: "아직 커스텀 작업이 없어요.",
     taskNamePlaceholder: "작업 이름 (예: 교정)",
@@ -164,6 +173,9 @@ const I18N = {
     pttEnable: "プッシュトゥトーク: 画面について聞く",
     pttHotkey: "プッシュトゥトークのキー",
     pttHint: "キーを押しながら画面のことを声で尋ね、離すと、猫が画面（特に自分のいる近く）を見て答え、必要なら 🐾 で指し示します。音声オン + OpenAI キーが必要です。",
+    ttsEnable: "音声で答える（猫が読み上げます）",
+    ttsVoice: "話す声",
+    ttsHint: "画面質問の答えを声でも読み上げます。OpenAI キーがあれば OpenAI の声、なければ言語に合った macOS 内蔵の声を使います。音量は通知音の設定に従います。",
     customTasksHeading: "カスタムタスク",
     noCustomTasks: "カスタムタスクはまだありません。",
     taskNamePlaceholder: "タスク名（例: 修正）",
@@ -255,6 +267,14 @@ const openaiKeyStatus = el("openai-key-status");
 const transcribeModelEl = el("transcribe-model");
 const pttEnabledEl = el("ptt-enabled");
 const pttHotkeyEl = el("ptt-hotkey");
+const ttsEnabledEl = el("tts-enabled");
+const ttsVoiceEl = el("tts-voice");
+
+// OpenAI voice ids are proper names — shown capitalized, no translation.
+const TTS_VOICE_LABELS = {
+  alloy: "Alloy", nova: "Nova", shimmer: "Shimmer", echo: "Echo",
+  onyx: "Onyx", fable: "Fable", coral: "Coral", sage: "Sage",
+};
 
 const PTT_HOTKEY_LABELS = {
   "ctrl+alt": "Ctrl + Alt",
@@ -367,6 +387,8 @@ function render() {
   fillSelect(transcribeModelEl, config.supportedTranscribeModels || [], transcribeLabels(), config.transcribeModel);
   if (pttEnabledEl) pttEnabledEl.checked = !!config.pttEnabled;
   if (pttHotkeyEl) fillSelect(pttHotkeyEl, config.supportedPttHotkeys || [], PTT_HOTKEY_LABELS, config.pttHotkey);
+  if (ttsEnabledEl) ttsEnabledEl.checked = !!config.ttsEnabled;
+  if (ttsVoiceEl) fillSelect(ttsVoiceEl, config.supportedTtsVoices || [], TTS_VOICE_LABELS, config.ttsVoice);
   renderKeyStatus();
   renderOpenAiStatus();
   renderCustomTasks();
@@ -430,6 +452,8 @@ vEnabled.addEventListener("change", () => patch({ voiceEnabled: vEnabled.checked
 transcribeModelEl.addEventListener("change", () => patch({ transcribeModel: transcribeModelEl.value }));
 if (pttEnabledEl) pttEnabledEl.addEventListener("change", () => patch({ pttEnabled: pttEnabledEl.checked }));
 if (pttHotkeyEl) pttHotkeyEl.addEventListener("change", () => patch({ pttHotkey: pttHotkeyEl.value }));
+if (ttsEnabledEl) ttsEnabledEl.addEventListener("change", () => patch({ ttsEnabled: ttsEnabledEl.checked }));
+if (ttsVoiceEl) ttsVoiceEl.addEventListener("change", () => patch({ ttsVoice: ttsVoiceEl.value }));
 
 saveOpenaiKey.addEventListener("click", async () => {
   const value = openaiKeyEl.value.trim();

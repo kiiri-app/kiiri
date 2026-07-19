@@ -17,6 +17,8 @@ const DEFAULT_TRANSCRIBE_MODEL = "gpt-4o-mini-transcribe";
 const SUPPORTED_TRANSCRIBE_MODELS = ["gpt-4o-mini-transcribe", "gpt-4o-transcribe", "whisper-1"];
 // Push-to-talk hold combos (modifier pairs, evaluated on the global input hook).
 const SUPPORTED_PTT_HOTKEYS = ["ctrl+alt", "ctrl+shift", "alt+shift", "cmd+alt"];
+// OpenAI TTS voices for spoken answers (macOS `say` is the keyless fallback).
+const SUPPORTED_TTS_VOICES = ["alloy", "nova", "shimmer", "echo", "onyx", "fable", "coral", "sage"];
 
 // Multi-provider: Claude (Anthropic), OpenAI, Gemini, and Ollama (local/offline).
 // OpenAI/Gemini/Ollama all speak the OpenAI Chat Completions format.
@@ -51,6 +53,10 @@ const DEFAULTS = Object.freeze({
   // voice usable (STT). Hotkey is a modifier combo held down.
   pttEnabled: false,
   pttHotkey: "ctrl+alt",
+  // Spoken answers (TTS): reads screen-question answers aloud. OpenAI TTS when
+  // a key is present, otherwise the macOS `say` voice for the response language.
+  ttsEnabled: false,
+  ttsVoice: "alloy",
 });
 
 let cached = null;
@@ -110,6 +116,8 @@ function sanitizeConfig(raw) {
       : DEFAULT_TRANSCRIBE_MODEL,
     pttEnabled: !!data.pttEnabled,
     pttHotkey: SUPPORTED_PTT_HOTKEYS.includes(data.pttHotkey) ? data.pttHotkey : "ctrl+alt",
+    ttsEnabled: !!data.ttsEnabled,
+    ttsVoice: SUPPORTED_TTS_VOICES.includes(data.ttsVoice) ? data.ttsVoice : DEFAULTS.ttsVoice,
   };
 }
 
@@ -250,7 +258,16 @@ function redactedConfig() {
     supportedTranscribeModels: SUPPORTED_TRANSCRIBE_MODELS,
     supportedPttHotkeys: SUPPORTED_PTT_HOTKEYS,
     pttUsable: pttUsable(),
+    supportedTtsVoices: SUPPORTED_TTS_VOICES,
+    ttsUsable: ttsUsable(),
   };
+}
+
+// Spoken answers usable: toggle on + either an OpenAI key (cloud TTS) or the
+// macOS `say` fallback.
+function ttsUsable() {
+  const c = loadConfig();
+  return !!(c.ttsEnabled && (hasOpenAiKey() || process.platform === "darwin"));
 }
 
 // True only when voice is usable (toggle on + key present).
@@ -290,7 +307,9 @@ module.exports = {
   providerReady,
   SUPPORTED_PROVIDERS,
   SUPPORTED_PTT_HOTKEYS,
+  SUPPORTED_TTS_VOICES,
   voiceUsable,
   pttUsable,
+  ttsUsable,
   redactedConfig,
 };

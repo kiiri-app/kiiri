@@ -109,6 +109,15 @@
         <select id="ptt-hotkey"></select>
       </label>
       <p class="hint" data-i18n="pttHint">Hold the hotkey, ask a question out loud about what's on your screen, release — the cat looks at your screen (especially near where it sits) and answers, pointing with a 🐾 when helpful. Needs voice on + an OpenAI key.</p>
+      <label class="row toggle-row">
+        <span data-i18n="ttsEnable">Spoken answers (the cat reads them aloud)</span>
+        <input type="checkbox" id="tts-enabled" />
+      </label>
+      <label class="field">
+        <span data-i18n="ttsVoice">Speaking voice</span>
+        <select id="tts-voice"></select>
+      </label>
+      <p class="hint" data-i18n="ttsHint">Screen-question answers are also spoken. Uses OpenAI voices when a key is set; otherwise the built-in macOS voice for your language. Volume follows the notification-sound slider.</p>
     </section>
 
     <section class="group">

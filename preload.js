@@ -71,6 +71,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onPttStop: (callback) => ipcRenderer.on("ptt-stop", () => callback()),
   pttSendAudio: (payload) => ipcRenderer.invoke("ptt-audio", payload),
   onScreenAnswer: (callback) => ipcRenderer.on("screen-answer", (_evt, data) => callback(data)),
+  // Spoken answers: main sends synthesized speech audio to play in the pet.
+  onTtsAudio: (callback) => ipcRenderer.on("tts-audio", (_evt, data) => callback(data)),
   // Ask about my screen (typed)
   askScreen: (question) => ipcRenderer.invoke("ask-screen", question),
   onScreenAskOpen: (callback) => ipcRenderer.on("screen-ask-open", () => callback()),

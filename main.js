@@ -22,6 +22,7 @@ const aiConfig = require("./ai/config");
 const aiAssistant = require("./ai/assistant");
 const aiAgent = require("./ai/agent");
 const aiVoice = require("./ai/voice");
+const aiTts = require("./ai/tts");
 const aiJournal = require("./ai/journal/store");
 const aiCardgen = require("./ai/journal/cardgen");
 const aiMemory = require("./ai/memory/store");
@@ -2006,8 +2007,12 @@ function createTray() {
 function startAgentStateServer() {
   if (agentStateServer) return;
   const token = ensureAgentStateToken();
+  // Local control bridge (OpenClicky-style): besides /agent-state, external
+  // agents holding the token can make the pet speak (/speak) or point at a
+  // screen spot with the paw overlay + pointing pose (/point).
+  const BRIDGE_ROUTES = new Set(["/agent-state", "/speak", "/point"]);
   agentStateServer = http.createServer((req, res) => {
-    if (req.method !== "POST" || req.url !== "/agent-state") {
+    if (req.method !== "POST" || !BRIDGE_ROUTES.has(req.url)) {
       res.writeHead(404);
       res.end("not found");
       return;
@@ -2030,7 +2035,28 @@ function startAgentStateServer() {
         return;
       }
       try {
-        handleAgentStateEvent(JSON.parse(body || "{}"));
+        const data = JSON.parse(body || "{}");
+        if (req.url === "/agent-state") {
+          handleAgentStateEvent(data);
+        } else if (req.url === "/speak") {
+          const text = String((data && data.text) || "").slice(0, 2000);
+          if (!text) throw new Error("no text");
+          speakAnswer(text, { force: true }).catch(() => {});
+        } else if (req.url === "/point") {
+          // {x,y} absolute screen coords, or {nx,ny} normalized 0..1 on the
+          // display the pet lives on.
+          let x = Number(data && data.x), y = Number(data && data.y);
+          if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            const nx = Number(data && data.nx), ny = Number(data && data.ny);
+            if (!Number.isFinite(nx) || !Number.isFinite(ny)) throw new Error("no point");
+            const disp = petWin && !petWin.isDestroyed()
+              ? screen.getDisplayNearestPoint({ x: petWin.getBounds().x, y: petWin.getBounds().y })
+              : screen.getPrimaryDisplay();
+            x = disp.bounds.x + Math.max(0, Math.min(1, nx)) * disp.bounds.width;
+            y = disp.bounds.y + Math.max(0, Math.min(1, ny)) * disp.bounds.height;
+          }
+          sendScreenAnswer({ point: { x, y } });
+        }
         res.writeHead(200);
         res.end("ok");
       } catch {
@@ -2068,6 +2094,23 @@ function sendCatNotice(message) {
   }
 }
 
+// Spoken answers (TTS): cloud synthesis when an OpenAI key exists (audio bytes
+// are played inside the pet window at the notification-sound volume), macOS
+// `say` otherwise. `force` lets the local bridge /speak endpoint bypass the
+// settings toggle — an external agent asking us to speak IS the user intent.
+async function speakAnswer(text, { force = false } = {}) {
+  const cfg = aiConfig.loadConfig();
+  if (!text || (!force && !cfg.ttsEnabled)) return;
+  if (aiConfig.hasOpenAiKey()) {
+    const r = await aiTts.synthesize(text);
+    if (r && r.ok && petWin && !petWin.isDestroyed()) {
+      petWin.webContents.send("tts-audio", { audio: r.audio, mime: r.mime });
+      return;
+    }
+  }
+  aiTts.speakWithSay(text);
+}
+
 // Streaming screen-answer phases: "start" opens an empty bubble, "delta" replaces
 // its text with the clean-so-far answer as tokens arrive. The final answer +
 // paw point is delivered by sendScreenAnswer ("end").
@@ -2098,6 +2141,7 @@ function sendScreenAnswer({ question, text, point } = {}) {
   if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) {
     showPawPoint(point);
   }
+  speakAnswer(text).catch(() => {});
 }
 
 function createAiPanelWindow() {

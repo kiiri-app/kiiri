@@ -57,6 +57,14 @@ contextBridge.exposeInMainWorld("aiAPI", {
   closeJournal: () => ipcRenderer.send("ai-journal-close"),
   resizeJournal: (size) => ipcRenderer.send("ai-journal-resize", size),
 
+  // Free-form chat (multi-turn conversation)
+  chatHistory: () => ipcRenderer.invoke("chat-history"),
+  chatSend: (text) => ipcRenderer.invoke("chat-send", text),
+  chatReset: () => ipcRenderer.invoke("chat-reset"),
+  chatCancel: () => ipcRenderer.send("chat-cancel"),
+  onChatStream: (cb) => ipcRenderer.on("chat-stream", (_e, data) => cb(data)),
+  closeChat: () => ipcRenderer.send("chat-close"),
+
   // Scheduled automations (interval / daily → screen-question or note)
   automationsList: () => ipcRenderer.invoke("automations-list"),
   automationsAdd: (payload) => ipcRenderer.invoke("automations-add", payload),

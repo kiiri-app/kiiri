@@ -102,6 +102,37 @@ async function callVisionStream({ apiKey, model, system, userText, imageBase64, 
   return { text, model: message.model, usage: message.usage };
 }
 
+// Streaming multi-turn chat: takes a full `messages` history ([{role, text}])
+// instead of a single user turn, so the conversation window can carry context.
+// Emits text deltas via onDelta and resolves with the full text.
+async function callChatStream({ apiKey, model, system, messages, maxTokens, think, signal }, onDelta) {
+  const SDK = loadSDK();
+  const client = new SDK({ apiKey, maxRetries: 1 });
+  const apiMessages = (messages || [])
+    .filter((m) => m && m.text != null && (m.role === "user" || m.role === "assistant"))
+    .map((m) => ({ role: m.role, content: [{ type: "text", text: String(m.text) }] }));
+  const params = {
+    model,
+    max_tokens: maxTokens || 1024,
+    system,
+    messages: apiMessages,
+  };
+  if (think && supportsAdaptiveThinking(model)) {
+    params.thinking = { type: "adaptive" };
+  }
+  const stream = client.messages.stream(params, { signal });
+  if (typeof onDelta === "function") {
+    stream.on("text", (delta) => { if (delta) onDelta(delta); });
+  }
+  const message = await stream.finalMessage();
+  const text = (message.content || [])
+    .filter((b) => b && b.type === "text")
+    .map((b) => b.text)
+    .join("")
+    .trim();
+  return { text, model: message.model, usage: message.usage };
+}
+
 // Tool-use (planning) call. Returns the assistant's text plus any tool calls it
 // wants to make. We do NOT auto-execute — the caller previews + gets approval,
 // then runs the executors. Optional image lets a command also see the screen.
@@ -133,4 +164,4 @@ async function callWithTools({ apiKey, model, system, userText, tools, imageBase
   return { text, toolUses, stopReason: message.stop_reason, model: message.model };
 }
 
-module.exports = { callVision, callVisionStream, callWithTools, classifyError, supportsAdaptiveThinking };
+module.exports = { callVision, callVisionStream, callChatStream, callWithTools, classifyError, supportsAdaptiveThinking };

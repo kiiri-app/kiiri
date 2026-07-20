@@ -25,6 +25,14 @@ function callVisionStream(opts, onDelta) {
   return openaiCompat.callVisionStream({ ...opts, baseUrl: p.baseUrl, apiKey: p.apiKey, model: p.model }, onDelta);
 }
 
+function callChatStream(opts, onDelta) {
+  const p = config.resolveProvider();
+  if (p.id === "anthropic") {
+    return anthropic.callChatStream({ ...opts, apiKey: p.apiKey, model: p.model }, onDelta);
+  }
+  return openaiCompat.callChatStream({ ...opts, baseUrl: p.baseUrl, apiKey: p.apiKey, model: p.model }, onDelta);
+}
+
 function callWithTools(opts) {
   const p = config.resolveProvider();
   if (p.id === "anthropic") {
@@ -37,4 +45,4 @@ function callWithTools(opts) {
 // openai-compat provider throws with `.status`) and network/Ollama failures.
 const classifyError = anthropic.classifyError;
 
-module.exports = { callVision, callVisionStream, callWithTools, classifyError };
+module.exports = { callVision, callVisionStream, callChatStream, callWithTools, classifyError };

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <link rel="stylesheet" href="ai-chat.css" />
+  <title>Chat</title>
+</head>
+<body>
+  <div id="titlebar">
+    <span>🗨 <span id="title" data-i18n="title">Chat</span> <small id="sub"></small></span>
+    <div class="tb-actions">
+      <button id="reset-btn" type="button" class="link-btn" data-i18n="reset">New chat</button>
+      <button id="close-btn" type="button" aria-label="Close" data-i18n-aria="close">×</button>
+    </div>
+  </div>
+
+  <main id="log">
+    <div id="empty" class="empty" data-i18n="empty">Say hi to Kiri — ask anything.</div>
+  </main>
+
+  <form id="form" autocomplete="off">
+    <textarea id="input" rows="1" data-i18n-ph="placeholder"></textarea>
+    <button type="submit" id="send" data-i18n="send">Send</button>
+  </form>
+
+  <script src="ai-chat.js"></script>
+</body>
+</html>

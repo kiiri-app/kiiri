@@ -33,6 +33,8 @@ const I18N = {
     hintOllama: "Local/offline — no key needed. Ollama must be running with a vision model pulled (e.g. `ollama pull llama3.2-vision`).",
     autoDetect: "Detect content and suggest tasks",
     alwaysDrop: "Analyze on every drop",
+    appContext: "App awareness (tell answers which app you're in)",
+    appContextHint: "When on, screen answers know your frontmost app (name only, e.g. \"VS Code\") for sharper replies. macOS only; no extra permission.",
     triggerHint: "When off: hold <b>Option/Alt</b> and drop the cat → analysis starts.",
     voiceHeading: "Voice (OpenAI) — voice commands",
     voiceEnable: "Enable voice commands",
@@ -87,6 +89,8 @@ const I18N = {
     hintOllama: "Yerel/offline — anahtar gerekmez. Ollama çalışıyor olmalı ve bir vision modeli indirilmeli (ör. `ollama pull llama3.2-vision`).",
     autoDetect: "İçeriği algıla ve görev öner",
     alwaysDrop: "Her bırakışta analiz et",
+    appContext: "Uygulama farkındalığı (yanıtlar hangi uygulamada olduğunu bilsin)",
+    appContextHint: "Açıkken ekran yanıtları öndeki uygulamanı bilir (yalnızca ad, ör. \"VS Code\") ve daha isabetli olur. Yalnızca macOS; ek izin gerekmez.",
     triggerHint: "Kapalıyken: <b>Option/Alt</b> tuşunu basılı tutup kediyi bırak → analiz başlar.",
     voiceHeading: "Ses (OpenAI) — sesli komut",
     voiceEnable: "Sesli komutu aç",
@@ -141,6 +145,8 @@ const I18N = {
     hintOllama: "로컬/오프라인 — 키가 필요 없어요. Ollama가 실행 중이고 vision 모델이 설치되어 있어야 해요 (예: `ollama pull llama3.2-vision`).",
     autoDetect: "내용을 인식해 작업 추천",
     alwaysDrop: "떨어뜨릴 때마다 분석",
+    appContext: "앱 인식 (답변이 현재 앱을 알도록)",
+    appContextHint: "켜면 화면 답변이 최상위 앱(이름만, 예: \"VS Code\")을 알아 더 정확해져요. macOS 전용; 추가 권한 불필요.",
     triggerHint: "꺼져 있을 때: <b>Option/Alt</b> 키를 누른 채 고양이를 놓으면 → 분석이 시작돼요.",
     voiceHeading: "음성 (OpenAI) — 음성 명령",
     voiceEnable: "음성 명령 켜기",
@@ -195,6 +201,8 @@ const I18N = {
     hintOllama: "ローカル/オフライン — キー不要。Ollama が起動していて vision モデルが必要です（例: `ollama pull llama3.2-vision`）。",
     autoDetect: "内容を検出してタスクを提案",
     alwaysDrop: "ドロップのたびに分析",
+    appContext: "アプリ認識（回答が今どのアプリか把握）",
+    appContextHint: "オンにすると画面回答が最前面のアプリ（名前のみ、例:\"VS Code\"）を把握し、より的確になります。macOS のみ; 追加権限不要。",
     triggerHint: "オフのとき: <b>Option/Alt</b> を押しながら猫をドロップ → 分析が始まります。",
     voiceHeading: "音声 (OpenAI) — 音声コマンド",
     voiceEnable: "音声コマンドをオン",
@@ -297,6 +305,7 @@ const providerHint = el("provider-hint");
 const langSel = el("response-language");
 const autoDetect = el("auto-detect");
 const alwaysDrop = el("always-drop");
+const appContextEl = el("app-context");
 const customList = el("custom-list");
 const customForm = el("custom-form");
 const vEnabled = el("voice-enabled");
@@ -444,6 +453,7 @@ function render() {
   renderProfiles();
   enabled.checked = config.enabled;
   autoDetect.checked = config.autoDetect;
+  if (appContextEl) appContextEl.checked = config.appContextEnabled !== false;
   alwaysDrop.checked = config.alwaysAnalyzeOnDrop;
   fillSelect(providerSel, config.supportedProviders || [], providerLabels(), config.provider);
   fillSelect(langSel, config.supportedResponseLanguages || [], LANG_LABELS, config.responseLanguage);
@@ -466,6 +476,7 @@ async function patch(p) {
 enabled.addEventListener("change", () => patch({ enabled: enabled.checked }));
 autoDetect.addEventListener("change", () => patch({ autoDetect: autoDetect.checked }));
 alwaysDrop.addEventListener("change", () => patch({ alwaysAnalyzeOnDrop: alwaysDrop.checked }));
+if (appContextEl) appContextEl.addEventListener("change", () => patch({ appContextEnabled: appContextEl.checked }));
 providerSel.addEventListener("change", async () => {
   await patch({ provider: providerSel.value });
   applyProviderUI();

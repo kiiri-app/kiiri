@@ -56,6 +56,10 @@ const DEFAULTS = Object.freeze({
   alwaysAnalyzeOnDrop: false,
   // Run a quick classify pass so the task menu can recommend an action.
   autoDetect: true,
+  // App-awareness: tell the model which app is frontmost (name only) so screen
+  // answers are sharper. Zero extra permission; the screenshot already reveals
+  // far more, so this is on by default. Toggle off to stop sending the app name.
+  appContextEnabled: true,
   // Logical-pixel size of the region captured around the cat.
   captureWidth: 720,
   captureHeight: 520,
@@ -123,6 +127,7 @@ function sanitizeConfig(raw) {
       : DEFAULTS.responseLanguage,
     alwaysAnalyzeOnDrop: !!data.alwaysAnalyzeOnDrop,
     autoDetect: data.autoDetect === undefined ? DEFAULTS.autoDetect : !!data.autoDetect,
+    appContextEnabled: data.appContextEnabled === undefined ? DEFAULTS.appContextEnabled : !!data.appContextEnabled,
     captureWidth: clampInt(data.captureWidth, 240, 2000, DEFAULTS.captureWidth),
     captureHeight: clampInt(data.captureHeight, 200, 2000, DEFAULTS.captureHeight),
     customTasks,

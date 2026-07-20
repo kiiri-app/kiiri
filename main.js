@@ -24,6 +24,8 @@ const aiAgent = require("./ai/agent");
 const aiVoice = require("./ai/voice");
 const aiTts = require("./ai/tts");
 const aiAutomations = require("./ai/automations");
+const aiAppContext = require("./ai/appcontext");
+const aiChat = require("./ai/chat");
 const aiJournal = require("./ai/journal/store");
 const aiCardgen = require("./ai/journal/cardgen");
 const aiMemory = require("./ai/memory/store");
@@ -188,6 +190,9 @@ const I18N = {
     memoryTitle: "Memory",
     memoryKindTask: "Task",
     memoryFileCreated: (name) => `Created ${name}`,
+    aiChat: "🗨 Chat with Kiri…",
+    chatTitle: "Chat",
+    chatMemoryTitle: "Chat",
     aiCommand: "💬 Give Kiri a command…",
     aiJournal: "📚 Knowledge Journal…",
     setCatPersona: "Set this cat's personality…",
@@ -282,6 +287,9 @@ const I18N = {
     memoryTitle: "기억",
     memoryKindTask: "작업",
     memoryFileCreated: (name) => `${name} 만듦`,
+    aiChat: "🗨 Kiri와 대화하기…",
+    chatTitle: "대화",
+    chatMemoryTitle: "대화",
     aiCommand: "💬 캣짱에게 명령하기…",
     aiJournal: "📚 지식 노트…",
     setCatPersona: "이 고양이의 성격 설정…",
@@ -376,6 +384,9 @@ const I18N = {
     memoryTitle: "記憶",
     memoryKindTask: "タスク",
     memoryFileCreated: (name) => `${name} を作成`,
+    aiChat: "🗨 Kiri とおしゃべり…",
+    chatTitle: "チャット",
+    chatMemoryTitle: "チャット",
     aiCommand: "💬 Kiri に指示する…",
     aiJournal: "📚 ナレッジノート…",
     setCatPersona: "この猫の性格を設定…",
@@ -470,6 +481,9 @@ const I18N = {
     memoryTitle: "Hafıza",
     memoryKindTask: "Görev",
     memoryFileCreated: (name) => `${name} oluşturuldu`,
+    aiChat: "🗨 Kiri ile sohbet et…",
+    chatTitle: "Sohbet",
+    chatMemoryTitle: "Sohbet",
     aiCommand: "💬 Kiri'ye komut ver…",
     aiJournal: "📚 Bilgi Defteri…",
     setCatPersona: "Bu kedinin kişiliğini ayarla…",
@@ -980,6 +994,7 @@ async function fireAutomation(a) {
       catName,
       persona: activeChar() && activeChar().persona,
       memory: activeMemoryContext(),
+      appContext: await currentAppContext(),
     }, (textSoFar) => {
       if (!started) { sendScreenStream("start"); started = true; }
       sendScreenStream("delta", textSoFar);
@@ -1287,6 +1302,13 @@ function activeChar() { return charById(activeCharId); }
 // to record a new entry for whichever character just did the work.
 function activeMemoryContext() {
   return activeCharId ? aiMemory.recentContext(activeCharId) : "";
+}
+// App-awareness: the frontmost app name to feed screen answers, or null when the
+// feature is off / unavailable. Awaited right before a screen question so it
+// reflects the app the user was actually looking at.
+async function currentAppContext() {
+  if (!aiConfig.loadConfig().appContextEnabled) return null;
+  try { return await aiAppContext.frontmostApp(); } catch { return null; }
 }
 function rememberForActiveChar(kind, title, detail) {
   if (!activeCharId) return;
@@ -1668,6 +1690,10 @@ ipcMain.on("show-context-menu", (evt) => {
     {
       label: t("askRegion"),
       click: () => openRegionSelect(),
+    },
+    {
+      label: t("aiChat"),
+      click: () => openChatWindow(),
     },
     {
       label: t("aiCommand"),
@@ -2732,6 +2758,7 @@ ipcMain.on("region-select-submit", async (evt, payload) => {
       catName,
       persona: activeChar() && activeChar().persona,
       memory: activeMemoryContext(),
+      appContext: await currentAppContext(),
     }, (textSoFar) => {
       if (!started) { sendScreenStream("start"); started = true; }
       sendScreenStream("delta", textSoFar);
@@ -2945,6 +2972,77 @@ function openMemoryWindow() {
   memoryWin.loadFile(path.join(__dirname, "renderer", "ai-memory.html"));
   memoryWin.on("closed", () => { memoryWin = null; });
 }
+
+// ── Chat window: free-form multi-turn conversation with the active character ──
+let chatWin = null;
+function openChatWindow() {
+  const cfg = aiConfig.loadConfig();
+  if (!cfg.enabled || !aiConfig.providerReady()) {
+    sendCatNotice(t("aiKeyRequired"));
+    openAiSettings();
+    return;
+  }
+  if (chatWin && !chatWin.isDestroyed()) {
+    chatWin.show();
+    chatWin.focus();
+    return;
+  }
+  chatWin = new BrowserWindow({
+    width: 420,
+    height: 560,
+    minWidth: 340,
+    minHeight: 360,
+    title: t("chatTitle"),
+    frame: false,
+    backgroundColor: "#fbf4e4",
+    resizable: true,
+    skipTaskbar: false,
+    alwaysOnTop: true,
+    icon: APP_ICON_PATH,
+    webPreferences: {
+      preload: path.join(__dirname, "renderer", "ai-preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  keepWindowOnTop(chatWin);
+  chatWin.loadFile(path.join(__dirname, "renderer", "ai-chat.html"));
+  chatWin.on("closed", () => { chatWin = null; });
+}
+
+ipcMain.handle("chat-history", () => {
+  return { charName: (activeChar() && activeChar().name) || catName || "Kiri", messages: aiChat.history(activeCharId || "_") };
+});
+ipcMain.handle("chat-send", async (evt, text) => {
+  const q = String(text || "").trim();
+  if (!q) return { error: "empty" };
+  const ch = charForSender(evt.sender) || activeChar();
+  if (ch) setActiveChar(ch.id);
+  const appContext = await currentAppContext();
+  const send = (phase, textSoFar) => {
+    if (chatWin && !chatWin.isDestroyed()) chatWin.webContents.send("chat-stream", { phase, text: textSoFar || "" });
+  };
+  send("start", "");
+  const answer = await aiChat.send(q, {
+    charId: activeCharId || "_",
+    catName,
+    persona: activeChar() && activeChar().persona,
+    memory: activeMemoryContext(),
+    appContext,
+  }, (textSoFar) => send("delta", textSoFar));
+  if (answer && answer.ok) {
+    send("end", answer.text);
+    rememberForActiveChar("note", t("chatMemoryTitle"), `S: ${q}\nY: ${answer.text}`);
+    return { ok: true };
+  }
+  send("error", (answer && answer.message) || t("aiError"));
+  return answer || { error: "unknown" };
+});
+ipcMain.handle("chat-reset", () => aiChat.reset(activeCharId || "_"));
+ipcMain.on("chat-cancel", () => aiChat.cancel());
+ipcMain.on("chat-close", () => {
+  if (chatWin && !chatWin.isDestroyed()) chatWin.close();
+});
 
 let automationsWin = null;
 function openAutomationsWindow() {
@@ -3349,6 +3447,7 @@ ipcMain.handle("ptt-audio", async (evt, payload) => {
       catName,
       persona: c && c.persona,
       memory: activeMemoryContext(),
+      appContext: await currentAppContext(),
     }, (textSoFar) => {
       if (!started) { sendScreenStream("start"); started = true; }
       sendScreenStream("delta", textSoFar);
@@ -3389,6 +3488,7 @@ ipcMain.handle("ask-screen", async (evt, question) => {
       catName,
       persona: activeChar() && activeChar().persona,
       memory: activeMemoryContext(),
+      appContext: await currentAppContext(),
     }, (textSoFar) => {
       if (!started) { sendScreenStream("start"); started = true; }
       sendScreenStream("delta", textSoFar);

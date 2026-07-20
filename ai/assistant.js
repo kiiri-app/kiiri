@@ -200,7 +200,7 @@ function stripPointForDisplay(text) {
 // { ok, text, point, display }. `point` (if any) carries absolute screen coords
 // for the paw overlay plus the normalized position. When `onDelta` is given, the
 // answer streams: onDelta(cleanTextSoFar) fires as tokens arrive.
-async function answerScreenQuestion(capture, { question, catName, persona, memory, region } = {}, onDelta) {
+async function answerScreenQuestion(capture, { question, catName, persona, memory, region, appContext } = {}, onDelta) {
   const cfg = config.loadConfig();
   if (!config.providerReady()) {
     return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
@@ -210,8 +210,8 @@ async function answerScreenQuestion(capture, { question, catName, persona, memor
   const controller = newController();
   const callOpts = {
     system: region
-      ? regionQuestionSystem(cfg.responseLanguage, catName, persona, memory)
-      : screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat, memory),
+      ? regionQuestionSystem(cfg.responseLanguage, catName, persona, memory, appContext)
+      : screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat, memory, appContext),
     userText: screenQuestionUser(question, cfg.responseLanguage),
     imageBase64: capture.base64,
     mediaType: capture.mediaType,

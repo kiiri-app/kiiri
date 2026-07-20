@@ -149,4 +149,73 @@ function clamp01(v) {
   return Math.max(0, Math.min(1, v));
 }
 
-module.exports = { captureRegion, regionForPet, captureFullScreen };
+// Capture an explicit logical-pixel rectangle the user drew (region-select
+// "ask about this"). `rect` is in absolute screen coords; we resolve the display
+// it sits on, hide the cat, grab that display, and crop to the rect. Returns
+// { base64, mediaType, display, rect } where `rect` echoes the (clamped) region
+// so a returned [POINT] can be mapped back into it. No `cat` field — the whole
+// image IS the region of interest.
+async function captureExactRegion(petWin, rect) {
+  if (!petWin || petWin.isDestroyed()) throw new Error("pet window unavailable");
+  const cx = rect.x + rect.width / 2;
+  const cy = rect.y + rect.height / 2;
+  const display = screen.getDisplayNearestPoint({ x: Math.round(cx), y: Math.round(cy) });
+  const b = display.bounds;
+  const scale = display.scaleFactor || 1;
+
+  // Clamp the requested rect to the display bounds.
+  let rx = Math.max(b.x, Math.min(rect.x, b.x + b.width - 2));
+  let ry = Math.max(b.y, Math.min(rect.y, b.y + b.height - 2));
+  let rw = Math.max(8, Math.min(rect.width, b.x + b.width - rx));
+  let rh = Math.max(8, Math.min(rect.height, b.y + b.height - ry));
+  const clampedRect = { x: Math.round(rx), y: Math.round(ry), width: Math.round(rw), height: Math.round(rh) };
+
+  const prevOpacity = petWin.getOpacity();
+  petWin.setOpacity(0);
+  let source = null;
+  try {
+    await delay(140);
+    const sources = await desktopCapturer.getSources({
+      types: ["screen"],
+      thumbnailSize: {
+        width: Math.round(display.size.width * scale),
+        height: Math.round(display.size.height * scale),
+      },
+    });
+    source = sources.find((s) => String(s.display_id) === String(display.id)) || sources[0];
+  } finally {
+    petWin.setOpacity(prevOpacity || 1);
+  }
+  if (!source || !source.thumbnail || source.thumbnail.isEmpty()) {
+    throw new Error("screen capture returned no image (check screen-recording permission)");
+  }
+
+  const full = source.thumbnail;
+  const fullSize = full.getSize();
+  const px = {
+    x: evenClamp((clampedRect.x - b.x) * scale, 0, Math.max(0, fullSize.width - 2)),
+    y: evenClamp((clampedRect.y - b.y) * scale, 0, Math.max(0, fullSize.height - 2)),
+    width: 0,
+    height: 0,
+  };
+  px.width = evenClamp(clampedRect.width * scale, 2, fullSize.width - px.x);
+  px.height = evenClamp(clampedRect.height * scale, 2, fullSize.height - px.y);
+
+  let cropped = full.crop(px);
+  const cs = cropped.getSize();
+  const longEdge = Math.max(cs.width, cs.height);
+  if (longEdge > MAX_LONG_EDGE) {
+    if (cs.width >= cs.height) cropped = cropped.resize({ width: MAX_LONG_EDGE, quality: "good" });
+    else cropped = cropped.resize({ height: MAX_LONG_EDGE, quality: "good" });
+  }
+
+  const buffer = cropped.toPNG();
+  return {
+    base64: buffer.toString("base64"),
+    mediaType: "image/png",
+    display: { id: display.id, bounds: b, scaleFactor: scale },
+    rect: clampedRect,
+  };
+}
+
+module.exports = { captureRegion, regionForPet, captureFullScreen, captureExactRegion };

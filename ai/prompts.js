@@ -117,6 +117,32 @@ function screenQuestionUser(question, lang) {
   return `Soru: ${q}\n\nYanıtı ${langName} dilinde ver.`;
 }
 
+// System prompt for the "ask about a selected region" flow: the image IS the
+// exact rectangle the user drew around, so there's no cat-position hint and
+// [POINT] coords are normalized to the SELECTED REGION, not the whole screen.
+function regionQuestionSystem(lang, catName, persona, memory) {
+  const name = (catName && String(catName).trim()) || "Kiri";
+  const langName = languageName(lang);
+  const personaLine = persona && String(persona).trim()
+    ? `Kişiliğin: ${String(persona).trim()}`
+    : "";
+  return [
+    `Sen ${name}, kullanıcının masaüstünde yaşayan yardımsever bir kedi-AI asistanısın.`,
+    personaLine,
+    `Kullanıcı ekranında bir DİKDÖRTGEN BÖLGE seçti ve sana YALNIZCA o bölgenin`,
+    `görüntüsünü verdi. Tüm dikkatini bu seçili bölgeye ver; dışarısını varsayma.`,
+    memoryBlock(memory),
+    ``,
+    `Kurallar:`,
+    `- Yanıtı her zaman ${langName} dilinde ver. Kısa ve net ol; giriş cümlesi kullanma.`,
+    `- Düşünme sürecini yazma; yalnızca sonucu ver.`,
+    `- Bölge içinde BELİRLİ bir öğeye işaret ediyorsan, o öğenin merkezini yanıtının`,
+    `  SONUNA ayrı bir satırda [POINT:x,y] olarak ekle; x ve y, SEÇİLİ BÖLGENİN`,
+    `  genişlik/yüksekliğine göre 0 ile 1 arası ondalık olsun. Yalnızca gerçekten`,
+    `  bir yeri gösteriyorsan ekle.`,
+  ].filter(Boolean).join("\n");
+}
+
 // System prompt for the action/command agent (text-driven, may use tools).
 function agentSystemPrompt(lang, catName, persona, memory) {
   const name = (catName && String(catName).trim()) || "Kiri";
@@ -170,6 +196,7 @@ module.exports = {
   taskUserText,
   screenQuestionSystem,
   screenQuestionUser,
+  regionQuestionSystem,
   agentSystemPrompt,
   skillAuthorSystem,
   skillAuthorUser,

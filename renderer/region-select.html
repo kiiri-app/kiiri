@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <style>
+    :root {
+      --accent: #e0795c;
+      --accent-line: #ff7a59;
+      --panel: #fbf4e4;
+      --ink: #3a3325;
+      --border: #d8bd92;
+    }
+    html, body {
+      margin: 0; width: 100%; height: 100%;
+      overflow: hidden; user-select: none;
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      cursor: crosshair;
+    }
+    /* Dim veil over the whole screen; a "hole" is punched by the selection via
+       a bright inner box + box-shadow trick. */
+    #veil {
+      position: fixed; inset: 0;
+      background: rgba(20, 22, 28, 0.34);
+    }
+    #hint {
+      position: fixed; top: 22px; left: 50%; transform: translateX(-50%);
+      background: var(--panel); color: var(--ink);
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 8px 16px; font-size: 13px; font-weight: 600;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      pointer-events: none; white-space: nowrap;
+    }
+    #sel {
+      position: fixed; display: none;
+      border: 2px solid var(--accent-line);
+      box-shadow: 0 0 0 100vmax rgba(20, 22, 28, 0.34);
+      background: transparent;
+    }
+    /* Question box appears after the drag; captures typing. */
+    #ask {
+      position: fixed; display: none;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 8px; gap: 8px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+      cursor: default; z-index: 10;
+    }
+    #ask.show { display: flex; }
+    #ask input {
+      width: 320px; border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font-size: 13px; color: var(--ink);
+      background: #fffdf7; outline: none;
+    }
+    #ask input:focus { border-color: var(--accent); }
+    #ask button {
+      border: none; border-radius: 8px; padding: 0 14px; font-size: 13px;
+      font-weight: 700; color: #fff; background: var(--accent); cursor: pointer;
+    }
+    #ask button:hover { background: #c9603f; }
+  </style>
+</head>
+<body>
+  <div id="veil"></div>
+  <div id="hint">…</div>
+  <div id="sel"></div>
+  <form id="ask" autocomplete="off">
+    <input id="ask-input" type="text" />
+    <button type="submit" id="ask-send">→</button>
+  </form>
+  <script src="region-select.js"></script>
+</body>
+</html>

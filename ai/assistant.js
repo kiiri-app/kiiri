@@ -5,7 +5,7 @@
 // different task on the same drop doesn't re-screenshot or re-classify.
 
 const config = require("./config");
-const { captureRegion, captureFullScreen } = require("./capture");
+const { captureRegion, captureFullScreen, captureExactRegion } = require("./capture");
 const llm = require("./llm");
 const { classifyError } = llm;
 const { localizedTasks, resolveTask } = require("./tasks");
@@ -15,6 +15,7 @@ const {
   taskUserText,
   screenQuestionSystem,
   screenQuestionUser,
+  regionQuestionSystem,
 } = require("./prompts");
 
 const CAPTURE_TTL_MS = 5 * 60 * 1000;
@@ -199,7 +200,7 @@ function stripPointForDisplay(text) {
 // { ok, text, point, display }. `point` (if any) carries absolute screen coords
 // for the paw overlay plus the normalized position. When `onDelta` is given, the
 // answer streams: onDelta(cleanTextSoFar) fires as tokens arrive.
-async function answerScreenQuestion(capture, { question, catName, persona, memory } = {}, onDelta) {
+async function answerScreenQuestion(capture, { question, catName, persona, memory, region } = {}, onDelta) {
   const cfg = config.loadConfig();
   if (!config.providerReady()) {
     return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
@@ -208,7 +209,9 @@ async function answerScreenQuestion(capture, { question, catName, persona, memor
 
   const controller = newController();
   const callOpts = {
-    system: screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat, memory),
+    system: region
+      ? regionQuestionSystem(cfg.responseLanguage, catName, persona, memory)
+      : screenQuestionSystem(cfg.responseLanguage, catName, persona, capture.cat, memory),
     userText: screenQuestionUser(question, cfg.responseLanguage),
     imageBase64: capture.base64,
     mediaType: capture.mediaType,
@@ -231,7 +234,17 @@ async function answerScreenQuestion(capture, { question, catName, persona, memor
     }
     const { text: answer, point } = extractPoint(text);
     let absPoint = null;
-    if (point && capture.display) {
+    if (point && capture.rect) {
+      // Region flow: [POINT] is normalized to the selected rectangle, so map it
+      // back into that rectangle's absolute screen coords.
+      const r = capture.rect;
+      absPoint = {
+        x: Math.round(r.x + point.x * r.width),
+        y: Math.round(r.y + point.y * r.height),
+        norm: point,
+        displayId: capture.display && capture.display.id,
+      };
+    } else if (point && capture.display) {
       const b = capture.display.bounds;
       absPoint = {
         x: Math.round(b.x + point.x * b.width),
@@ -256,6 +269,23 @@ async function askAboutScreen(petWin, opts = {}, onDelta) {
   return answerScreenQuestion(cap.capture, opts, onDelta);
 }
 
+// Region-select flow: capture the exact user-drawn rectangle + answer about it.
+async function askAboutRegion(petWin, rect, opts = {}, onDelta) {
+  const cfg = config.loadConfig();
+  if (!cfg.enabled) return { error: "disabled" };
+  if (!config.providerReady()) {
+    return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+  }
+  if (!rect || !(rect.width > 0) || !(rect.height > 0)) return { error: "empty_region" };
+  let capture;
+  try {
+    capture = await captureExactRegion(petWin, rect);
+  } catch (err) {
+    return { error: "capture", message: (err && err.message) || "Bölge yakalanamadı." };
+  }
+  return answerScreenQuestion(capture, { ...opts, region: true }, onDelta);
+}
+
 module.exports = {
   analyzeDrop,
   runTask,
@@ -264,4 +294,5 @@ module.exports = {
   captureScreen,
   answerScreenQuestion,
   askAboutScreen,
+  askAboutRegion,
 };

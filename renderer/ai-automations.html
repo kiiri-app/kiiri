@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <link rel="stylesheet" href="ai-automations.css" />
+  <title>Automations</title>
+</head>
+<body>
+  <div id="titlebar">
+    <span>⏱ <span data-i18n="title">Automations</span></span>
+    <button id="close-btn" type="button" aria-label="Close" data-i18n-aria="close">×</button>
+  </div>
+
+  <div id="toolbar">
+    <p class="hint" data-i18n="hint">Kiri runs these on a schedule — a note to say, or a question about your screen (bubble + spoken answer).</p>
+  </div>
+
+  <main>
+    <div id="empty" class="empty" data-i18n="empty" hidden>No automations yet — add one below.</div>
+    <div id="list" class="auto-list"></div>
+
+    <form id="form" autocomplete="off">
+      <div class="form-title" data-i18n="addTitle">New automation</div>
+      <input id="name" class="f-name" type="text" maxlength="60" data-i18n-ph="namePh" />
+
+      <div class="row">
+        <label class="seg">
+          <span data-i18n="kindLabel">Kind</span>
+          <select id="kind">
+            <option value="screen" data-i18n="kindScreen">Ask about my screen</option>
+            <option value="note" data-i18n="kindNote">Say a note</option>
+          </select>
+        </label>
+      </div>
+
+      <textarea id="prompt" class="f-prompt" rows="2" maxlength="500" data-i18n-ph="promptPh"></textarea>
+
+      <div class="row">
+        <label class="seg">
+          <span data-i18n="scheduleLabel">Schedule</span>
+          <select id="sched-type">
+            <option value="interval" data-i18n="schedInterval">Every…</option>
+            <option value="daily" data-i18n="schedDaily">Daily at…</option>
+          </select>
+        </label>
+        <label class="seg" id="interval-wrap">
+          <span data-i18n="everyLabel">Interval</span>
+          <select id="interval"></select>
+        </label>
+        <label class="seg" id="daily-wrap" hidden>
+          <span data-i18n="timeLabel">Time</span>
+          <input id="time" type="time" value="09:00" />
+        </label>
+      </div>
+
+      <button type="submit" class="primary-btn" data-i18n="addBtn">Add automation</button>
+    </form>
+  </main>
+
+  <script src="ai-automations.js"></script>
+</body>
+</html>

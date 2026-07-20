@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("aiAPI", {
   // Settings
   configGet: () => ipcRenderer.invoke("ai-config-get"),
   configSet: (patch) => ipcRenderer.invoke("ai-config-set", patch),
+  profileApply: (id) => ipcRenderer.invoke("ai-profile-apply", id),
   setKey: (key) => ipcRenderer.invoke("ai-set-key", key),
   clearKey: () => ipcRenderer.invoke("ai-clear-key"),
   setOpenAiKey: (key) => ipcRenderer.invoke("ai-set-openai-key", key),
@@ -55,6 +56,15 @@ contextBridge.exposeInMainWorld("aiAPI", {
   journalDelete: (id) => ipcRenderer.invoke("ai-journal-delete", id),
   closeJournal: () => ipcRenderer.send("ai-journal-close"),
   resizeJournal: (size) => ipcRenderer.send("ai-journal-resize", size),
+
+  // Scheduled automations (interval / daily → screen-question or note)
+  automationsList: () => ipcRenderer.invoke("automations-list"),
+  automationsAdd: (payload) => ipcRenderer.invoke("automations-add", payload),
+  automationsUpdate: (payload) => ipcRenderer.invoke("automations-update", payload),
+  automationsEnabledSet: (payload) => ipcRenderer.invoke("automations-enabled-set", payload),
+  automationsDelete: (id) => ipcRenderer.invoke("automations-delete", id),
+  automationsRunNow: (id) => ipcRenderer.invoke("automations-run-now", id),
+  closeAutomations: () => ipcRenderer.send("automations-close"),
 
   // Per-character memory (work history + auto-context)
   memoryList: () => ipcRenderer.invoke("memory-list"),

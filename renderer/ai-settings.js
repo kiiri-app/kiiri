@@ -6,6 +6,14 @@ const I18N = {
     titlebar: "🐾 AI Assistant",
     close: "Close",
     enableAssistant: "Turn on AI Assistant",
+    profilesHeading: "Quick profiles",
+    profilesHint: "Pick a mode — it flips the provider, voice and spoken-answer settings together. You can still fine-tune anything below.",
+    profileLocalName: "Local",
+    profileLocalDesc: "Offline & private. Ollama brain, built-in voice, no cloud.",
+    profileFastName: "Fast",
+    profileFastDesc: "Snappy & cheap. Small cloud model, no voice.",
+    profileQualityName: "Quality",
+    profileQualityDesc: "Best answers + full voice. Needs an OpenAI key.",
     anthropicKeyHeading: "Anthropic API key",
     save: "Save",
     remove: "Remove",
@@ -52,6 +60,14 @@ const I18N = {
     titlebar: "🐾 AI Asistan",
     close: "Kapat",
     enableAssistant: "AI Asistanı aç",
+    profilesHeading: "Hızlı profiller",
+    profilesHint: "Bir kip seç — sağlayıcı, ses ve sesli-yanıt ayarlarını birlikte değiştirir. Aşağıdan yine de ince ayar yapabilirsin.",
+    profileLocalName: "Yerel",
+    profileLocalDesc: "Çevrimdışı ve özel. Ollama beyni, yerleşik ses, bulut yok.",
+    profileFastName: "Hızlı",
+    profileFastDesc: "Çevik ve ucuz. Küçük bulut modeli, ses yok.",
+    profileQualityName: "Kaliteli",
+    profileQualityDesc: "En iyi yanıt + tam ses. OpenAI anahtarı gerekir.",
     anthropicKeyHeading: "Anthropic API anahtarı",
     save: "Kaydet",
     remove: "Sil",
@@ -98,6 +114,14 @@ const I18N = {
     titlebar: "🐾 AI 어시스턴트",
     close: "닫기",
     enableAssistant: "AI 어시스턴트 켜기",
+    profilesHeading: "빠른 프로필",
+    profilesHint: "모드를 선택하면 제공자, 음성, 음성 답변 설정이 함께 바뀌어요. 아래에서 세부 조정도 가능해요.",
+    profileLocalName: "로컬",
+    profileLocalDesc: "오프라인 & 비공개. Ollama 두뇌, 내장 음성, 클라우드 없음.",
+    profileFastName: "빠름",
+    profileFastDesc: "빠르고 저렴. 작은 클라우드 모델, 음성 없음.",
+    profileQualityName: "고품질",
+    profileQualityDesc: "최고의 답변 + 전체 음성. OpenAI 키가 필요해요.",
     anthropicKeyHeading: "Anthropic API 키",
     save: "저장",
     remove: "삭제",
@@ -144,6 +168,14 @@ const I18N = {
     titlebar: "🐾 AI アシスタント",
     close: "閉じる",
     enableAssistant: "AI アシスタントをオン",
+    profilesHeading: "クイックプロファイル",
+    profilesHint: "モードを選ぶと、プロバイダー・音声・音声回答の設定がまとめて切り替わります。下で細かい調整もできます。",
+    profileLocalName: "ローカル",
+    profileLocalDesc: "オフライン & プライベート。Ollama の頭脳、内蔵音声、クラウドなし。",
+    profileFastName: "高速",
+    profileFastDesc: "軽快で低コスト。小さなクラウドモデル、音声なし。",
+    profileQualityName: "高品質",
+    profileQualityDesc: "最高の回答 + フル音声。OpenAI キーが必要です。",
     anthropicKeyHeading: "Anthropic API キー",
     save: "保存",
     remove: "削除",
@@ -236,8 +268,16 @@ function transcribeLabels() {
   };
 }
 
+// Quick-profile metadata: id → i18n keys for its name + one-line description.
+const PROFILE_META = {
+  local:   { name: "profileLocalName",   desc: "profileLocalDesc" },
+  fast:    { name: "profileFastName",    desc: "profileFastDesc" },
+  quality: { name: "profileQualityName", desc: "profileQualityDesc" },
+};
+
 const el = (id) => document.getElementById(id);
 const enabled = el("enabled");
+const profileButtonsEl = el("profile-buttons");
 const apiKey = el("api-key");
 const saveKey = el("save-key");
 const clearKey = el("clear-key");
@@ -376,7 +416,32 @@ function applyProviderUI() {
   renderGeminiStatus();
 }
 
+function renderProfiles() {
+  if (!profileButtonsEl) return;
+  profileButtonsEl.innerHTML = "";
+  for (const id of config.profiles || []) {
+    const meta = PROFILE_META[id];
+    if (!meta) continue;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "profile-btn" + (config.activeProfile === id ? " active" : "");
+    const name = document.createElement("span");
+    name.className = "pb-name";
+    name.textContent = L(meta.name);
+    const desc = document.createElement("span");
+    desc.className = "pb-desc";
+    desc.textContent = L(meta.desc);
+    btn.append(name, desc);
+    btn.addEventListener("click", async () => {
+      config = await window.aiAPI.profileApply(id);
+      render();          // a profile touches provider/voice/tts — redraw everything
+    });
+    profileButtonsEl.appendChild(btn);
+  }
+}
+
 function render() {
+  renderProfiles();
   enabled.checked = config.enabled;
   autoDetect.checked = config.autoDetect;
   alwaysDrop.checked = config.alwaysAnalyzeOnDrop;

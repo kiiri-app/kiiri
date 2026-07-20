@@ -112,3 +112,16 @@ textarea { resize: vertical; }
 .custom-form-row { display: flex; gap: 8px; }
 .emoji-input { width: 56px; text-align: center; }
 .label-input { flex: 1; }
+
+/* One-click profile buttons (Yerel / Hızlı / Kaliteli) */
+.profile-buttons { display: flex; gap: 8px; }
+.profile-btn {
+  flex: 1; display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  background: var(--panel-soft); border: 1px solid var(--border);
+  border-radius: 10px; padding: 9px 11px; cursor: pointer; text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+}
+.profile-btn:hover { border-color: var(--accent); }
+.profile-btn.active { border-color: var(--accent); background: #fbe9d7; box-shadow: inset 0 0 0 1px var(--accent); }
+.profile-btn .pb-name { font-weight: 700; font-size: 13px; }
+.profile-btn .pb-desc { font-size: 10.5px; color: var(--muted); line-height: 1.35; }

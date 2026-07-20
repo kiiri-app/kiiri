@@ -20,6 +20,20 @@ const SUPPORTED_PTT_HOTKEYS = ["ctrl+alt", "ctrl+shift", "alt+shift", "cmd+alt"]
 // OpenAI TTS voices for spoken answers (macOS `say` is the keyless fallback).
 const SUPPORTED_TTS_VOICES = ["alloy", "nova", "shimmer", "echo", "onyx", "fable", "coral", "sage"];
 
+// One-click profiles (OpenClicky "Local/Realtime/Quality" parity): each flips the
+// whole provider+voice+TTS stack atomically so the user picks an intent, not six
+// toggles. `patch` is merged into the config; the master `enabled` toggle and any
+// stored keys are untouched (usable() gates still apply if a key is missing).
+const PROFILES = [
+  // Offline & private: local Ollama brain, keyless macOS `say` voice, no cloud STT.
+  { id: "local",   patch: { provider: "ollama",    voiceEnabled: false, pttEnabled: false, ttsEnabled: true } },
+  // Fast & cheap: small cloud model, no voice — snappy typed answers.
+  { id: "fast",    patch: { provider: "anthropic", model: "claude-haiku-4-5", voiceEnabled: false, pttEnabled: false, ttsEnabled: false } },
+  // Best quality: flagship model + full voice (needs an OpenAI key for STT/TTS).
+  { id: "quality", patch: { provider: "anthropic", model: "claude-opus-4-8",  voiceEnabled: true,  pttEnabled: true,  ttsEnabled: true } },
+];
+const PROFILE_IDS = PROFILES.map((p) => p.id);
+
 // Multi-provider: Claude (Anthropic), OpenAI, Gemini, and Ollama (local/offline).
 // OpenAI/Gemini/Ollama all speak the OpenAI Chat Completions format.
 const SUPPORTED_PROVIDERS = ["anthropic", "openai", "gemini", "ollama"];
@@ -57,6 +71,8 @@ const DEFAULTS = Object.freeze({
   // a key is present, otherwise the macOS `say` voice for the response language.
   ttsEnabled: false,
   ttsVoice: "alloy",
+  // Last one-click profile the user applied (informational; "" = custom/none).
+  activeProfile: "",
 });
 
 let cached = null;
@@ -118,8 +134,22 @@ function sanitizeConfig(raw) {
     pttHotkey: SUPPORTED_PTT_HOTKEYS.includes(data.pttHotkey) ? data.pttHotkey : "ctrl+alt",
     ttsEnabled: !!data.ttsEnabled,
     ttsVoice: SUPPORTED_TTS_VOICES.includes(data.ttsVoice) ? data.ttsVoice : DEFAULTS.ttsVoice,
+    activeProfile: PROFILE_IDS.includes(data.activeProfile) ? data.activeProfile : "",
   };
 }
+
+// Apply a one-click profile: merge its patch + record which profile is active.
+// Editing any of the profiled fields afterwards clears activeProfile (see
+// saveConfig) so the UI stops claiming a preset that no longer matches.
+function applyProfile(id) {
+  const profile = PROFILES.find((p) => p.id === id);
+  if (!profile) return { ok: false, reason: "unknown" };
+  saveConfig({ ...profile.patch, activeProfile: id });
+  return { ok: true, config: redactedConfig() };
+}
+
+// Fields a profile owns — touching any of them by hand means "custom" now.
+const PROFILE_FIELDS = ["provider", "model", "voiceEnabled", "pttEnabled", "ttsEnabled"];
 
 function loadConfig() {
   if (cached) return cached;
@@ -133,7 +163,13 @@ function loadConfig() {
 }
 
 function saveConfig(patch) {
-  const next = sanitizeConfig({ ...loadConfig(), ...(patch || {}) });
+  const p = patch || {};
+  // Hand-editing a profiled field (unless we're the one applying a profile)
+  // detaches from the preset so the settings UI shows "custom".
+  if (p.activeProfile === undefined && PROFILE_FIELDS.some((f) => f in p)) {
+    p.activeProfile = "";
+  }
+  const next = sanitizeConfig({ ...loadConfig(), ...p });
   cached = next;
   try {
     fs.writeFileSync(configPath(), JSON.stringify(next, null, 2), "utf8");
@@ -260,6 +296,8 @@ function redactedConfig() {
     pttUsable: pttUsable(),
     supportedTtsVoices: SUPPORTED_TTS_VOICES,
     ttsUsable: ttsUsable(),
+    profiles: PROFILE_IDS,
+    activeProfile: c.activeProfile || "",
   };
 }
 
@@ -308,6 +346,8 @@ module.exports = {
   SUPPORTED_PROVIDERS,
   SUPPORTED_PTT_HOTKEYS,
   SUPPORTED_TTS_VOICES,
+  PROFILE_IDS,
+  applyProfile,
   voiceUsable,
   pttUsable,
   ttsUsable,

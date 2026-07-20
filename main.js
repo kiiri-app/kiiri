@@ -23,6 +23,7 @@ const aiAssistant = require("./ai/assistant");
 const aiAgent = require("./ai/agent");
 const aiVoice = require("./ai/voice");
 const aiTts = require("./ai/tts");
+const aiAutomations = require("./ai/automations");
 const aiJournal = require("./ai/journal/store");
 const aiCardgen = require("./ai/journal/cardgen");
 const aiMemory = require("./ai/memory/store");
@@ -178,6 +179,11 @@ const I18N = {
     showCatName: "Show Kiri name",
     aiAssistant: "🐾 AI Assistant…",
     askScreen: "🔍 Ask about my screen…",
+    askRegion: "⬚ Ask about a region…",
+    regionHint: "Drag a box around what you want to ask about — Esc to cancel",
+    regionPlaceholder: "Ask about this region…",
+    regionSend: "Ask",
+    regionDefaultQuestion: "What's in this region?",
     aiMemory: "🧠 Memory…",
     memoryTitle: "Memory",
     memoryKindTask: "Task",
@@ -197,6 +203,8 @@ const I18N = {
     personaPlaceholder: "e.g. cheerful and concise tutor",
     fixedMessage: "Fixed message",
     reminders: "Reminders",
+    automations: "⏱ Automations…",
+    automationsTitle: "Automations",
     remindersOpen: "Open reminders",
     showReminderButtonOutside: "Show button outside",
     pomodoro: "Pomodoro",
@@ -265,6 +273,11 @@ const I18N = {
     showCatName: "캣짱 이름 표시",
     aiAssistant: "🐾 AI 어시스턴트…",
     askScreen: "🔍 내 화면에 대해 묻기…",
+    askRegion: "⬚ 영역에 대해 묻기…",
+    regionHint: "물어볼 부분을 상자로 드래그하세요 — Esc로 취소",
+    regionPlaceholder: "이 영역에 대해 물어보기…",
+    regionSend: "질문",
+    regionDefaultQuestion: "이 영역에 뭐가 있어?",
     aiMemory: "🧠 기억…",
     memoryTitle: "기억",
     memoryKindTask: "작업",
@@ -284,6 +297,8 @@ const I18N = {
     personaPlaceholder: "예: 밝고 간결한 튜터",
     fixedMessage: "고정 메시지",
     reminders: "알림",
+    automations: "⏱ 자동화…",
+    automationsTitle: "자동화",
     remindersOpen: "알림 열기",
     showReminderButtonOutside: "바깥에 버튼 표시",
     pomodoro: "뽀모도로",
@@ -352,6 +367,11 @@ const I18N = {
     showCatName: "Kiri の名前を表示",
     aiAssistant: "🐾 AI アシスタント…",
     askScreen: "🔍 画面について聞く…",
+    askRegion: "⬚ 範囲について聞く…",
+    regionHint: "聞きたい部分を四角で囲んでください — Esc でキャンセル",
+    regionPlaceholder: "この範囲について聞く…",
+    regionSend: "質問",
+    regionDefaultQuestion: "この範囲には何がありますか？",
     aiMemory: "🧠 記憶…",
     memoryTitle: "記憶",
     memoryKindTask: "タスク",
@@ -371,6 +391,8 @@ const I18N = {
     personaPlaceholder: "例: 明るく簡潔なチューター",
     fixedMessage: "固定メッセージ",
     reminders: "通知",
+    automations: "⏱ 自動化…",
+    automationsTitle: "自動化",
     remindersOpen: "通知を開く",
     showReminderButtonOutside: "外側にボタンを表示",
     pomodoro: "ポモドーロ",
@@ -439,6 +461,11 @@ const I18N = {
     showCatName: "Kiri'nin adını göster",
     aiAssistant: "🐾 AI Asistan…",
     askScreen: "🔍 Ekranımı sor…",
+    askRegion: "⬚ Bölge seçerek sor…",
+    regionHint: "Sormak istediğin yerin etrafına bir kutu çiz — İptal için Esc",
+    regionPlaceholder: "Bu bölge hakkında sor…",
+    regionSend: "Sor",
+    regionDefaultQuestion: "Bu bölgede ne var?",
     aiMemory: "🧠 Hafıza…",
     memoryTitle: "Hafıza",
     memoryKindTask: "Görev",
@@ -458,6 +485,8 @@ const I18N = {
     personaPlaceholder: "ör. neşeli ve özlü bir hoca",
     fixedMessage: "Sabit mesaj",
     reminders: "Hatırlatıcılar",
+    automations: "⏱ Otomasyonlar…",
+    automationsTitle: "Otomasyonlar",
     remindersOpen: "Hatırlatıcıları aç",
     showReminderButtonOutside: "Düğmeyi dışarıda göster",
     pomodoro: "Pomodoro",
@@ -919,6 +948,66 @@ function stopReminderTimer() {
   if (!reminderTimer) return;
   clearInterval(reminderTimer);
   reminderTimer = null;
+}
+
+// ── Automations scheduler ───────────────────────────────────────────────
+// Every 30s, fire any due automation. "note" just speaks the text; "screen"
+// asks the vision model about the current screen (bubble + paw + spoken answer).
+// Screen runs are serialized (they capture the screen) via automationBusy.
+let automationTimer = null;
+let automationBusy = false;
+
+async function fireAutomation(a) {
+  const now = new Date();
+  aiAutomations.markRan(a.id, now); // mark first so a slow run can't double-fire
+  if (a.kind === "note") {
+    const text = String(a.prompt || "").trim();
+    if (!text) return;
+    if (petWin && !petWin.isDestroyed()) petWin.webContents.send("ai-notice", text);
+    speakAnswer(text).catch(() => {});
+    return;
+  }
+  // "screen": needs the AI enabled + a ready provider; skip quietly otherwise.
+  const cfg = aiConfig.loadConfig();
+  if (!cfg.enabled || !aiConfig.providerReady()) return;
+  if (automationBusy) return;
+  automationBusy = true;
+  sendCatThinking(true);
+  let started = false;
+  try {
+    const answer = await aiAssistant.askAboutScreen(petWin, {
+      question: a.prompt,
+      catName,
+      persona: activeChar() && activeChar().persona,
+      memory: activeMemoryContext(),
+    }, (textSoFar) => {
+      if (!started) { sendScreenStream("start"); started = true; }
+      sendScreenStream("delta", textSoFar);
+    });
+    if (answer && answer.ok) {
+      sendScreenAnswer({ question: a.prompt, text: answer.text, point: answer.point });
+      rememberForActiveChar("screen", `[oto] ${a.name}`, answer.text);
+    }
+  } catch (err) {
+    console.warn("[Kiri][automations] run failed:", err && err.message);
+  } finally {
+    automationBusy = false;
+    sendCatThinking(false);
+  }
+}
+
+function checkAutomationsNow() {
+  let due;
+  try { due = aiAutomations.dueNow(new Date()); } catch { due = []; }
+  for (const a of due) {
+    // Fire sequentially-ish; fireAutomation guards concurrent screen captures.
+    fireAutomation(a).catch(() => {});
+  }
+}
+
+function startAutomationTimer() {
+  if (automationTimer) clearInterval(automationTimer);
+  automationTimer = setInterval(checkAutomationsNow, 30 * 1000);
 }
 
 function setLanguage(language) {
@@ -1426,6 +1515,7 @@ function startApp() {
   startAgentIntegrations();
   startStretchTimer();
   startReminderTimer();
+  startAutomationTimer();
   startJournalReminder();
   if (!agentSweepTimer) agentSweepTimer = setInterval(sweepAgentSessions, 60 * 1000);
 }
@@ -1576,6 +1666,10 @@ ipcMain.on("show-context-menu", (evt) => {
       },
     },
     {
+      label: t("askRegion"),
+      click: () => openRegionSelect(),
+    },
+    {
       label: t("aiCommand"),
       click: () => openAiCommand(),
     },
@@ -1609,6 +1703,10 @@ ipcMain.on("show-context-menu", (evt) => {
               click: (item) => setShowReminderButtonOutside(item.checked),
             },
           ],
+        },
+        {
+          label: t("automations"),
+          click: () => openAutomationsWindow(),
         },
         {
           label: t("pomodoro"),
@@ -2311,6 +2409,11 @@ ipcMain.handle("ai-config-set", (_evt, patch) => {
   broadcastVoiceConfig();
   return aiConfig.redactedConfig();
 });
+ipcMain.handle("ai-profile-apply", (_evt, id) => {
+  const r = aiConfig.applyProfile(String(id || ""));
+  if (r && r.ok) broadcastVoiceConfig();
+  return aiConfig.redactedConfig();
+});
 ipcMain.handle("ai-set-key", (_evt, key) => aiConfig.setApiKey(key));
 ipcMain.handle("ai-clear-key", () => aiConfig.clearApiKey());
 ipcMain.handle("ai-tasks-get", () => {
@@ -2547,6 +2650,103 @@ function showPawPoint(point) {
   }, 3200);
 }
 
+// ── Region-select "ask about this": a focusable full-screen overlay on the
+// pet's display where the user drags a rectangle and types a question. The
+// window origin equals the display origin, so local rect + origin = absolute
+// screen coords for captureExactRegion. ──
+let regionWin = null;
+
+function openRegionSelect() {
+  const cfg = aiConfig.loadConfig();
+  if (!cfg.enabled || !aiConfig.providerReady()) {
+    sendCatNotice(t("aiKeyRequired"));
+    openAiSettings();
+    return;
+  }
+  if (regionWin && !regionWin.isDestroyed()) {
+    regionWin.focus();
+    return;
+  }
+  // Use the display the cat sits on (same one region capture will target).
+  const petBounds = petWin && !petWin.isDestroyed() ? petWin.getBounds() : { x: 0, y: 0, width: 0, height: 0 };
+  const display = screen.getDisplayNearestPoint({
+    x: Math.round(petBounds.x + petBounds.width / 2),
+    y: Math.round(petBounds.y + petBounds.height / 2),
+  });
+  const b = display.bounds;
+  regionWin = new BrowserWindow({
+    x: b.x, y: b.y, width: b.width, height: b.height,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    focusable: true,
+    skipTaskbar: true,
+    hasShadow: false,
+    alwaysOnTop: true,
+    fullscreenable: false,
+    webPreferences: {
+      preload: path.join(__dirname, "renderer", "region-select-preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  keepWindowOnTop(regionWin);
+  regionWin.on("closed", () => { regionWin = null; });
+  regionWin.loadFile(path.join(__dirname, "renderer", "region-select.html"));
+  regionWin.webContents.once("did-finish-load", () => {
+    if (!regionWin || regionWin.isDestroyed()) return;
+    regionWin.webContents.send("region-init", {
+      labels: {
+        hint: t("regionHint"),
+        placeholder: t("regionPlaceholder"),
+        send: t("regionSend"),
+      },
+    });
+    regionWin.focus();
+  });
+}
+
+ipcMain.on("region-select-cancel", () => {
+  if (regionWin && !regionWin.isDestroyed()) regionWin.close();
+});
+
+ipcMain.on("region-select-submit", async (evt, payload) => {
+  const local = payload && payload.rect;
+  const question = String((payload && payload.question) || "").trim();
+  // The window origin equals the display origin — convert to absolute coords.
+  const origin = regionWin && !regionWin.isDestroyed() ? regionWin.getBounds() : { x: 0, y: 0 };
+  const rect = local && Number.isFinite(local.width)
+    ? { x: origin.x + local.x, y: origin.y + local.y, width: local.width, height: local.height }
+    : null;
+  // Close the overlay BEFORE capturing so it isn't photographed.
+  if (regionWin && !regionWin.isDestroyed()) regionWin.close();
+  if (!rect) return;
+  const ch = charForSender(evt.sender) || activeChar();
+  if (ch) setActiveChar(ch.id);
+  sendCatThinking(true);
+  let started = false;
+  try {
+    const answer = await aiAssistant.askAboutRegion(petWin, rect, {
+      question,
+      catName,
+      persona: activeChar() && activeChar().persona,
+      memory: activeMemoryContext(),
+    }, (textSoFar) => {
+      if (!started) { sendScreenStream("start"); started = true; }
+      sendScreenStream("delta", textSoFar);
+    });
+    if (answer && answer.ok) {
+      sendScreenAnswer({ question: question || t("regionDefaultQuestion"), text: answer.text, point: answer.point });
+      rememberForActiveChar("screen", question || t("regionDefaultQuestion"), answer.text);
+    } else if (answer && answer.error !== "aborted") {
+      sendCatNotice((answer && answer.message) || t("aiError"));
+    }
+  } finally {
+    sendCatThinking(false);
+  }
+});
+
 function openOverlayEditor() {
   if (overlayWin && !overlayWin.isDestroyed()) {
     overlayWin.show();
@@ -2745,6 +2945,57 @@ function openMemoryWindow() {
   memoryWin.loadFile(path.join(__dirname, "renderer", "ai-memory.html"));
   memoryWin.on("closed", () => { memoryWin = null; });
 }
+
+let automationsWin = null;
+function openAutomationsWindow() {
+  if (automationsWin && !automationsWin.isDestroyed()) {
+    automationsWin.show();
+    automationsWin.focus();
+    return;
+  }
+  automationsWin = new BrowserWindow({
+    width: 460,
+    height: 560,
+    minWidth: 380,
+    minHeight: 360,
+    title: t("automationsTitle"),
+    frame: false,
+    backgroundColor: "#fbf4e4",
+    resizable: true,
+    skipTaskbar: false,
+    alwaysOnTop: true,
+    icon: APP_ICON_PATH,
+    webPreferences: {
+      preload: path.join(__dirname, "renderer", "ai-preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  keepWindowOnTop(automationsWin);
+  automationsWin.loadFile(path.join(__dirname, "renderer", "ai-automations.html"));
+  automationsWin.on("closed", () => { automationsWin = null; });
+}
+
+ipcMain.handle("automations-list", () => aiAutomations.list());
+ipcMain.handle("automations-add", (_evt, payload) => aiAutomations.add(payload || {}));
+ipcMain.handle("automations-update", (_evt, payload) => {
+  const { id, ...rest } = payload || {};
+  return aiAutomations.update(String(id || ""), rest);
+});
+ipcMain.handle("automations-enabled-set", (_evt, payload) => {
+  const p = payload || {};
+  return aiAutomations.setEnabled(String(p.id || ""), !!p.enabled);
+});
+ipcMain.handle("automations-delete", (_evt, id) => aiAutomations.remove(String(id || "")));
+ipcMain.handle("automations-run-now", async (_evt, id) => {
+  const a = aiAutomations.list().find((x) => x.id === String(id || ""));
+  if (!a) return { ok: false };
+  fireAutomation(a).catch(() => {});
+  return { ok: true };
+});
+ipcMain.on("automations-close", () => {
+  if (automationsWin && !automationsWin.isDestroyed()) automationsWin.close();
+});
 
 ipcMain.handle("memory-list", () => {
   const c = activeChar();

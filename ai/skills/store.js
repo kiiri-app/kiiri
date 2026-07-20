@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { app } = require("electron");
 
-const VALID_TOOLS = ["create_pptx", "create_docx", "write_file"];
+const VALID_TOOLS = ["create_pptx", "create_docx", "write_file", "create_xlsx", "create_csv", "create_json"];
 
 function storePath() {
   return path.join(app.getPath("userData"), "ai-skills.json");
@@ -55,6 +55,16 @@ function list() {
   return load();
 }
 
+// Seed the store with starter skills on the very first run (file absent), so a
+// fresh command window isn't empty. Once the file exists — even if the user
+// deleted every skill — we never re-seed, so their choice sticks.
+function seedIfEmpty(skills) {
+  if (fs.existsSync(storePath())) return list();
+  const clean = (Array.isArray(skills) ? skills : []).map(sanitize).filter(Boolean);
+  if (clean.length) persist(clean);
+  return clean;
+}
+
 function save(skill) {
   const clean = sanitize(skill, 0);
   if (!clean) return list();
@@ -70,4 +80,4 @@ function remove(id) {
   return all;
 }
 
-module.exports = { list, save, remove, sanitize, VALID_TOOLS };
+module.exports = { list, save, remove, seedIfEmpty, sanitize, VALID_TOOLS };

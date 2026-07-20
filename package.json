@@ -21,6 +21,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.1",
     "docx": "^9.7.1",
+    "exceljs": "^4.4.0",
     "pptxgenjs": "^4.0.1",
     "uiohook-napi": "^1.5.5"
   },

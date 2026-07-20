@@ -15,6 +15,7 @@ const { classifyError } = require("./llm");
 const skillStore = require("./skills/store");
 const skillRouter = require("./skills/router");
 const skillAuthor = require("./skills/author");
+const { bundledSkills } = require("./skills/bundled");
 
 const pendingPlans = new Map(); // planId -> { actions }
 let planSeq = 0;
@@ -32,6 +33,10 @@ function cancelInflight() {
 // ---- Skills ----
 function listSkills() {
   return skillStore.list();
+}
+// First-run only: seed the store with localized starter skills.
+function seedSkills(lang) {
+  return skillStore.seedIfEmpty(bundledSkills(lang));
 }
 async function authorSkill(description) {
   return skillAuthor.authorSkill(description);
@@ -145,6 +150,7 @@ function openItem(filePath) {
 
 module.exports = {
   listSkills,
+  seedSkills,
   authorSkill,
   saveSkill,
   deleteSkill,

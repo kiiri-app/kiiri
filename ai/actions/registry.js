@@ -6,6 +6,9 @@
 const { CreatePptxExecutor } = require("./executors/create-pptx");
 const { CreateDocxExecutor } = require("./executors/create-docx");
 const { WriteFileExecutor } = require("./executors/write-file");
+const { CreateXlsxExecutor } = require("./executors/create-xlsx");
+const { CreateCsvExecutor } = require("./executors/create-csv");
+const { CreateJsonExecutor } = require("./executors/create-json");
 
 const executors = new Map();
 
@@ -32,5 +35,8 @@ function toolSchemas(allowedTypes) {
 register(new CreatePptxExecutor());
 register(new CreateDocxExecutor());
 register(new WriteFileExecutor());
+register(new CreateXlsxExecutor());
+register(new CreateCsvExecutor());
+register(new CreateJsonExecutor());
 
 module.exports = { register, get, all, toolSchemas };

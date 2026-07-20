@@ -3640,6 +3640,9 @@ app.whenReady().then(async () => {
     currentLanguage = defaultLanguage();
     loadSettings();
     loadPattern();
+    // First run: seed starter skills in the user's language so the command
+    // window ships with something useful.
+    try { aiAgent.seedSkills(currentLanguage); } catch (err) { logError("[Kiri] skill seed failed:", err); }
     buildAppMenu();
     registerGlobalShortcuts();
     startApp();

@@ -1,177 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1065 1439" overflow="visible">
-  <!-- Kiri working pose: upright, spiral notepad in the left paw, feather quill
-       in the right — writes in bursts (wiggling quill + a scribble line that
-       draws itself onto the pad), small head nods. Prefix: kw- -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 396 468" overflow="visible">
+  <!-- Kiri working: the painterly "writing" art from kiri_working.png
+       (2 cells of ~396x468) alternated as a 2-frame writing loop, with the
+       whole body rocking in a write-write-pause rhythm. Prefix: kw-
+       PNG-wrap: we swap/rock the ORIGINAL frames, never redraw the cat. -->
   <style>
-    #kw-head {
+    #kw-body {
       transform-box: fill-box;
-      transform-origin: 50% 92%;
-      animation: kw-nod 3.6s ease-in-out infinite;
-    }
-    @keyframes kw-nod {                          /* looks down at the pad while writing */
-      0%, 8%        { transform: rotate(0deg); }
-      18%, 52%      { transform: rotate(3.2deg); }
-      64%, 100%     { transform: rotate(0deg); }
-    }
-    #kw-quill-arm {
-      transform-box: fill-box;
-      transform-origin: 22% 30%;                 /* shoulder */
+      transform-origin: 50% 98%;
       animation: kw-write 3.6s ease-in-out infinite;
     }
-    @keyframes kw-write {                        /* write-write-pause rhythm */
+    @keyframes kw-write {                        /* gentle write-burst body rock */
       0%, 8%   { transform: rotate(0deg); }
-      12%      { transform: rotate(-4deg); }
-      16%      { transform: rotate(2.5deg); }
-      20%      { transform: rotate(-3.5deg); }
-      24%      { transform: rotate(2deg); }
-      28%      { transform: rotate(-4deg); }
-      32%      { transform: rotate(1.5deg); }
-      36%      { transform: rotate(-3deg); }
-      40%      { transform: rotate(2.5deg); }
-      44%      { transform: rotate(-3.5deg); }
-      48%      { transform: rotate(1deg); }
-      52%      { transform: rotate(-2deg); }
-      60%, 100%{ transform: rotate(0deg); }
+      12%      { transform: rotate(-0.9deg); }
+      18%      { transform: rotate(0.7deg); }
+      24%      { transform: rotate(-0.8deg); }
+      30%      { transform: rotate(0.6deg); }
+      36%      { transform: rotate(-0.9deg); }
+      42%      { transform: rotate(0.5deg); }
+      48%      { transform: rotate(-0.6deg); }
+      56%, 100%{ transform: rotate(0deg); }
     }
-    #kw-scribble {
-      stroke-dasharray: 560;
-      stroke-dashoffset: 560;
-      animation: kw-scribble 3.6s linear infinite;
-    }
-    @keyframes kw-scribble {                     /* line draws during the writing burst */
-      0%, 8%    { stroke-dashoffset: 560; opacity: 1; }
-      55%       { stroke-dashoffset: 0;   opacity: 1; }
-      78%       { stroke-dashoffset: 0;   opacity: 1; }
-      92%, 100% { stroke-dashoffset: 560; opacity: 0; }
-    }
-    .kw-ear-l, .kw-ear-r { transform-box: fill-box; transform-origin: 50% 96%; }
-    .kw-ear-l { animation: kw-twitch 7.4s linear infinite; }
-    .kw-ear-r { animation: kw-twitch 6.2s linear infinite reverse; }
-    @keyframes kw-twitch {
-      0%, 86%, 94%, 100% { transform: rotate(0deg); }
-      89%                { transform: rotate(-6deg); }
-      92%                { transform: rotate(2deg); }
-    }
-    #kw-tail {
-      transform-box: fill-box;
-      transform-origin: 10% 90%;
-      animation: kw-tail 5.2s ease-in-out infinite;
-    }
-    @keyframes kw-tail {
-      0%, 100% { transform: rotate(0deg); }
-      50%      { transform: rotate(-7deg); }
-    }
-    .kw-lid {
-      transform-box: fill-box;
-      transform-origin: 50% 0%;
-      transform: scaleY(0);
-      animation: kw-blink 4.6s linear infinite;
-    }
-    @keyframes kw-blink {
-      0%, 90%, 95.5%, 100% { transform: scaleY(0); }
-      92%, 93.5%           { transform: scaleY(1); }
-    }
-    #kw-pupils { animation: kw-look 3.6s ease-in-out infinite; }
-    @keyframes kw-look {                         /* eyes track pad while writing, up while thinking */
-      0%, 8%    { transform: translate(0px, 6px); }
-      18%, 52%  { transform: translate(-8px, 16px); }
-      68%, 84%  { transform: translate(10px, -8px); }
-      94%, 100% { transform: translate(0px, 6px); }
+    /* 2-frame writing loop: the drawn frames alternate ~2.7x/s (matches the
+       legacy sheet's 3.6fps loop over 2 frames). */
+    .kw-f0 { animation: kw-flip 0.56s steps(1, end) infinite; }
+    .kw-f1 { animation: kw-flip 0.56s steps(1, end) infinite; animation-delay: -0.28s; }
+    @keyframes kw-flip {
+      0%, 49.9% { opacity: 1; }
+      50%, 100% { opacity: 0; }
     }
   </style>
 
-  <!-- tail sways behind on the right -->
-  <path id="kw-tail" d="M700 1320 C822 1288 906 1194 928 1064 C946 952 916 842 838 772 C806 744 764 756 762 792 C760 822 788 838 814 878 C862 950 876 1036 850 1112 C818 1204 744 1266 652 1288 Z" fill="#101216"/>
-
-  <!-- ============ BODY (upright) ============ -->
-  <path d="M533 600 C408 600 330 700 322 848 C314 996 344 1200 392 1316 C424 1392 474 1428 533 1428 C592 1428 642 1392 674 1316 C722 1200 752 996 744 848 C736 700 658 600 533 600 Z" fill="#101216"/>
-  <!-- hind feet peeking out -->
-  <g fill="#101216">
-    <path d="M424 1332 C396 1332 378 1356 380 1388 C382 1416 402 1432 428 1432 C454 1432 470 1414 472 1386 C474 1356 452 1332 424 1332 Z"/>
-    <path d="M642 1332 C670 1332 688 1356 686 1388 C684 1416 664 1432 638 1432 C612 1432 596 1414 594 1386 C592 1356 614 1332 642 1332 Z"/>
-  </g>
-  <g stroke="#2a2d36" stroke-width="6" stroke-linecap="round">
-    <path d="M416 1430 L416 1408"/>
-    <path d="M440 1430 L440 1408"/>
-    <path d="M626 1430 L626 1408"/>
-    <path d="M650 1430 L650 1408"/>
-  </g>
-
-  <!-- ============ HEAD ============ -->
-  <g id="kw-head">
-    <g class="kw-ear-l">
-      <path d="M296 236 C252 130 226 44 236 -10 C304 16 376 88 428 180 C382 202 334 222 296 236 Z" fill="#101216"/>
-      <path d="M312 200 C286 138 272 86 276 54 C314 74 354 116 384 168 C358 180 332 190 312 200 Z" fill="#fdfdfd"/>
-    </g>
-    <g class="kw-ear-r">
-      <path d="M770 236 C814 130 840 44 830 -10 C762 16 690 88 638 180 C684 202 732 222 770 236 Z" fill="#101216"/>
-      <path d="M754 200 C780 138 794 86 790 54 C752 74 712 116 682 168 C708 180 734 190 754 200 Z" fill="#fdfdfd"/>
-    </g>
-    <path d="M533 150 C376 150 252 252 252 410 C252 554 374 646 533 646 C692 646 814 554 814 410 C814 252 690 150 533 150 Z" fill="#101216"/>
-    <g stroke="#101216" stroke-width="9" stroke-linecap="round" fill="none">
-      <path d="M258 420 C180 428 116 444 66 466"/>
-      <path d="M262 462 C188 478 130 500 84 528"/>
-      <path d="M808 420 C886 428 950 444 1000 466"/>
-      <path d="M804 462 C878 478 936 500 982 528"/>
-    </g>
-    <g>
-      <ellipse cx="446" cy="412" rx="82" ry="90" fill="#ffffff"/>
-      <ellipse cx="620" cy="412" rx="82" ry="90" fill="#ffffff"/>
-      <g id="kw-pupils" fill="#101216">
-        <circle cx="446" cy="416" r="26"/>
-        <circle cx="620" cy="416" r="26"/>
-      </g>
-      <rect class="kw-lid" x="362" y="320" width="168" height="184" rx="82" fill="#101216"/>
-      <rect class="kw-lid" x="536" y="320" width="168" height="184" rx="82" fill="#101216"/>
-    </g>
-    <path d="M517 474 C523 466 543 466 549 474 C545 486 537 494 533 494 C529 494 521 486 517 474 Z" fill="#e59aa6"/>
-    <path d="M510 522 C525 531 541 531 556 522" stroke="#2a2d36" stroke-width="8" stroke-linecap="round" fill="none"/>
-  </g>
-
-  <!-- blue bow -->
-  <g>
-    <path d="M506 668 C452 636 390 618 344 622 C326 664 326 710 344 752 C392 754 454 736 506 700 Z" fill="#274794" stroke="#16204a" stroke-width="10" stroke-linejoin="round"/>
-    <path d="M560 668 C614 636 676 618 722 622 C740 664 740 710 722 752 C674 754 612 736 560 700 Z" fill="#274794" stroke="#16204a" stroke-width="10" stroke-linejoin="round"/>
-    <rect x="497" y="646" width="72" height="72" rx="20" fill="#274794" stroke="#16204a" stroke-width="10"/>
-  </g>
-
-  <!-- ============ NOTEPAD (held by the left arm, chest height) ============ -->
-  <g id="kw-pad">
-    <!-- pad: spiral-bound, slightly tilted -->
-    <g transform="rotate(-8 560 1010)">
-      <rect x="430" y="852" width="280" height="330" rx="18" fill="#e9dfc6" stroke="#3a3325" stroke-width="10"/>
-      <rect x="430" y="852" width="280" height="330" rx="18" fill="none" stroke="#cfc3a4" stroke-width="4" transform="translate(-8 8)" opacity="0.6"/>
-      <!-- spiral rings -->
-      <g stroke="#3a3325" stroke-width="9" fill="none" stroke-linecap="round">
-        <path d="M462 852 C458 828 470 812 486 816 C498 820 500 838 492 852"/>
-        <path d="M520 852 C516 828 528 812 544 816 C556 820 558 838 550 852"/>
-        <path d="M578 852 C574 828 586 812 602 816 C614 820 616 838 608 852"/>
-        <path d="M636 852 C632 828 644 812 660 816 C672 820 674 838 666 852"/>
-      </g>
-      <!-- previously written lines -->
-      <g stroke="#8b7f60" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.85">
-        <path d="M470 912 C520 906 570 908 668 912"/>
-        <path d="M470 950 C530 944 590 946 656 950"/>
-      </g>
-      <!-- the live scribble that writes itself -->
-      <path id="kw-scribble" d="M468 996 C500 988 522 1000 552 994 C582 988 600 1002 630 996 C650 992 662 998 672 996 M470 1040 C504 1032 538 1044 574 1038" stroke="#4a5f9c" stroke-width="8" stroke-linecap="round" fill="none"/>
-    </g>
-    <!-- left arm wraps around the pad from the left -->
-    <path d="M410 780 C360 800 330 856 336 924 C342 986 380 1030 434 1044 C458 1050 476 1032 470 1010 C464 990 442 984 424 962 C404 936 398 900 408 866 C416 838 428 812 434 796 Z" fill="#101216"/>
-    <path d="M430 1006 C408 1010 396 1032 402 1054 C408 1074 428 1084 448 1078 C468 1072 478 1052 472 1032 C466 1012 450 1002 430 1006 Z" fill="#16181f"/>
-  </g>
-
-  <!-- ============ QUILL ARM (right, writes) ============ -->
-  <g id="kw-quill-arm">
-    <!-- arm from right shoulder toward the pad -->
-    <path d="M652 780 C702 796 730 844 726 906 C722 958 692 996 646 1010 C620 1018 600 1002 604 980 C608 962 628 956 644 938 C662 916 668 886 660 856 C654 830 646 806 640 792 Z" fill="#101216"/>
-    <!-- paw gripping the quill -->
-    <path d="M636 962 C610 966 596 990 602 1014 C608 1036 630 1046 652 1040 C674 1034 686 1012 680 990 C674 968 658 958 636 962 Z" fill="#16181f"/>
-    <!-- feather quill: cream feather, dark nib pointing at the pad -->
-    <g transform="rotate(24 640 1000)">
-      <path d="M640 1004 L616 1052 L600 1044 Z" fill="#3a3325"/>
-      <path d="M640 1004 C610 924 606 838 632 762 C648 716 676 684 704 672 C718 706 720 762 706 826 C692 890 668 956 652 1000 Z" fill="#efe3c0" stroke="#b8a87e" stroke-width="7"/>
-      <path d="M648 986 C632 920 630 850 646 786" stroke="#b8a87e" stroke-width="6" fill="none" stroke-linecap="round"/>
-    </g>
+  <!-- The two writing cells are the same cat with the quill/hand in a different
+       spot, but cell 1's content sits +77px right of cell 0's. We re-align them
+       (f0 shifted +38 to centre, f1 shifted -39) so BOTH heads/bodies land at the
+       same place — alternating them then reads as writing, not a jumping cat. -->
+  <g id="kw-body">
+    <svg class="kw-f0" x="38" y="0" width="396" height="468" viewBox="0 0 396 468">
+      <image href="../svg/kiri_working.png" width="793" height="468"/>
+    </svg>
+    <svg class="kw-f1" x="-39" y="0" width="397" height="468" viewBox="396 0 397 468">
+      <image href="../svg/kiri_working.png" width="793" height="468"/>
+    </svg>
   </g>
 </svg>

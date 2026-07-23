@@ -75,7 +75,8 @@ let poseOverlay = null;
 let poseAiActive = false;
 let poseListening = false;
 let poseListeningTimer = null;
-let poseLeanX = 0, poseLeanY = 0;
+let poseLeanR = 0; // smoothed upper-body tilt toward the cursor (deg), feet pinned
+const POSE_MAX_LEAN_DEG = 7; // max "hafif" tilt at full cursor offset
 let poseEyeX = 0, poseEyeY = 0;
 let posePupilTravelPx = 0;
 // Animated inline-SVG poses (new vector/painterly art, one file per state).
@@ -83,12 +84,20 @@ let posePupilTravelPx = 0;
 // legacy sprite sheets above stay as the fallback if the bundle fails to load.
 const poseSvgEl = document.getElementById("pose-svg");
 const POSE_SVG_KEYS = {
+  // Both sets now use the PNG-WRAP animation pattern: each *_anim.svg wraps the
+  // ORIGINAL painted art (kiri_*.png / tori_*.png) in <image> and animates it
+  // with CSS transforms + small vector overlays — it never redraws the character.
+  // (The earlier kiri rig hand-vectored the cat into flat <path> blobs and lost
+  //  the eyes/whiskers/silhouette; that regression is gone.) Re-run
+  //  `npm run build:posesvgs` after editing any *_anim.svg.
   kiri: { move: 1, listening: 1, working: 1, pointing: 1 },
   tori: { move: 1, listening: 1, working: 1, pointing: 1 },
 };
 // viewBox aspect of each SVG file — used for layout before/without injection.
+// kiri: move = one kiri_move cell (937/3 x 710); working = one kiri_working cell
+// (793/2 x 468); listening/pointing wrap the full kiri_noeye (1065 x 1439).
 const POSE_SVG_VIEW = {
-  kiri: { move: [1065, 2000], listening: [1065, 1439], working: [1065, 1439], pointing: [1065, 1439] },
+  kiri: { move: [312, 710], listening: [1065, 1439], working: [396, 468], pointing: [1065, 1439] },
   tori: { move: [300, 1100], listening: [594, 932], working: [567, 1150], pointing: [594, 932] },
 };
 let poseSvgShown = null;      // "set/state" currently injected into #pose-svg
@@ -1178,16 +1187,14 @@ function tick() {
     if (spriteLeanEl) spriteLeanEl.setAttribute("transform", `translate(${spriteLeanX.toFixed(2)} ${spriteLeanY.toFixed(2)}) rotate(${(spriteLeanX * 0.5).toFixed(2)} 60 90)`);
   }
   if (poseMode && posesetEl) {
-    // "Eyes follow" → pupils drift toward the cursor AND the whole illustration
-    // leans toward it (idle only). Both combine for a lively look-at effect.
+    // "Look at the cursor": pupils drift toward it AND the upper body tilts
+    // toward it — but the FEET STAY PLANTED. We rotate the box about its
+    // bottom-centre pivot (transform-origin: 50% 100%) instead of sliding the
+    // whole illustration, so only the top leans. Idle only.
     const idle = (document.body.dataset.poseState || "idle") === "idle";
-    const tx = idle ? targetDx * 9 : 0;
-    const ty = idle ? targetDy * 4 : 0;
-    poseLeanX += (tx - poseLeanX) * 0.1;
-    poseLeanY += (ty - poseLeanY) * 0.1;
-    posesetEl.style.setProperty("--lean-x", `${poseLeanX.toFixed(2)}px`);
-    posesetEl.style.setProperty("--lean-y", `${poseLeanY.toFixed(2)}px`);
-    posesetEl.style.setProperty("--lean-r", `${(poseLeanX * 0.06).toFixed(3)}deg`);
+    const leanTargetR = idle ? targetDx * POSE_MAX_LEAN_DEG : 0;
+    poseLeanR += (leanTargetR - poseLeanR) * 0.1;
+    posesetEl.style.setProperty("--lean-r", `${poseLeanR.toFixed(2)}deg`);
 
     const ex = idle ? targetDx * posePupilTravelPx : 0;
     const ey = idle ? targetDy * posePupilTravelPx : 0;

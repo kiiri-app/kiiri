@@ -927,7 +927,8 @@ body[data-editing-screen-ask] #screen-ask-editor {
 /* ── Pose-set characters (kiri / tori) ──────────────────────────────────────
    A flat illustrated PNG per state (idle/move/listening/working) anchored at
    the feet (bottom-center, object-fit: contain) so swaps stay grounded. The
-   whole box leans toward the cursor (--lean-*) to fake eye-following. */
+   upper body TILTS toward the cursor (--lean-r) while the feet stay pinned at
+   the bottom-centre pivot — no whole-image slide. */
 #poseset {
   position: absolute;
   /* feet stay anchored at the cat box bottom; portrait art reaches upward */
@@ -935,7 +936,7 @@ body[data-editing-screen-ask] #screen-ask-editor {
   left: 50%;
   width: var(--cat-size);
   height: calc(var(--cat-size) * 1.18);
-  transform: translateX(-50%) translate(var(--lean-x, 0px), var(--lean-y, 0px)) rotate(var(--lean-r, 0deg));
+  transform: translateX(-50%) rotate(var(--lean-r, 0deg));
   transform-origin: 50% 100%;
   pointer-events: none;
   z-index: 3;

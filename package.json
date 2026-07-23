@@ -48,6 +48,7 @@
       "package.json"
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -58,6 +59,7 @@
       ]
     },
     "mac": {
+      "icon": "build/icon.icns",
       "target": "dmg",
       "category": "public.app-category.productivity",
       "extendInfo": {
@@ -65,6 +67,7 @@
       }
     },
     "linux": {
+      "icon": "build/icon.png",
       "target": "AppImage",
       "category": "Utility"
     }

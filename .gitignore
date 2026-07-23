@@ -4,7 +4,11 @@ node_modules/
 # Build output
 dist/
 out/
-build/
+build/*
+# ...but keep the app icons (electron-builder buildResources) under version control
+!build/icon.icns
+!build/icon.ico
+!build/icon.png
 *.exe
 *.dmg
 *.AppImage

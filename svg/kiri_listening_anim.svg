@@ -1,168 +1,79 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1065 1439" overflow="visible">
-  <!-- Kiri listening pose: sitting, ears perked tall, head slowly turning
-       left/right toward the sound, floating music notes + sound arcs.
-       Plays while the mic records (PTT) / on click. Prefix: kl- -->
+  <!-- Kiri listening: the original idle art (kiri_noeye.png) bobbing gently
+       toward the sound, with floating music notes + sound ripples in kiri's
+       bow-blue. Prefix: kl-  (PNG-wrap: animate the real art, never redraw it.) -->
   <style>
-    #kl-head {
+    #kl-body {
       transform-box: fill-box;
-      transform-origin: 50% 88%;                 /* neck pivot */
-      animation: kl-head 7.2s ease-in-out infinite;
+      transform-origin: 50% 96%;
+      animation: kl-bob 4.6s ease-in-out infinite;
     }
-    @keyframes kl-head {                         /* smooth version of the 2-frame look L/R */
-      0%, 12%       { transform: rotate(-5deg); }
-      38%, 62%      { transform: rotate(5.5deg); }
-      88%, 100%     { transform: rotate(-5deg); }
+    @keyframes kl-bob {                          /* lean/tilt left-right, tracking a sound */
+      0%, 10%   { transform: rotate(-2.2deg) translateY(0px); }
+      40%, 60%  { transform: rotate(2.4deg) translateY(-8px); }
+      90%, 100% { transform: rotate(-2.2deg) translateY(0px); }
     }
-    .kl-ear-l, .kl-ear-r {
+    #kl-breathe {
       transform-box: fill-box;
       transform-origin: 50% 100%;
+      animation: kl-breathe 3.2s ease-in-out infinite;
     }
-    .kl-ear-l { animation: kl-ear-l 3.8s linear infinite; }
-    .kl-ear-r { animation: kl-ear-r 4.6s linear infinite; }
-    @keyframes kl-ear-l {                        /* alert twitches */
-      0%, 78%, 90%, 100% { transform: rotate(0deg); }
-      82%                { transform: rotate(-9deg); }
-      86%                { transform: rotate(3deg); }
+    @keyframes kl-breathe {
+      0%, 100% { transform: scale(1, 1); }
+      50%      { transform: scale(1.006, 1.018); }
     }
-    @keyframes kl-ear-r {
-      0%, 40%, 54%, 100% { transform: rotate(0deg); }
-      44%                { transform: rotate(9deg); }
-      49%                { transform: rotate(-3deg); }
-    }
-    #kl-pupils { animation: kl-look 7.2s ease-in-out infinite; }
-    @keyframes kl-look {                         /* eyes lead the head turn, glancing up */
-      0%, 12%   { transform: translate(-14px, -12px); }
-      38%, 62%  { transform: translate(16px, -14px); }
-      88%, 100% { transform: translate(-14px, -12px); }
-    }
-    .kl-lid {
-      transform-box: fill-box;
-      transform-origin: 50% 0%;
-      transform: scaleY(0);
-      animation: kl-blink 5.1s linear infinite;
-    }
-    @keyframes kl-blink {
-      0%, 91%, 96.5%, 100% { transform: scaleY(0); }
-      93%, 94.5%           { transform: scaleY(1); }
-    }
-    #kl-tail {
-      transform-box: fill-box;
-      transform-origin: 8% 88%;
-      animation: kl-tail 4.4s ease-in-out infinite;
-    }
-    @keyframes kl-tail {
-      0%, 100% { transform: rotate(0deg); }
-      50%      { transform: rotate(-6deg); }
-    }
-    .kl-note {
-      opacity: 0;
-      animation: kl-note 4.8s ease-in-out infinite;
-    }
-    .kl-note2 { animation-delay: -1.6s; }
-    .kl-note3 { animation-delay: -3.2s; }
-    @keyframes kl-note {                         /* drift up + fade, staggered */
-      0%       { opacity: 0; transform: translate(0px, 40px) rotate(-6deg); }
-      18%      { opacity: 0.95; }
-      55%      { opacity: 0.55; }
-      80%, 100%{ opacity: 0; transform: translate(14px, -150px) rotate(8deg); }
+    .kl-note { opacity: 0; animation: kl-note 4.6s ease-in-out infinite; }
+    .kl-note2 { animation-delay: -1.5s; }
+    .kl-note3 { animation-delay: -3.1s; }
+    @keyframes kl-note {
+      0%       { opacity: 0; transform: translate(0px, 46px) rotate(-6deg); }
+      18%      { opacity: 0.9; }
+      55%      { opacity: 0.5; }
+      80%, 100%{ opacity: 0; transform: translate(18px, -190px) rotate(8deg); }
     }
     .kl-arc {
       opacity: 0;
-      animation: kl-arc 2.6s ease-out infinite;
+      animation: kl-arc 2.7s ease-out infinite;
       fill: none;
-      stroke: #3d4250;
+      stroke: #3f63a8;
       stroke-linecap: round;
     }
     .kl-arc2 { animation-delay: -0.9s; }
     .kl-arc3 { animation-delay: -1.8s; }
-    @keyframes kl-arc {                          /* sound ripples near the ear */
-      0%       { opacity: 0; transform: scale(0.82); }
-      25%      { opacity: 0.75; }
-      70%, 100%{ opacity: 0; transform: scale(1.12); }
+    @keyframes kl-arc {
+      0%       { opacity: 0; transform: scale(0.84); }
+      25%      { opacity: 0.7; }
+      70%, 100%{ opacity: 0; transform: scale(1.1); }
     }
     #kl-arcs { transform-box: fill-box; transform-origin: 0% 100%; }
   </style>
 
-  <!-- tail curls around the right side like the idle art -->
-  <path id="kl-tail" d="M676 1354 C806 1330 908 1240 940 1104 C968 984 942 862 862 782 C830 750 786 760 782 796 C778 826 806 844 834 884 C886 958 902 1050 874 1130 C840 1226 762 1294 660 1316 Z" fill="#101216"/>
-
-  <!-- ============ BODY (sitting, like idle) ============ -->
-  <path d="M533 620 C400 620 316 726 306 880 C296 1030 330 1220 380 1330 C412 1400 468 1428 533 1428 C598 1428 654 1400 686 1330 C736 1220 770 1030 760 880 C750 726 666 620 533 620 Z" fill="#101216"/>
-  <!-- front paws -->
-  <g fill="#101216">
-    <path d="M430 1300 C404 1300 386 1326 388 1360 C390 1396 410 1420 438 1420 C466 1420 484 1398 486 1364 C488 1328 458 1300 430 1300 Z"/>
-    <path d="M636 1300 C662 1300 680 1326 678 1360 C676 1396 656 1420 628 1420 C600 1420 582 1398 580 1364 C578 1328 608 1300 636 1300 Z"/>
-  </g>
-  <g stroke="#2a2d36" stroke-width="6" stroke-linecap="round">
-    <path d="M424 1418 L424 1394"/>
-    <path d="M448 1418 L448 1394"/>
-    <path d="M618 1418 L618 1394"/>
-    <path d="M642 1418 L642 1394"/>
-  </g>
-
-  <!-- ============ HEAD GROUP (turns toward the sound) ============ -->
-  <g id="kl-head">
-    <!-- perked, oversized alert ears -->
-    <g class="kl-ear-l">
-      <path d="M300 340 C250 200 218 90 232 20 C310 48 392 130 448 240 C396 268 342 306 300 340 Z" fill="#101216"/>
-      <path d="M316 296 C286 216 268 148 274 106 C318 130 364 180 398 244 C368 260 340 278 316 296 Z" fill="#fdfdfd"/>
+  <g id="kl-body">
+    <g id="kl-breathe">
+      <image href="../svg/kiri_noeye.png" width="1065" height="1439"/>
     </g>
-    <g class="kl-ear-r">
-      <path d="M766 340 C816 200 848 90 834 20 C756 48 674 130 618 240 C670 268 724 306 766 340 Z" fill="#101216"/>
-      <path d="M750 296 C780 216 798 148 792 106 C748 130 702 180 668 244 C698 260 726 278 750 296 Z" fill="#fdfdfd"/>
-    </g>
-    <!-- head blob -->
-    <path d="M533 196 C372 196 244 300 244 462 C244 610 370 704 533 704 C696 704 822 610 822 462 C822 300 694 196 533 196 Z" fill="#101216"/>
-    <!-- whiskers, lifted (alert) -->
-    <g stroke="#101216" stroke-width="9" stroke-linecap="round" fill="none">
-      <path d="M250 470 C168 462 100 466 46 480"/>
-      <path d="M254 512 C176 516 114 530 64 552"/>
-      <path d="M816 470 C898 462 966 466 1020 480"/>
-      <path d="M812 512 C890 516 952 530 1002 552"/>
-    </g>
-    <!-- eyes -->
-    <g>
-      <ellipse cx="442" cy="462" rx="86" ry="94" fill="#ffffff"/>
-      <ellipse cx="624" cy="462" rx="86" ry="94" fill="#ffffff"/>
-      <g id="kl-pupils" fill="#101216">
-        <circle cx="442" cy="462" r="27"/>
-        <circle cx="624" cy="462" r="27"/>
-      </g>
-      <rect class="kl-lid" x="354" y="366" width="176" height="192" rx="86" fill="#101216"/>
-      <rect class="kl-lid" x="536" y="366" width="176" height="192" rx="86" fill="#101216"/>
-    </g>
-    <!-- nose + attentive mouth -->
-    <path d="M517 528 C523 520 543 520 549 528 C545 540 537 548 533 548 C529 548 521 540 517 528 Z" fill="#e59aa6"/>
-    <path d="M512 578 C526 588 540 588 554 578" stroke="#2a2d36" stroke-width="8" stroke-linecap="round" fill="none"/>
-    <!-- sound ripples by the right ear -->
+    <!-- sound ripples off the right ear -->
     <g id="kl-arcs">
-      <path class="kl-arc"          d="M846 250 C874 282 888 322 886 366" stroke-width="11"/>
-      <path class="kl-arc kl-arc2"  d="M894 216 C932 258 950 312 946 370" stroke-width="11"/>
-      <path class="kl-arc kl-arc3"  d="M942 182 C990 234 1012 302 1006 374" stroke-width="11"/>
+      <path class="kl-arc"         d="M840 150 C880 205 902 270 900 340" stroke-width="13"/>
+      <path class="kl-arc kl-arc2" d="M900 110 C952 175 978 250 972 350" stroke-width="13"/>
+      <path class="kl-arc kl-arc3" d="M960 70 C1024 150 1050 245 1042 360" stroke-width="13"/>
     </g>
   </g>
 
-  <!-- blue bow at the chest -->
-  <g>
-    <path d="M506 730 C450 696 386 678 338 682 C320 726 320 774 338 818 C388 820 452 800 506 764 Z" fill="#274794" stroke="#16204a" stroke-width="10" stroke-linejoin="round"/>
-    <path d="M560 730 C616 696 680 678 728 682 C746 726 746 774 728 818 C678 820 614 800 560 764 Z" fill="#274794" stroke="#16204a" stroke-width="10" stroke-linejoin="round"/>
-    <rect x="496" y="708" width="74" height="74" rx="20" fill="#274794" stroke="#16204a" stroke-width="10"/>
-  </g>
-
-  <!-- floating music notes (left side, above the head) -->
-  <g fill="#23262e">
-    <g class="kl-note" transform="translate(150, 240)">
-      <ellipse cx="0" cy="54" rx="21" ry="15" transform="rotate(-18 0 54)"/>
-      <path d="M18 50 L18 -34 L64 -46 L64 -18 L28 -9 L28 50 Z"/>
+  <!-- floating music notes, left of the head -->
+  <g fill="#3f63a8">
+    <g class="kl-note" transform="translate(140, 250)">
+      <ellipse cx="0" cy="56" rx="24" ry="17" transform="rotate(-18 0 56)"/>
+      <path d="M20 51 L20 -40 L74 -53 L74 -21 L32 -12 L32 51 Z"/>
     </g>
-    <g class="kl-note kl-note2" transform="translate(84, 420)">
-      <ellipse cx="0" cy="40" rx="18" ry="13" transform="rotate(-18 0 40)"/>
-      <rect x="14" y="-42" width="9" height="84" rx="4"/>
-      <path d="M14 -42 C40 -34 52 -18 48 4 C42 -8 30 -16 14 -18 Z"/>
+    <g class="kl-note kl-note2" transform="translate(72, 450)">
+      <ellipse cx="0" cy="44" rx="20" ry="15" transform="rotate(-18 0 44)"/>
+      <rect x="15" y="-47" width="10" height="93" rx="5"/>
+      <path d="M15 -47 C45 -38 58 -20 53 5 C47 -8 33 -17 15 -20 Z"/>
     </g>
-    <g class="kl-note kl-note3" transform="translate(214, 470)">
-      <ellipse cx="0" cy="34" rx="16" ry="12" transform="rotate(-18 0 34)"/>
-      <rect x="11" y="-36" width="8" height="72" rx="4"/>
+    <g class="kl-note kl-note3" transform="translate(205, 500)">
+      <ellipse cx="0" cy="37" rx="18" ry="13" transform="rotate(-18 0 37)"/>
+      <rect x="12" y="-40" width="10" height="80" rx="5"/>
     </g>
   </g>
 </svg>

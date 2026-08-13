@@ -1481,6 +1481,43 @@ function createAllPetWindows() {
   startCursorPoll();
 }
 
+// Where to put a newly added character. The old code offset it by 70px, but a
+// pet window is ~500px wide, so the newcomer landed almost exactly on top of the
+// current one — adding a character looked like it did nothing. Worse, a spot
+// past the screen edge fails petPositionIsVisible() and falls back to the
+// default corner, i.e. *exactly* where the first pet usually sits. So: step a
+// full art-width sideways, stay inside the work area, and skip occupied spots.
+function spawnPositionFor(display, W, H, base) {
+  const area = display.workArea;
+  const step = Math.round(W * 0.62);
+  const clampX = (x) => Math.min(Math.max(x, area.x + 8), Math.max(area.x + 8, area.x + area.width - W - 8));
+  const clampY = (y) => Math.min(Math.max(y, area.y + 8), Math.max(area.y + 8, area.y + area.height - H - 8));
+  const baseY = clampY(base.y);
+  // Rows first (beside the current pet, preferring the roomier side), then
+  // staggered rows above/below once a row fills up.
+  const rows = [baseY, clampY(baseY - Math.round(H * 0.22)), clampY(baseY + Math.round(H * 0.22))];
+  const columns = [base.x + step, base.x - step];
+  for (let i = 1; i <= 6; i++) columns.push(base.x + step * (i + 1), base.x - step * (i + 1));
+
+  const distance = (pos) => Math.min(...characters.map((c) => (c.position
+    ? Math.hypot(c.position.x - pos.x, c.position.y - pos.y)
+    : Infinity)), Infinity);
+  let best = null;
+  for (const y of rows) {
+    for (const rawX of columns) {
+      const pos = { x: clampX(rawX), y };
+      const free = characters.every((c) => !c.position
+        || Math.abs(c.position.x - pos.x) >= step * 0.6
+        || Math.abs(c.position.y - pos.y) >= H * 0.4);
+      if (free) return pos;
+      // Nothing free yet — remember the least-crowded spot as the fallback.
+      const d = distance(pos);
+      if (!best || d > best.d) best = { pos, d };
+    }
+  }
+  return best ? best.pos : { x: clampX(base.x + step), y: baseY };
+}
+
 function addCharacter(set = "kiri") {
   if (!charStore.POSESET_SETS.includes(set)) set = "kiri";
   const display = screen.getPrimaryDisplay();
@@ -1495,7 +1532,7 @@ function addCharacter(set = "kiri") {
     kind: "poseset",
     set,
     pattern: currentPattern,
-    position: { x: base.x + 70, y: base.y + 24 },
+    position: spawnPositionFor(display, W, H, base),
     size: currentPetSize,
   }, idx);
   characters.push(char);

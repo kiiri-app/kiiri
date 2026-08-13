@@ -46,11 +46,27 @@
       70%, 100%{ opacity: 0; transform: scale(1.1); }
     }
     #kl-arcs { transform-box: fill-box; transform-origin: 0% 100%; }
+    /* kiri_noeye.png has blank white eyes — the pupils are normally the DOM
+       dots, which only render on the idle pose. Without these the cat went
+       eyeless the moment it started listening. They live inside #kl-breathe so
+       they ride the bob/breathe transforms and stay glued to the eyes. */
+    #kl-eyes circle { fill: #1b1b1b; }
+    #kl-eyes { animation: kl-look 4.6s ease-in-out infinite; }
+    @keyframes kl-look {                         /* glances toward the sound */
+      0%, 10%   { transform: translate(-9px, 2px); }
+      40%, 60%  { transform: translate(10px, -3px); }
+      90%, 100% { transform: translate(-9px, 2px); }
+    }
   </style>
 
   <g id="kl-body">
     <g id="kl-breathe">
       <image href="../svg/kiri_noeye.png" width="1065" height="1439"/>
+      <!-- centres/radius match POSE_EYES.kiri (0.261/0.421 x, 0.280 y, pr 0.028) -->
+      <g id="kl-eyes">
+        <circle cx="278" cy="403" r="30"/>
+        <circle cx="448" cy="404" r="30"/>
+      </g>
     </g>
     <!-- sound ripples off the right ear -->
     <g id="kl-arcs">

@@ -121,7 +121,10 @@
     <button type="submit">OK</button>
     <button type="button" id="pomodoro-focus-cancel">×</button>
   </form>
-  <object id="cat" type="image/svg+xml" data="../svg/cat-idle-follow-v2.svg" aria-label="cat"></object>
+  <!-- The legacy pixel cat starts hidden: it used to render for the split second
+       between window paint and the character-art IPC, so every kiri/tori user saw
+       the old cat flash first. applyCharacterArt() unhides it for classic chars. -->
+  <object id="cat" type="image/svg+xml" data="../svg/cat-idle-follow-v2.svg" aria-label="cat" hidden></object>
   <object id="sprite" type="image/svg+xml" data="../svg/sprite.svg" aria-label="character" hidden></object>
   <!-- Pose-set characters (kiri / tori): flat per-state PNG art + painted pixel overlay -->
   <div id="poseset" aria-label="character" hidden>

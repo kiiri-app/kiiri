@@ -46,11 +46,26 @@
       70%, 100%{ opacity: 0; transform: scale(1.1); }
     }
     #tl-arcs { transform-box: fill-box; transform-origin: 0% 100%; }
+    /* tori_noeye.png has blank white eyes too — same fix as kiri: draw the
+       pupils inside the breathing group so tori never goes eyeless while it
+       is listening (the DOM tracking dots only render on the idle pose). */
+    #tl-eyes circle { fill: #1b1b1b; }
+    #tl-eyes { animation: tl-look 4.6s ease-in-out infinite; }
+    @keyframes tl-look {
+      0%, 10%   { transform: translate(-5px, 1px); }
+      40%, 60%  { transform: translate(6px, -2px); }
+      90%, 100% { transform: translate(-5px, 1px); }
+    }
   </style>
 
   <g id="tl-body">
     <g id="tl-breathe">
       <image href="../svg/tori_noeye.png" width="594" height="932"/>
+      <!-- centres/radius match POSE_EYES.tori (0.461/0.539 x, 0.215 y, pr 0.020) -->
+      <g id="tl-eyes">
+        <circle cx="274" cy="200" r="12"/>
+        <circle cx="320" cy="200" r="12"/>
+      </g>
     </g>
     <!-- sound ripples by the right ear -->
     <g id="tl-arcs">

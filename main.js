@@ -2133,7 +2133,7 @@ function startAgentStateServer() {
   const token = ensureAgentStateToken();
   // Local control bridge (OpenClicky-style): besides /agent-state, external
   // agents holding the token can make the pet speak (/speak) or point at a
-  // screen spot with the paw overlay + pointing pose (/point).
+  // screen spot with the arrow overlay + a look-at-that-spot gaze (/point).
   const BRIDGE_ROUTES = new Set(["/agent-state", "/speak", "/point"]);
   agentStateServer = http.createServer((req, res) => {
     if (req.method !== "POST" || !BRIDGE_ROUTES.has(req.url)) {
@@ -2245,7 +2245,7 @@ function sendScreenStream(phase, text) {
 }
 
 // Deliver a screen-question answer to the pet (speech bubble) and, if the model
-// pointed at a UI element, draw the paw overlay there + have the cat look at it.
+// pointed at a UI element, draw the arrow overlay there + have the cat look at it.
 function sendScreenAnswer({ question, text, point } = {}) {
   let gaze = null;
   if (point && Number.isFinite(point.x) && Number.isFinite(point.y) && petWin && !petWin.isDestroyed()) {
@@ -2628,17 +2628,38 @@ function broadcastCharacterArt(c) {
 }
 
 // ── Pixel-overlay editor (paint over the active pose-set character) ──
-// ── Paw-point overlay: a transparent, click-through full-screen window that
-// draws a paw + pulse ring where the vision answer pointed, then fades. ──
+// ── Point overlay: a transparent, click-through full-screen window that draws
+// an arrow (tip on the spot, tail toward the pet) + pulse ring where the vision
+// answer pointed, then fades. The pet itself only *looks* at the spot. ──
 let pawWin = null;
 let pawHideTimer = null;
+
+// Angle (deg) of the pet → target vector, so the arrow reads as coming from the
+// character. Falls back to "from the left" when the pet window is unavailable.
+function pointArrowAngle(point) {
+  if (!petWin || petWin.isDestroyed()) return 0;
+  const b = petWin.getBounds();
+  const vx = point.x - (b.x + b.width / 2);
+  const vy = point.y - (b.y + b.height * 0.4);
+  if (!vx && !vy) return 0;
+  return (Math.atan2(vy, vx) * 180) / Math.PI;
+}
 
 function showPawPoint(point) {
   const display = screen.getDisplayNearestPoint({ x: point.x, y: point.y });
   const b = display.bounds;
-  const local = { x: point.x - b.x, y: point.y - b.y };
+  const angle = pointArrowAngle(point);
+  // Coordinates are relative to where the window ACTUALLY ended up: macOS can
+  // clamp a full-screen overlay below the menu bar, and using the requested
+  // display origin would then shift the arrow off its target by that much.
   const send = () => {
-    if (pawWin && !pawWin.isDestroyed()) pawWin.webContents.send("paw-point", local);
+    if (!pawWin || pawWin.isDestroyed()) return;
+    const wb = pawWin.getBounds();
+    pawWin.webContents.send("paw-point", {
+      x: point.x - wb.x,
+      y: point.y - wb.y,
+      angle,
+    });
   };
   if (pawWin && !pawWin.isDestroyed()) {
     pawWin.setBounds(b);
@@ -2663,11 +2684,16 @@ function showPawPoint(point) {
     });
     pawWin.setIgnoreMouseEvents(true, { forward: true });
     keepWindowOnTop(pawWin);
+    // macOS clamps a normal-level window below the menu bar at creation time,
+    // which shifted the whole overlay down (~menu-bar height) and made the
+    // arrow miss its target. Re-apply the display bounds now that the window
+    // sits at screen-saver level and may cover the menu bar.
+    pawWin.setBounds(b);
     pawWin.on("closed", () => { pawWin = null; });
     pawWin.loadFile(path.join(__dirname, "renderer", "paw-overlay.html"));
     pawWin.webContents.once("did-finish-load", send);
   }
-  // The paw animation runs ~2.6s; close a bit after so it never lingers.
+  // The arrow animation runs ~2.8s; close a bit after so it never lingers.
   if (pawHideTimer) clearTimeout(pawHideTimer);
   pawHideTimer = setTimeout(() => {
     if (pawWin && !pawWin.isDestroyed()) pawWin.close();

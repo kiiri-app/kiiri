@@ -998,7 +998,7 @@ body[data-posemode][data-pose-state="working"] #pose-working { display: block; }
 /* Animated inline-SVG poses: when JS has injected an SVG for the active state it
    sets data-pose-svg on <body> — the legacy sheet divs (and idle art) yield to
    #pose-svg. Without an SVG (load failure / unknown state) the rules above keep
-   working as the fallback, and "pointing" gracefully shows the idle art. */
+   working as the fallback (unknown states gracefully show the idle art). */
 #pose-svg > svg { width: 100%; height: 100%; display: block; overflow: visible; }
 body[data-posemode][data-pose-svg] #pose-svg { display: block; }
 body[data-posemode][data-pose-svg] .pose-anim { display: none !important; }

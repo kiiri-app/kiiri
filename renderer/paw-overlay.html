@@ -10,43 +10,73 @@
       overflow: hidden; background: transparent;
       pointer-events: none; user-select: none;
     }
-    #paw {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      font-size: 40px;
-      line-height: 1;
+    /* Zero-size anchor placed exactly on the pointed screen spot; everything
+       inside is positioned relative to that point. */
+    #marker { position: absolute; width: 0; height: 0; }
+    /* The arrow rotates about the target point, so its tip always aims at the
+       spot and its tail trails back toward the pet. --ang is set from main. */
+    #arrowWrap {
+      position: absolute; left: 0; top: 0;
+      transform: rotate(var(--ang, 0deg));
+      transform-origin: 0 0;
       opacity: 0;
+    }
+    /* Right edge sits 12px short of the target so the tip never covers it. */
+    #arrow {
+      position: absolute;
+      left: -100px; top: -17px;
+      width: 88px; height: 34px;
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
       will-change: transform, opacity;
     }
     #ring {
-      position: absolute;
+      position: absolute; left: 0; top: 0;
       width: 12px; height: 12px;
       border-radius: 50%;
       transform: translate(-50%, -50%);
-      border: 3px solid #ff7a59;
-      box-shadow: 0 0 0 2px rgba(255,255,255,0.6);
+      border: 3px solid #e2673f;
+      box-shadow: 0 0 0 2px rgba(253, 246, 233, 0.7);
       opacity: 0;
     }
-    body.show #paw { animation: pawIn 2.6s ease forwards; }
-    body.show #ring { animation: ringPulse 2.6s ease-out forwards; }
-    @keyframes pawIn {
-      0%   { opacity: 0; transform: translate(-50%, -80%) rotate(-12deg) scale(0.6); }
-      14%  { opacity: 1; transform: translate(-50%, -50%) rotate(0deg) scale(1.15); }
-      26%  { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
-      70%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    body.show #arrowWrap { animation: wrapIn 2.8s ease forwards; }
+    body.show #arrow { animation: arrowNudge 2.8s cubic-bezier(.22,1,.36,1) forwards; }
+    body.show #ring { animation: ringPulse 2.8s ease-out forwards; }
+    @keyframes wrapIn {
+      0%   { opacity: 0; }
+      10%  { opacity: 1; }
+      78%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    /* Flies in along its own axis, then bobs twice toward the target. */
+    @keyframes arrowNudge {
+      0%   { transform: translateX(-34px) scale(0.82); }
+      16%  { transform: translateX(5px) scale(1.04); }
+      26%  { transform: translateX(0) scale(1); }
+      45%  { transform: translateX(7px) scale(1); }
+      60%  { transform: translateX(0) scale(1); }
+      75%  { transform: translateX(5px) scale(1); }
+      100% { transform: translateX(-5px) scale(0.96); }
     }
     @keyframes ringPulse {
-      0%   { opacity: 0.9; width: 12px; height: 12px; }
-      60%  { opacity: 0.35; width: 74px; height: 74px; }
-      100% { opacity: 0; width: 104px; height: 104px; }
+      0%   { opacity: 0.9; width: 10px; height: 10px; }
+      55%  { opacity: 0.4; width: 52px; height: 52px; }
+      100% { opacity: 0; width: 76px; height: 76px; }
     }
   </style>
 </head>
 <body>
-  <div id="ring"></div>
-  <div id="paw">🐾</div>
+  <div id="marker">
+    <div id="ring"></div>
+    <div id="arrowWrap">
+      <!-- One silhouette (tapered shaft + head) so the cream outline reads as a
+           single shape; tip at (120,23) = the pointed spot. -->
+      <svg id="arrow" viewBox="0 0 120 46" xmlns="http://www.w3.org/2000/svg">
+        <path d="M5 17 L57 13 L57 4 L119 23 L57 42 L57 33 L5 29 Z"
+              fill="#e2673f" stroke="#fdf6e9" stroke-width="4"
+              stroke-linejoin="round" />
+      </svg>
+    </div>
+  </div>
   <script src="paw-overlay.js"></script>
 </body>
 </html>

@@ -10,11 +10,12 @@ const FILES = {
   "kiri/move": "kiri_scruff_anim.svg",
   "kiri/listening": "kiri_listening_anim.svg",
   "kiri/working": "kiri_working_anim.svg",
-  "kiri/pointing": "kiri_pointing_anim.svg",
   "tori/move": "tori_scruff_anim.svg",
   "tori/listening": "tori_listening_anim.svg",
   "tori/working": "tori_working_anim.svg",
-  "tori/pointing": "tori_pointing_anim.svg",
+  // No "pointing" entry: the drawn pointing pose was dropped — showing a spot
+  // is now gaze (idle art) + the arrow overlay. The *_pointing_anim.svg files
+  // are kept on disk but no longer bundled.
 };
 
 const svgDir = path.join(__dirname, "..", "svg");

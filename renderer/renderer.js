@@ -90,22 +90,22 @@ const POSE_SVG_KEYS = {
   // (The earlier kiri rig hand-vectored the cat into flat <path> blobs and lost
   //  the eyes/whiskers/silhouette; that regression is gone.) Re-run
   //  `npm run build:posesvgs` after editing any *_anim.svg.
-  kiri: { move: 1, listening: 1, working: 1, pointing: 1 },
-  tori: { move: 1, listening: 1, working: 1, pointing: 1 },
+  // No "pointing" pose on purpose: showing where something is now = the pet
+  // LOOKS at the spot (gaze/lean + pupils, idle art) while the screen overlay
+  // draws the arrow. The drawn pointing art read poorly, so it is not used.
+  kiri: { move: 1, listening: 1, working: 1 },
+  tori: { move: 1, listening: 1, working: 1 },
 };
 // viewBox aspect of each SVG file — used for layout before/without injection.
 // kiri: move = one kiri_move cell (937/3 x 710); working = one kiri_working cell
-// (793/2 x 468); listening/pointing wrap the full kiri_noeye (1065 x 1439).
+// (793/2 x 468); listening wraps the full kiri_noeye (1065 x 1439).
 const POSE_SVG_VIEW = {
-  kiri: { move: [312, 710], listening: [1065, 1439], working: [396, 468], pointing: [1065, 1439] },
-  tori: { move: [300, 1100], listening: [594, 932], working: [567, 1150], pointing: [594, 932] },
+  kiri: { move: [312, 710], listening: [1065, 1439], working: [396, 468] },
+  tori: { move: [300, 1100], listening: [594, 932], working: [567, 1150] },
 };
 let poseSvgShown = null;      // "set/state" currently injected into #pose-svg
 // Scruff-drag pendulum: horizontal drag impulses swing the hanging body.
 let poseSwayAngle = 0, poseSwayVel = 0;
-// Pointing at a screen spot (paw overlay flow): {dir: 1 right | -1 left}.
-let posePointing = null;
-let posePointingTimer = null;
 const shareNameBadge = document.getElementById("share-name-badge");
 const catSpeechBubble = document.getElementById("cat-speech-bubble");
 const catThinkingDots = document.getElementById("cat-thinking-dots");
@@ -1917,9 +1917,7 @@ function applyPoseSvgState(state) {
       poseSvgEl.style.setProperty("--ks-sway", "0deg");
       poseSvgEl.style.setProperty("--ks-stretch", "0");
     }
-    // Pointing art faces right; mirror the whole SVG when the target is left.
-    poseSvgEl.style.transform =
-      state === "pointing" && posePointing && posePointing.dir < 0 ? "scaleX(-1)" : "";
+    poseSvgEl.style.transform = "";
     sizePoseSvg(state);
   });
 }
@@ -1955,31 +1953,20 @@ function sizePoseSvg(state) {
   poseSvgEl.style.top = `${box.height - dispH}px`;
 }
 
-// Brief "pointing at that spot" pose alongside the paw overlay (screen-answer).
-function triggerPosePointing(dir) {
-  if (!poseMode) return;
-  posePointing = { dir: dir < 0 ? -1 : 1 };
-  updatePoseState();
-  clearTimeout(posePointingTimer);
-  posePointingTimer = setTimeout(() => {
-    posePointing = null;
-    updatePoseState();
-  }, 3600);
-}
-
 function stopPoseAnim() {
   poseAnimState = null;
   if (poseAnimRaf) { cancelAnimationFrame(poseAnimRaf); poseAnimRaf = null; }
 }
 
 // Resolve the current pose-set state from active conditions and reflect it on
-// <body> (CSS swaps the visible <img>). Priority: drag > listen > point > AI > idle.
+// <body> (CSS swaps the visible <img>). Priority: drag > listen > AI > idle.
+// "Showing a spot" deliberately has no pose — the pet stays on the idle art so
+// the tracking pupils stay visible while it gazes at the target.
 function updatePoseState() {
   if (!poseMode) return;
   let st = "idle";
   if (dragging) st = "move";
   else if (poseListening) st = "listening";
-  else if (posePointing) st = "pointing";
   else if (poseAiActive) st = "working";
   document.body.dataset.poseState = st;
   applyPoseSvgState(st);
@@ -2768,9 +2755,9 @@ if (window.electronAPI.onScreenAnswer) {
       showSpeech(data.text, { duration: secs, kind: "notice" });
     }
     if (data.gaze && Number.isFinite(data.gaze.dx)) {
-      setGazeOverride(data.gaze.dx, data.gaze.dy, 3000);
-      // Pose-set characters also strike the pointing pose toward the target.
-      triggerPosePointing(data.gaze.dx);
+      // Showing a spot = look at it. The gaze hold outlasts the arrow overlay
+      // (~2.8s + fade) so the pet is still facing the target while it reads.
+      setGazeOverride(data.gaze.dx, data.gaze.dy, 4500);
     }
   });
 }

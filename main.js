@@ -29,6 +29,7 @@ const aiChat = require("./ai/chat");
 const aiJournal = require("./ai/journal/store");
 const aiCardgen = require("./ai/journal/cardgen");
 const aiMemory = require("./ai/memory/store");
+const aiRedact = require("./ai/redact");
 const charStore = require("./characters");
 const { localizedTasks } = require("./ai/tasks");
 
@@ -2128,13 +2129,38 @@ function createTray() {
   }
 }
 
+// What an external agent needs to know before driving the pet: that Kiri is up,
+// who is on screen, whether speech is audible, and the display geometry the
+// normalized /point coordinates map onto.
+function bridgeStatus() {
+  const cfg = aiConfig.loadConfig();
+  const char = activeChar();
+  let display = null;
+  try {
+    const d = petWin && !petWin.isDestroyed()
+      ? screen.getDisplayNearestPoint({ x: petWin.getBounds().x, y: petWin.getBounds().y })
+      : screen.getPrimaryDisplay();
+    display = { width: d.bounds.width, height: d.bounds.height };
+  } catch {}
+  return {
+    ok: true,
+    version: app.getVersion(),
+    character: char ? char.name : null,
+    voice: Boolean(cfg.ttsEnabled),
+    agentMonitoring: Boolean(cfg.agentMonitoringEnabled),
+    display,
+  };
+}
+
 function startAgentStateServer() {
   if (agentStateServer) return;
   const token = ensureAgentStateToken();
   // Local control bridge (OpenClicky-style): besides /agent-state, external
   // agents holding the token can make the pet speak (/speak) or point at a
-  // screen spot with the arrow overlay + a look-at-that-spot gaze (/point).
-  const BRIDGE_ROUTES = new Set(["/agent-state", "/speak", "/point"]);
+  // screen spot with the arrow overlay + a look-at-that-spot gaze (/point), or
+  // ask what the pet can do (/status). This is also what the MCP server
+  // (hooks/kiri-mcp-server.js) speaks to — MCP is a stdio front-end for it.
+  const BRIDGE_ROUTES = new Set(["/agent-state", "/speak", "/point", "/status"]);
   agentStateServer = http.createServer((req, res) => {
     if (req.method !== "POST" || !BRIDGE_ROUTES.has(req.url)) {
       res.writeHead(404);
@@ -2162,9 +2188,16 @@ function startAgentStateServer() {
         const data = JSON.parse(body || "{}");
         if (req.url === "/agent-state") {
           handleAgentStateEvent(data);
+        } else if (req.url === "/status") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(bridgeStatus()));
+          return;
         } else if (req.url === "/speak") {
-          const text = String((data && data.text) || "").slice(0, 2000);
+          // External text is scrubbed of secrets/absolute paths before it can
+          // reach a speech bubble or the speakers (see ai/redact.js).
+          const text = aiRedact.redactForSpeech(String((data && data.text) || ""));
           if (!text) throw new Error("no text");
+          sendCatNotice(text);
           speakAnswer(text, { force: true }).catch(() => {});
         } else if (req.url === "/point") {
           // {x,y} absolute screen coords, or {nx,ny} normalized 0..1 on the
@@ -2179,7 +2212,8 @@ function startAgentStateServer() {
             x = disp.bounds.x + Math.max(0, Math.min(1, nx)) * disp.bounds.width;
             y = disp.bounds.y + Math.max(0, Math.min(1, ny)) * disp.bounds.height;
           }
-          sendScreenAnswer({ point: { x, y } });
+          const text = aiRedact.redactForSpeech(String((data && data.text) || ""));
+          sendScreenAnswer({ point: { x, y }, text: text || undefined });
         }
         res.writeHead(200);
         res.end("ok");
@@ -3264,6 +3298,34 @@ function startCursorAgentMonitor() {
   }
 }
 
+// Register Kiri's MCP server with every client that reads a config file. Unlike
+// the hooks (which fire on the agent's lifecycle), this is what lets an agent
+// deliberately drive the pet: kiri_say / kiri_point / kiri_react / kiri_status.
+function installMcpServer() {
+  try {
+    const { registerClaudeMcpServer, registerCursorMcpServer } = require("./hooks/install");
+    const hookDir = agentHookDir();
+    fs.mkdirSync(hookDir, { recursive: true });
+    for (const file of ["kiri-mcp-server.js", "server-config.js"]) {
+      fs.copyFileSync(path.join(__dirname, "hooks", file), path.join(hookDir, file));
+    }
+    const options = {
+      serverScript: path.join(hookDir, "kiri-mcp-server.js"),
+      runnerPath: ensureAgentHookRunner(),
+    };
+    for (const register of [registerClaudeMcpServer, registerCursorMcpServer]) {
+      try {
+        const result = register(options);
+        if (result.changed) console.log(`[Kiri] registered MCP server in ${result.configPath}`);
+      } catch (err) {
+        console.warn("[Kiri] MCP registration failed:", err && err.message);
+      }
+    }
+  } catch (err) {
+    console.warn("[Kiri] failed to install MCP server:", err && err.message);
+  }
+}
+
 function startAgentIntegrations() {
   // Respect the saved tray toggle: when monitoring is off we must not rewrite
   // third-party configs, run pollers, or hold the port.
@@ -3272,6 +3334,7 @@ function startAgentIntegrations() {
   installClaudeCodeHooks();
   installAntigravityHooks();
   installCursorHooks();
+  installMcpServer();
   startCodexMonitor();
   startKiroMonitor();
   startCursorAgentMonitor();
@@ -3279,9 +3342,15 @@ function startAgentIntegrations() {
 
 function uninstallAgentHooks() {
   try {
-    const { unregisterClaudeHooks, unregisterAntigravityHooks, unregisterCursorHooks } = require("./hooks/install");
+    const {
+      unregisterClaudeHooks, unregisterAntigravityHooks, unregisterCursorHooks,
+      unregisterClaudeMcpServer, unregisterCursorMcpServer,
+    } = require("./hooks/install");
     let removed = 0;
-    for (const unregister of [unregisterClaudeHooks, unregisterAntigravityHooks, unregisterCursorHooks]) {
+    for (const unregister of [
+      unregisterClaudeHooks, unregisterAntigravityHooks, unregisterCursorHooks,
+      unregisterClaudeMcpServer, unregisterCursorMcpServer,
+    ]) {
       try {
         removed += unregister().removed || 0;
       } catch (err) {

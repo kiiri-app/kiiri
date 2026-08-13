@@ -75,8 +75,15 @@ own.
 - **Multi-provider** — Claude (Anthropic), OpenAI (GPT-4o), Google Gemini, or
   **Ollama** (fully local / offline / free).
 - **Control bridge** — a local token-guarded HTTP server (`127.0.0.1:23456`)
-  lets external agents/tools drive the pet: report agent state, make it `/speak`,
-  or `/point` at a screen spot with the paw overlay.
+  lets external agents/tools drive the pet: report agent state, ask what it can
+  do (`/status`), make it `/speak`, or `/point` at a screen spot (the pet looks
+  there and an arrow marks it).
+- **MCP server** — the same bridge, exposed to any MCP client (Claude Code,
+  Cursor, …) as four tools: `kiri_status`, `kiri_say`, `kiri_point`,
+  `kiri_react`. It registers itself while agent monitoring is on (and removes
+  itself when you turn it off), and runs on Kiri's own bundled Node runtime — no
+  system `node` required. Text an agent sends is scrubbed of secrets and
+  absolute paths before it reaches a speech bubble.
 - **Multi-language UI** — English, Türkçe, 한국어, 日本語 (every window and menu).
 
 ## Stack

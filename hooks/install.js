@@ -279,6 +279,77 @@ function registerCursorHooks(options = {}) {
   return { added, updated, settingsPath };
 }
 
+// ── MCP server registration ──────────────────────────────────────────────
+// Hooks only let Kiri *react* to an agent's lifecycle. The MCP server lets the
+// agent drive the pet on purpose (say / point / react / status). Clients read
+// it from their own config file, so we register the same stdio command in each:
+// Claude Code (~/.claude.json), Cursor (~/.cursor/mcp.json).
+const MCP_SERVER_KEY = "kiri";
+const MCP_SERVER_MARKER = "kiri-mcp-server.js";
+
+function mcpServerEntry(runnerPath, serverScript) {
+  return {
+    command: runnerPath,
+    args: [path.basename(serverScript)],
+    env: {},
+  };
+}
+
+function sameMcpEntry(a, b) {
+  if (!a || typeof a !== "object") return false;
+  return a.command === b.command && JSON.stringify(a.args || []) === JSON.stringify(b.args);
+}
+
+function registerMcpServer(configPath, options = {}) {
+  const serverScript = options.serverScript || path.join(__dirname, "kiri-mcp-server.js");
+  const runnerPath = options.runnerPath || writeHookRunner(path.dirname(serverScript), process.execPath);
+  const config = readJson(configPath);
+  if (!config.mcpServers || typeof config.mcpServers !== "object") config.mcpServers = {};
+  const expected = mcpServerEntry(runnerPath, serverScript);
+  const existing = config.mcpServers[MCP_SERVER_KEY];
+  if (sameMcpEntry(existing, expected)) return { changed: false, configPath };
+  config.mcpServers[MCP_SERVER_KEY] = expected;
+  writeJsonAtomic(configPath, config);
+  return { changed: true, added: !existing, configPath };
+}
+
+function unregisterMcpServer(configPath) {
+  const config = readJson(configPath);
+  const entry = config.mcpServers && config.mcpServers[MCP_SERVER_KEY];
+  // Only remove OUR entry — never touch a hand-written server that reused the name.
+  if (!entry || !JSON.stringify(entry).includes(MCP_SERVER_MARKER)) {
+    return { removed: 0, configPath };
+  }
+  delete config.mcpServers[MCP_SERVER_KEY];
+  if (Object.keys(config.mcpServers).length === 0) delete config.mcpServers;
+  writeJsonAtomic(configPath, config);
+  return { removed: 1, configPath };
+}
+
+function claudeMcpConfigPath() {
+  return path.join(os.homedir(), ".claude.json");
+}
+
+function cursorMcpConfigPath() {
+  return path.join(os.homedir(), ".cursor", "mcp.json");
+}
+
+function registerClaudeMcpServer(options = {}) {
+  return registerMcpServer(options.configPath || claudeMcpConfigPath(), options);
+}
+
+function registerCursorMcpServer(options = {}) {
+  return registerMcpServer(options.configPath || cursorMcpConfigPath(), options);
+}
+
+function unregisterClaudeMcpServer(options = {}) {
+  return unregisterMcpServer(options.configPath || claudeMcpConfigPath());
+}
+
+function unregisterCursorMcpServer(options = {}) {
+  return unregisterMcpServer(options.configPath || cursorMcpConfigPath());
+}
+
 // ── Uninstall: remove every Kiri hook entry from the third-party configs so
 // turning the feature off (or removing Kiri) leaves nothing behind. ──
 
@@ -347,4 +418,10 @@ module.exports = {
   unregisterAntigravityHooks,
   unregisterClaudeHooks,
   unregisterCursorHooks,
+  registerClaudeMcpServer,
+  registerCursorMcpServer,
+  unregisterClaudeMcpServer,
+  unregisterCursorMcpServer,
+  claudeMcpConfigPath,
+  cursorMcpConfigPath,
 };

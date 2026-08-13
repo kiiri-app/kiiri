@@ -81,6 +81,30 @@ const SPRITE_PRESETS = {
   totoro:  { label: "Orman Ruhu", sprite: { ears: "totoro", accessory: "leaf", face: "calm", marks: true, whiskers: true, body: "#7e93ab", belly: "#efe6d2", eye: "#1e1e1e", accent: "#3a3a3a", mouth: "#5a4636" } },
 };
 
+// An installed petdex/agentpets pet: we store the resolved sheet geometry with
+// the character so a pet that is later uninstalled still renders (or fails
+// gracefully) without re-scanning the pet folders on every launch.
+function sanitizePet(p) {
+  if (!p || typeof p !== "object") return null;
+  const sheet = String(p.sheet || "").trim();
+  if (!sheet) return null;
+  const num = (v, min, max, fallback) => {
+    const n = Math.round(Number(v));
+    return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
+  };
+  return {
+    id: String(p.id || "").trim() || `petdex:${Date.now()}`,
+    slug: String(p.slug || "").trim(),
+    sheet,
+    columns: num(p.columns, 1, 64, 8),
+    rows: num(p.rows, 1, 64, 9),
+    frameWidth: num(p.frameWidth, 8, 4096, 192),
+    frameHeight: num(p.frameHeight, 8, 4096, 208),
+    frames: num(p.frames, 1, 64, 8),
+    fps: num(p.fps, 1, 24, 8),
+  };
+}
+
 function sanitize(c, index) {
   if (!c || typeof c !== "object") return null;
   const id = String(c.id || "").trim() || `char-${Date.now()}-${index || 0}`;
@@ -94,11 +118,16 @@ function sanitize(c, index) {
     if (Number.isFinite(x) && Number.isFinite(y)) position = { x, y };
   }
   const size = Number(c.size) || 0;
-  const kind = c.kind === "sprite" ? "sprite" : c.kind === "poseset" ? "poseset" : "classic";
+  const kind = c.kind === "sprite" ? "sprite"
+    : c.kind === "poseset" ? "poseset"
+    : c.kind === "petdex" ? "petdex"
+    : "classic";
+  const pet = kind === "petdex" ? sanitizePet(c.pet) : null;
+  if (kind === "petdex" && !pet) return null; // unusable without its sheet
   const sprite = kind === "sprite" ? sanitizeSprite(c.sprite) : (c.sprite ? sanitizeSprite(c.sprite) : null);
   const set = POSESET_SETS.includes(c.set) ? c.set : (kind === "poseset" ? "kiri" : null);
   const overlay = c.overlay ? sanitizeOverlay(c.overlay) : null;
-  return { id, name, persona, pattern, position, size: size > 0 ? size : 0, kind, sprite, set, overlay };
+  return { id, name, persona, pattern, position, size: size > 0 ? size : 0, kind, sprite, set, overlay, pet };
 }
 
 function load() {
@@ -119,6 +148,6 @@ function save(list) {
 }
 
 module.exports = {
-  load, save, sanitize, sanitizeSprite, sanitizeOverlay, charactersPath,
+  load, save, sanitize, sanitizeSprite, sanitizeOverlay, sanitizePet, charactersPath,
   SPRITE_PRESETS, POSESET_SETS, POSESET_STATES,
 };

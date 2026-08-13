@@ -30,6 +30,14 @@ let spriteNoteTimer = null, spriteHappyTimer = null;
 // "eyes follow" faked as a whole-body lean toward the cursor, plus a painted
 // pixel overlay composited over the idle pose.
 const posesetEl = document.getElementById("poseset");
+// Community pet (petdex/agentpets sprite sheet) render state.
+const petdexEl = document.getElementById("petdex");
+let petdexMode = false;
+let petdexPet = null;      // {url, columns, rows, frameWidth, frameHeight, frames, fps}
+let petdexImage = null;
+let petdexTimer = null;
+let petdexFrame = 0;
+let petdexRow = 0;
 const poseEls = posesetEl ? { noeye: posesetEl.querySelector("#pose-noeye") } : null;
 // move/listening/working are sprite sheets rendered into these <div>s via
 // background-position. Frame counts + play mode were measured from the art.
@@ -1963,6 +1971,7 @@ function stopPoseAnim() {
 // "Showing a spot" deliberately has no pose — the pet stays on the idle art so
 // the tracking pupils stay visible while it gazes at the target.
 function updatePoseState() {
+  updatePetdexState();   // community pets follow the same conditions
   if (!poseMode) return;
   let st = "idle";
   if (dragging) st = "move";
@@ -1977,7 +1986,7 @@ function updatePoseState() {
 
 // Brief "listening" reaction when the character is clicked.
 function triggerPoseListening() {
-  if (!poseMode) return;
+  if (!poseMode && !petdexMode) return;
   poseListening = true;
   updatePoseState();
   clearTimeout(poseListeningTimer);
@@ -2051,6 +2060,89 @@ function layoutPosePupils() {
   posePupilTravelPx = eyes.travel * dispW;
 }
 
+// ── Petdex / agentpets community pets ───────────────────────────────────────
+// A pet is one sprite sheet: `columns` frames across, one animation state per
+// row. We blit the current frame into #petdex each tick — simpler and more
+// exact than CSS background-position math, and it lets a short sheet fall back
+// to row 0 without any layout surprises.
+const PETDEX_STATE_ROWS = {                 // Kiri state → petdex row index
+  idle: 0, listening: 3, working: 7, move: 4, complete: 3, error: 5, thinking: 6,
+};
+
+function applyPetdexArt(pet) {
+  stopPetdexAnim();
+  petdexPet = pet || null;
+  if (!petdexPet || !petdexEl) return;
+  petdexImage = new Image();
+  petdexImage.onload = () => {
+    layoutPetdexCanvas();
+    startPetdexAnim();
+  };
+  petdexImage.onerror = () => { petdexImage = null; };
+  // The sheet lives outside the app folder (~/.codex/pets/…), so it is passed
+  // through as a file:// URL by main.
+  petdexImage.src = petdexPet.url;
+}
+
+// Canvas backing store = one frame at device resolution; CSS scales it to the
+// pet box, and image-rendering:pixelated keeps pixel art crisp.
+function layoutPetdexCanvas() {
+  if (!petdexEl || !petdexPet) return;
+  const dpr = window.devicePixelRatio || 1;
+  const box = petdexEl.getBoundingClientRect();
+  if (box.width <= 0 || box.height <= 0) return;
+  petdexEl.width = Math.max(1, Math.round(box.width * dpr));
+  petdexEl.height = Math.max(1, Math.round(box.height * dpr));
+  drawPetdexFrame();
+}
+
+function drawPetdexFrame() {
+  if (!petdexEl || !petdexPet || !petdexImage || !petdexImage.complete) return;
+  const ctx = petdexEl.getContext("2d");
+  if (!ctx) return;
+  const { frameWidth: fw, frameHeight: fh } = petdexPet;
+  const row = Math.min(petdexRow, Math.max(0, petdexPet.rows - 1));
+  const col = petdexFrame % Math.max(1, petdexPet.frames);
+  // Contain the frame in the box, feet on the bottom edge (same as pose-set).
+  const scale = Math.min(petdexEl.width / fw, petdexEl.height / fh);
+  const w = fw * scale, h = fh * scale;
+  const x = (petdexEl.width - w) / 2;
+  const y = petdexEl.height - h;
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, petdexEl.width, petdexEl.height);
+  ctx.drawImage(petdexImage, col * fw, row * fh, fw, fh, x, y, w, h);
+}
+
+function startPetdexAnim() {
+  stopPetdexAnim();
+  if (!petdexPet) return;
+  const interval = 1000 / Math.max(1, petdexPet.fps);
+  drawPetdexFrame();
+  petdexTimer = setInterval(() => {
+    petdexFrame = (petdexFrame + 1) % Math.max(1, petdexPet.frames);
+    drawPetdexFrame();
+  }, interval);
+}
+
+function stopPetdexAnim() {
+  if (petdexTimer) { clearInterval(petdexTimer); petdexTimer = null; }
+}
+
+// Mirrors updatePoseState() for community pets: pick the row for the current
+// condition. Priority matches the pose-set path (drag > listen > AI > idle).
+function updatePetdexState() {
+  if (!petdexMode || !petdexPet) return;
+  let state = "idle";
+  if (dragging) state = "move";
+  else if (poseListening) state = "listening";
+  else if (poseAiActive) state = "working";
+  const row = PETDEX_STATE_ROWS[state] || 0;
+  if (row === petdexRow) return;
+  petdexRow = row;
+  petdexFrame = 0;
+  drawPetdexFrame();
+}
+
 // The legacy classic cat's rigged stretch chain needs cell-mappings.js (~850KB).
 // Load it once, only when a classic character is actually shown.
 let cellMappingsLoad = null;
@@ -2075,13 +2167,18 @@ function ensureCellMappings() {
 function applyCharacterArt(art) {
   spriteMode = !!(art && art.kind === "sprite" && art.sprite);
   poseMode = !!(art && art.kind === "poseset");
-  const classicMode = !spriteMode && !poseMode;
+  petdexMode = !!(art && art.kind === "petdex" && art.pet);
+  const classicMode = !spriteMode && !poseMode && !petdexMode;
   if (classicMode) ensureCellMappings();
   document.body.toggleAttribute("data-sprite", spriteMode);
   document.body.toggleAttribute("data-posemode", poseMode);
+  document.body.toggleAttribute("data-petdexmode", petdexMode);
   if (spriteObj) spriteObj.hidden = !spriteMode;
-  if (obj) obj.hidden = spriteMode || poseMode;
+  if (obj) obj.hidden = spriteMode || poseMode || petdexMode;
   if (posesetEl) posesetEl.hidden = !poseMode;
+  if (petdexEl) petdexEl.hidden = !petdexMode;
+  if (petdexMode) applyPetdexArt(art.pet);
+  else stopPetdexAnim();
   if (!poseMode) clearPoseSvg();
   if (poseMode) {
     poseSet = art && art.set === "tori" ? "tori" : "kiri";
@@ -2100,6 +2197,7 @@ if (poseEls && poseEls.noeye) {
   poseEls.noeye.addEventListener("load", () => { renderPosesetOverlay(); layoutPosePupils(); });
 }
 window.addEventListener("resize", () => {
+  if (petdexMode) layoutPetdexCanvas();
   if (!poseMode) return;
   renderPosesetOverlay();
   layoutPosePupils();
@@ -2503,7 +2601,7 @@ function applyPomodoroState(state) {
 }
 
 function clearAiTaskVisuals() {
-  if (poseMode) {
+  if (poseMode || petdexMode) {
     poseAiActive = false;
     updatePoseState();
   } else if (spriteMode) {
@@ -2515,7 +2613,9 @@ function clearAiTaskVisuals() {
 function applyAiTaskState(event) {
   const state = event && typeof event.state === "string" ? event.state : "";
   const active = state === "thinking" || state === "working";
-  if (poseMode) {
+  // Community pets share the pose-set condition flags; updatePoseState() fans
+  // out to updatePetdexState() so the sheet's state row follows along.
+  if (poseMode || petdexMode) {
     poseAiActive = active;
     updatePoseState();
     setThinkingDotsVisible(false);
@@ -2993,6 +3093,7 @@ function stopPurring() {
 }
 
 function currentPoseElement() {
+  if (petdexMode && petdexEl) return petdexEl;
   if (poseMode && posesetEl) return posesetEl;
   if (spriteMode && spriteObj) return spriteObj;
   if (document.body.classList.contains("dragging")) {
@@ -3040,7 +3141,7 @@ function isCatHitPoint(x, y) {
   const nx = (x - rect.left) / rect.width;
   const ny = (y - rect.top) / rect.height;
 
-  if (poseMode) {
+  if (poseMode || petdexMode) {
     // Generous box over the lower-centre where the illustration sits (contain,
     // bottom-anchored), excluding the transparent top/side margins of the box.
     return nx >= 0.16 && nx <= 0.84 && ny >= 0.12 && ny <= 0.99;

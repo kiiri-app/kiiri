@@ -18,6 +18,7 @@ const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const crypto = require("crypto");
+const { pathToFileURL } = require("url");
 const aiConfig = require("./ai/config");
 const aiAssistant = require("./ai/assistant");
 const aiAgent = require("./ai/agent");
@@ -30,6 +31,7 @@ const aiJournal = require("./ai/journal/store");
 const aiCardgen = require("./ai/journal/cardgen");
 const aiMemory = require("./ai/memory/store");
 const aiRedact = require("./ai/redact");
+const petdex = require("./ai/petdex");
 const charStore = require("./characters");
 const { localizedTasks } = require("./ai/tasks");
 
@@ -1367,6 +1369,17 @@ function sendSharedState(win) {
   win.webContents.send("language-changed", currentLanguage);
 }
 
+// The renderer needs the pet sheet as a loadable URL; the file lives outside
+// the app folder (~/.codex/pets/…), so hand it over as file:// here rather than
+// letting the renderer guess a path.
+function characterArtPayload(char) {
+  const payload = { kind: char.kind, sprite: char.sprite, set: char.set, overlay: char.overlay };
+  if (char.kind === "petdex" && char.pet) {
+    payload.pet = { ...char.pet, url: pathToFileURL(char.pet.sheet).href };
+  }
+  return payload;
+}
+
 function createPetWindow(char) {
   if (!char) return null;
   const existing = petWins.get(char.id);
@@ -1412,7 +1425,7 @@ function createPetWindow(char) {
   win.webContents.on("did-finish-load", () => {
     win.webContents.send("pattern-changed", sanitizePattern(char.pattern || currentPattern));
     win.webContents.send("cat-name-changed", { name: char.name, visible: showCatName });
-    win.webContents.send("character-art", { kind: char.kind, sprite: char.sprite, set: char.set, overlay: char.overlay });
+    win.webContents.send("character-art", characterArtPayload(char));
     sendSharedState(win);
     if (char.id === activeCharId && !catNamePromptShown) {
       setTimeout(() => {
@@ -1516,6 +1529,57 @@ function spawnPositionFor(display, W, H, base) {
     }
   }
   return best ? best.pos : { x: clampX(base.x + step), y: baseY };
+}
+
+// Community pets found on disk, as a context-menu section. Scanning is cheap
+// (a readdir plus a few image headers) and happens only when the menu opens, so
+// installing a pet while Kiri runs needs no restart.
+function petdexMenuItems() {
+  let pets = [];
+  try {
+    pets = petdex.listPets();
+  } catch (err) {
+    console.warn("[Kiri] petdex scan failed:", err && err.message);
+  }
+  if (!pets.length) return [];
+  return [
+    { type: "separator" },
+    ...pets.slice(0, 24).map((pet) => ({
+      label: pet.author ? `${pet.name} · ${pet.author}` : pet.name,
+      click: () => addPetdexCharacter(pet),
+    })),
+  ];
+}
+
+function addPetdexCharacter(pet) {
+  const display = screen.getPrimaryDisplay();
+  const { width: W, height: H } = windowDims(currentPetSize);
+  const base = (activeChar() && activeChar().position) || defaultPetPosition(display, W, H);
+  const char = charStore.sanitize({
+    id: `char-${Date.now()}-${characters.length}`,
+    name: pet.name,
+    persona: "",
+    kind: "petdex",
+    pet: {
+      id: pet.id,
+      slug: pet.slug,
+      sheet: pet.sheet,
+      columns: pet.columns,
+      rows: pet.rows,
+      frameWidth: pet.frameWidth,
+      frameHeight: pet.frameHeight,
+      frames: pet.frames,
+      fps: pet.fps,
+    },
+    pattern: currentPattern,
+    position: spawnPositionFor(display, W, H, base),
+    size: currentPetSize,
+  }, characters.length);
+  if (!char) return;
+  characters.push(char);
+  charStore.save(characters);
+  createPetWindow(char);
+  setActiveChar(char.id);
 }
 
 function addCharacter(set = "kiri") {
@@ -1837,6 +1901,9 @@ ipcMain.on("show-context-menu", (evt) => {
       submenu: [
         { label: "Kiri", click: () => addCharacter("kiri") },
         { label: "Tori", click: () => addCharacter("tori") },
+        // Pets the user installed with `npx petdex install <slug>` (or dropped
+        // into ~/.kiri/pets) show up here automatically.
+        ...petdexMenuItems(),
       ],
     },
     {
@@ -2189,6 +2256,38 @@ function bridgeStatus() {
   };
 }
 
+// /ask-screen: an external agent borrows Kiri's eyes. Runs the same vision
+// flow as the pet's own "ask about my screen", shows the answer in the bubble
+// (+ arrow when the model points at something) and returns the text so the
+// agent can act on it. Serialized behind the same automationBusy guard so two
+// screen captures never overlap.
+async function bridgeAskScreen(question) {
+  const cfg = aiConfig.loadConfig();
+  if (!cfg.enabled || !aiConfig.providerReady()) {
+    return { ok: false, error: "no-provider" };
+  }
+  if (!petWin || petWin.isDestroyed()) return { ok: false, error: "no-pet-window" };
+  if (automationBusy) return { ok: false, error: "busy" };
+  automationBusy = true;
+  sendCatThinking(true);
+  try {
+    const answer = await aiAssistant.askAboutScreen(petWin, {
+      question: question || undefined,
+      catName,
+      persona: activeChar() && activeChar().persona,
+      memory: activeMemoryContext(),
+      appContext: await currentAppContext(),
+    });
+    if (!answer || !answer.ok) return { ok: false, error: (answer && answer.error) || "failed" };
+    sendScreenAnswer({ question, text: answer.text, point: answer.point });
+    rememberForActiveChar("screen", question || "[agent] ekran sorusu", answer.text);
+    return { ok: true, text: answer.text, point: answer.point || null };
+  } finally {
+    automationBusy = false;
+    sendCatThinking(false);
+  }
+}
+
 function startAgentStateServer() {
   if (agentStateServer) return;
   const token = ensureAgentStateToken();
@@ -2197,7 +2296,7 @@ function startAgentStateServer() {
   // screen spot with the arrow overlay + a look-at-that-spot gaze (/point), or
   // ask what the pet can do (/status). This is also what the MCP server
   // (hooks/kiri-mcp-server.js) speaks to — MCP is a stdio front-end for it.
-  const BRIDGE_ROUTES = new Set(["/agent-state", "/speak", "/point", "/status"]);
+  const BRIDGE_ROUTES = new Set(["/agent-state", "/speak", "/point", "/status", "/ask-screen"]);
   agentStateServer = http.createServer((req, res) => {
     if (req.method !== "POST" || !BRIDGE_ROUTES.has(req.url)) {
       res.writeHead(404);
@@ -2225,6 +2324,19 @@ function startAgentStateServer() {
         const data = JSON.parse(body || "{}");
         if (req.url === "/agent-state") {
           handleAgentStateEvent(data);
+        } else if (req.url === "/ask-screen") {
+          // The one thing only Kiri can do for an agent: look at the user's
+          // screen and answer about it. Async, so the response is written from
+          // the promise (and the pet shows the answer + arrow meanwhile).
+          const question = String((data && data.question) || "").slice(0, 500);
+          bridgeAskScreen(question).then((result) => {
+            res.writeHead(result.ok ? 200 : 503, { "Content-Type": "application/json" });
+            res.end(JSON.stringify(result));
+          }).catch((err) => {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ ok: false, error: (err && err.message) || "failed" }));
+          });
+          return;
         } else if (req.url === "/status") {
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify(bridgeStatus()));
@@ -2694,7 +2806,7 @@ ipcMain.handle("ai-clear-gemini-key", () => aiConfig.clearGeminiKey());
 function broadcastCharacterArt(c) {
   const win = petWins.get(c.id);
   if (win && !win.isDestroyed()) {
-    win.webContents.send("character-art", { kind: c.kind, sprite: c.sprite, set: c.set, overlay: c.overlay });
+    win.webContents.send("character-art", characterArtPayload(c));
   }
 }
 

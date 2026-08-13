@@ -942,6 +942,42 @@ body[data-editing-screen-ask] #screen-ask-editor {
   z-index: 3;
   display: none;
 }
+/* Petdex sheets are pixel art: keep the blit crisp and anchor the pet's feet at
+   the same baseline the pose-set characters use, so both kinds sit alike. */
+#petdex {
+  position: absolute;
+  top: calc(var(--cat-top) - var(--cat-size) * 0.18);
+  left: 50%;
+  width: var(--cat-size);
+  height: calc(var(--cat-size) * 1.18);
+  transform: translateX(-50%) rotate(var(--lean-r, 0deg));
+  transform-origin: 50% 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+  z-index: 3;
+  display: none;
+}
+#petdex[hidden] { display: none; }
+body[data-petdexmode] #petdex { display: block; }
+body[data-petdexmode] #cat,
+body[data-petdexmode] #sprite,
+body[data-petdexmode] #poseset,
+body[data-petdexmode] #press-left,
+body[data-petdexmode] #press-right,
+body[data-petdexmode] #scroll-unroll,
+body[data-petdexmode] #jump-start,
+body[data-petdexmode] #jump-ing,
+body[data-petdexmode] #stretch-svg-end,
+body[data-petdexmode] #stretch-pose-default,
+body[data-petdexmode] #stretch-pose-ing { display: none !important; }
+/* Same enlarged grab area as the pose-set box. */
+body[data-petdexmode] #drag-handle {
+  top: calc(var(--cat-top) - var(--cat-size) * 0.18);
+  width: var(--cat-size);
+  height: calc(var(--cat-size) * 1.18);
+  aspect-ratio: auto;
+}
+
 #poseset[hidden] { display: none; }
 body[data-posemode] #poseset { display: block; }
 

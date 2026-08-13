@@ -57,6 +57,24 @@ const TOOLS = [
     },
   },
   {
+    name: "kiri_ask_screen",
+    description:
+      "Look at the user's screen through Kiri's eyes and answer a question about it. " +
+      "Use when you need to SEE what the user sees — which window is open, what an error dialog says, " +
+      "where a button is, what the design looks like. The answer is also shown to the user in Kiri's " +
+      "speech bubble, and if the model located something it points at it. Takes a few seconds.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        question: {
+          type: "string",
+          description: "What to find out about the screen. Omit for a general description.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "kiri_react",
     description:
       "Set the pet's current mood/animation so the user can see the agent's state at a glance.",
@@ -144,6 +162,19 @@ async function callTool(name, args) {
       const res = await callBridge("/point", payload);
       if (!res.ok) return textResult(bridgeFailureText(res), true);
       return textResult("Kiri is looking at that spot and an arrow is marking it.");
+    }
+    case "kiri_ask_screen": {
+      // Vision + a model round-trip: far slower than the other tools.
+      const res = await callBridge("/ask-screen", { question: String(a.question || "") }, { timeout: 120000 });
+      if (!res.ok) {
+        const why = res.json && res.json.error;
+        if (why === "no-provider") return textResult("Kiri has no AI provider configured, so it cannot look at the screen. Ask the user to set one up in Kiri's settings.", true);
+        if (why === "busy") return textResult("Kiri is already answering a screen question — try again in a moment.", true);
+        return textResult(bridgeFailureText(res), true);
+      }
+      const info = res.json || {};
+      const point = info.point ? ` (Kiri is pointing at x=${Math.round(info.point.x)}, y=${Math.round(info.point.y)} on screen.)` : "";
+      return textResult(`${info.text || "(no answer)"}${point}`);
     }
     case "kiri_react": {
       const state = String(a.state || "").trim();

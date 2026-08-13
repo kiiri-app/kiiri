@@ -78,9 +78,17 @@ own.
   lets external agents/tools drive the pet: report agent state, ask what it can
   do (`/status`), make it `/speak`, or `/point` at a screen spot (the pet looks
   there and an arrow marks it).
+- **Community pets** — Kiri reads the petdex / agentpets sprite-sheet format
+  (`pet.json` + an 8×9 grid sheet). Anything installed with
+  `npx petdex install <slug>` (or dropped into `~/.kiri/pets/`) shows up under
+  right-click ▸ **Add character**, animates from the sheet, and follows Kiri's
+  states (idle / waving when clicked / running while an agent works). Kiri only
+  reads what you installed — it ships just its own original characters.
 - **MCP server** — the same bridge, exposed to any MCP client (Claude Code,
-  Cursor, …) as four tools: `kiri_status`, `kiri_say`, `kiri_point`,
-  `kiri_react`. It registers itself while agent monitoring is on (and removes
+  Cursor, …) as five tools: `kiri_status`, `kiri_say`, `kiri_point`,
+  `kiri_react`, and `kiri_ask_screen` (the agent borrows Kiri's eyes: it asks
+  about the user's screen and gets the answer back, while the user sees it in
+  the speech bubble). It registers itself while agent monitoring is on (and removes
   itself when you turn it off), and runs on Kiri's own bundled Node runtime — no
   system `node` required. Text an agent sends is scrubbed of secrets and
   absolute paths before it reaches a speech bubble.

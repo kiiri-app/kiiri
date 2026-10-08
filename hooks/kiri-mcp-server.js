@@ -170,6 +170,7 @@ async function callTool(name, args) {
         const why = res.json && res.json.error;
         if (why === "no-provider") return textResult("Kiri has no AI provider configured, so it cannot look at the screen. Ask the user to set one up in Kiri's settings.", true);
         if (why === "busy") return textResult("Kiri is already answering a screen question — try again in a moment.", true);
+        if (why === "denied") return textResult("The user declined to let Kiri look at the screen. Don't retry right away; ask the user directly if you need what's on screen.", true);
         return textResult(bridgeFailureText(res), true);
       }
       const info = res.json || {};

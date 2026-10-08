@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- Same lockdown as the other windows. Extras: file: images for community
+       pets (their sheets live outside the app, e.g. ~/.codex/pets) and data:
+       audio for TTS answers. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: file:; media-src 'self' data: blob:; object-src 'none'; connect-src 'self'">
   <title>Kiri</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -121,21 +125,15 @@
     <button type="submit">OK</button>
     <button type="button" id="pomodoro-focus-cancel">×</button>
   </form>
-  <!-- The legacy pixel cat starts hidden: it used to render for the split second
-       between window paint and the character-art IPC, so every kiri/tori user saw
-       the old cat flash first. applyCharacterArt() unhides it for classic chars. -->
-  <object id="cat" type="image/svg+xml" data="../svg/cat-idle-follow-v2.svg" aria-label="cat" hidden></object>
-  <object id="sprite" type="image/svg+xml" data="../svg/sprite.svg" aria-label="character" hidden></object>
   <!-- Pose-set characters (kiri / tori): flat per-state PNG art + painted pixel overlay -->
   <div id="poseset" aria-label="character" hidden>
     <img id="pose-noeye" class="pose" alt="" draggable="false">
-    <!-- move/listening/working are sprite sheets — animated via background-position -->
+    <!-- The other states are sprite strips (svg/<set>_<state>.png, built by
+         scripts/build-pose-sheets.py) animated via background-position. -->
     <div id="pose-move" class="pose pose-anim"></div>
     <div id="pose-listening" class="pose pose-anim"></div>
     <div id="pose-working" class="pose pose-anim"></div>
-    <!-- Animated inline-SVG poses (scruff drag / listening / working / pointing);
-         markup injected by JS from pose-anim-svgs.js, replaces the sheets above. -->
-    <div id="pose-svg" class="pose"></div>
+    <div id="pose-happy" class="pose pose-anim"></div>
     <canvas id="poseset-overlay" aria-hidden="true"></canvas>
     <!-- Tracking pupils overlaid on the idle art's eyes (flat PNG has none). -->
     <span id="pose-pupil-l" class="pose-pupil" aria-hidden="true"></span>
@@ -144,30 +142,7 @@
   <!-- Community pets (petdex / agentpets sprite sheets): one canvas, JS blits
        the current frame out of the sheet. -->
   <canvas id="petdex" aria-label="character" hidden></canvas>
-  <div id="purr-hearts" aria-hidden="true">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
-  <!-- 타이핑 heat가 높을 때 머리 위로 올라가는 빨간 김 particle들 -->
-  <div id="heat-steam">
-    <span class="steam-particle"></span>
-    <span class="steam-particle"></span>
-    <span class="steam-particle"></span>
-    <span class="steam-particle"></span>
-    <span class="steam-particle"></span>
-  </div>
-  <object id="press-left" type="image/svg+xml" data="../svg/press-left.svg" aria-label="cat-typing-left"></object>
-  <object id="press-right" type="image/svg+xml" data="../svg/press-right.svg" aria-label="cat-typing-right"></object>
-  <object id="scroll-unroll" type="image/svg+xml" data="../svg/scroll-unroll.svg" aria-label="cat-unrolling-paper"></object>
-  <object id="jump-start" type="image/svg+xml" data="../svg/jump-start.svg" aria-label="cat-jump-start"></object>
-  <object id="jump-ing" type="image/svg+xml" data="../svg/jump-ing.svg" aria-label="cat-jumping"></object>
-  <object id="stretch-svg-end" type="image/svg+xml" data="../svg/stretch-end.svg" aria-label="stretch"></object>
-  <object id="stretch-pose-default" type="image/svg+xml" data="../svg/stretch-pose-default.svg" aria-label="stretching-default"></object>
-  <object id="stretch-pose-ing" type="image/svg+xml" data="../svg/stretch-pose-ing.svg" aria-label="stretching-active"></object>
-  <!-- cell-mappings.js (~850KB) is only needed by the legacy "classic" rigged
-       cat; renderer.js lazy-loads it on demand so poseset/sprite windows never
-       pay the parse cost. -->
+  <script src="pose-manifest.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

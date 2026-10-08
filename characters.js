@@ -1,9 +1,8 @@
 "use strict";
 
-// Character registry. Each character is an independent cat: own name, persona,
-// appearance (pattern), position and size. Skills/AI config stay global (shared
-// pool). Persisted as JSON in userData. Migration from the old single-cat state
-// happens in main.js (it owns the legacy globals).
+// Character registry. Each character is an independent pet: own name, persona,
+// look (kiri/tori + painted overlay, or a community petdex sheet), position and
+// size. Skills/AI config stay global (shared pool). Persisted as JSON in userData.
 
 const fs = require("fs");
 const path = require("path");
@@ -13,17 +12,15 @@ function charactersPath() {
   return path.join(app.getPath("userData"), "characters.json");
 }
 
-const EARS = ["cat", "round", "totoro"];
-const ACCESSORY = ["none", "bow", "leaf"];
-const FACE = ["grin", "calm"];
 const HEX = /^#[0-9a-fA-F]{3,8}$/;
 
 // Pose-set characters: flat illustrated PNG-per-state art (kiri / tori).
-// Each set ships 4 state images: <set>_noeye (idle/look), _move (drag),
-// _listening (click), _working (AI active). New, more efficient than the
-// old rigged-SVG sprite path — just an <img> swap + lean-follow + pixel overlay.
+// Each set ships svg/<set>_noeye.png (idle; pupils are drawn by the renderer)
+// plus one sprite strip per state: _move (drag), _listening (click / voice),
+// _working (AI active), _happy (task done). Built from art/src/ by
+// scripts/build-pose-sheets.py, which also writes renderer/pose-manifest.js.
 const POSESET_SETS = ["kiri", "tori"];
-const POSESET_STATES = ["noeye", "move", "listening", "working"];
+const POSESET_STATES = ["noeye", "move", "listening", "working", "happy"];
 const MAX_OVERLAY_CELLS = 8000;
 
 function hex(v, fallback) {
@@ -55,31 +52,11 @@ function sanitizeOverlay(o) {
     if (out.length >= MAX_OVERLAY_CELLS) break;
   }
   if (!out.length) return null;
-  return { cols, rows, cells: out };
+  // Art revision the design was painted on (see ART_REV in
+  // scripts/build-pose-sheets.py); unstamped = the original 2026-06 art.
+  const art = Number.isInteger(o.art) && o.art > 0 ? o.art : 1;
+  return { cols, rows, cells: out, art };
 }
-
-function sanitizeSprite(s) {
-  const sp = s && typeof s === "object" ? s : {};
-  return {
-    ears: EARS.includes(sp.ears) ? sp.ears : "cat",
-    accessory: ACCESSORY.includes(sp.accessory) ? sp.accessory : "none",
-    face: FACE.includes(sp.face) ? sp.face : "grin",
-    marks: !!sp.marks,
-    whiskers: sp.whiskers === undefined ? true : !!sp.whiskers,
-    body: hex(sp.body, "#8aa0b8"),
-    belly: hex(sp.belly, "#efe6d2"),
-    eye: hex(sp.eye, "#1e1e1e"),
-    accent: hex(sp.accent, "#d94a3a"),
-    mouth: hex(sp.mouth, "#6b3b2a"),
-  };
-}
-
-// Built-in Ghibli-resembling presets (original, not copies).
-const SPRITE_PRESETS = {
-  kedibus: { label: "Kedibüs", sprite: { ears: "cat", accessory: "none", face: "grin", marks: false, whiskers: true, body: "#d99a5b", belly: "#f0dcc0", eye: "#1e1e1e", accent: "#b56a2e", mouth: "#7a4a2a" } },
-  jiji:    { label: "Papyonlu Kedi", sprite: { ears: "cat", accessory: "bow", face: "calm", marks: false, whiskers: true, body: "#26262b", belly: "#3a3a42", eye: "#1a1a1a", accent: "#d23b2e", mouth: "#222222" } },
-  totoro:  { label: "Orman Ruhu", sprite: { ears: "totoro", accessory: "leaf", face: "calm", marks: true, whiskers: true, body: "#7e93ab", belly: "#efe6d2", eye: "#1e1e1e", accent: "#3a3a3a", mouth: "#5a4636" } },
-};
 
 // An installed petdex/agentpets pet: we store the resolved sheet geometry with
 // the character so a pet that is later uninstalled still renders (or fails
@@ -110,7 +87,6 @@ function sanitize(c, index) {
   const id = String(c.id || "").trim() || `char-${Date.now()}-${index || 0}`;
   const name = String(c.name || "Kiri").trim().slice(0, 24) || "Kiri";
   const persona = String(c.persona || "").trim().slice(0, 500);
-  const pattern = c.pattern && typeof c.pattern === "object" ? c.pattern : null;
   let position = null;
   if (c.position && typeof c.position === "object") {
     const x = Math.round(Number(c.position.x));
@@ -118,16 +94,15 @@ function sanitize(c, index) {
     if (Number.isFinite(x) && Number.isFinite(y)) position = { x, y };
   }
   const size = Number(c.size) || 0;
-  const kind = c.kind === "sprite" ? "sprite"
-    : c.kind === "poseset" ? "poseset"
-    : c.kind === "petdex" ? "petdex"
-    : "classic";
+  // Only two kinds exist now. Saves from the retired "classic" pixel cat and
+  // "sprite" presets (and anything unknown) become kiri — name, persona,
+  // position and size carry over; the old pattern/sprite looks are dropped.
+  const kind = c.kind === "petdex" ? "petdex" : "poseset";
   const pet = kind === "petdex" ? sanitizePet(c.pet) : null;
   if (kind === "petdex" && !pet) return null; // unusable without its sheet
-  const sprite = kind === "sprite" ? sanitizeSprite(c.sprite) : (c.sprite ? sanitizeSprite(c.sprite) : null);
-  const set = POSESET_SETS.includes(c.set) ? c.set : (kind === "poseset" ? "kiri" : null);
-  const overlay = c.overlay ? sanitizeOverlay(c.overlay) : null;
-  return { id, name, persona, pattern, position, size: size > 0 ? size : 0, kind, sprite, set, overlay, pet };
+  const set = kind === "poseset" ? (POSESET_SETS.includes(c.set) ? c.set : "kiri") : null;
+  const overlay = kind === "poseset" && c.overlay ? sanitizeOverlay(c.overlay) : null;
+  return { id, name, persona, position, size: size > 0 ? size : 0, kind, set, overlay, pet };
 }
 
 function load() {
@@ -148,6 +123,6 @@ function save(list) {
 }
 
 module.exports = {
-  load, save, sanitize, sanitizeSprite, sanitizeOverlay, sanitizePet, charactersPath,
-  SPRITE_PRESETS, POSESET_SETS, POSESET_STATES,
+  load, save, sanitize, sanitizeOverlay, sanitizePet, charactersPath,
+  POSESET_SETS, POSESET_STATES,
 };

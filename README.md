@@ -14,15 +14,16 @@ own.
 
 ### The character
 
-- **Living animations** — the character idles with cursor-tracking eyes, then
-  reacts to what's happening: dangling by the scruff like a carried kitten while
-  you drag it, ears perked with floating notes while it **listens**, quill on a
-  notepad while it **works**, and an outstretched arm when it **points** at
-  something. Kiri is a hand-drawn vector rig; Tori is painterly watercolor.
+- **Living animations** — the character idles with cursor-tracking eyes and
+  leans toward your pointer, then reacts to what's happening: dangling by the
+  scruff while you drag it (side view when you swing it sideways), perking up
+  when it **listens**, scribbling in a notepad while an AI agent **works**, and
+  beaming when a task or pomodoro is **done**. When it shows you something on
+  screen it looks there while an arrow marks the spot.
 - **Characters** — pick Kiri or Tori, paint your own look in the pixel overlay
   editor, and run several at once, each with its own name, look, and personality.
-- **Desktop companion** — follows your cursor, reacts to typing, plus a pomodoro
-  timer and time/interval reminders.
+- **Desktop companion** — follows your cursor, plus a pomodoro timer,
+  time/interval reminders and an optional stretch reminder.
 
 ### Seeing your screen
 
@@ -120,8 +121,11 @@ enter a provider key (or pick Ollama for a fully local, no-key setup).
 | Script | What it does |
 | --- | --- |
 | `npm start` | Run the app in dev mode. |
+| `npm test` | Unit tests (Node's built-in runner, no Electron needed). |
+| `npm run check` | Syntax-check every JS file. |
 | `npm run smoke` | Boot the app, log a startup line, and quit (CI smoke test). |
-| `npm run pack` | Build an unpacked Electron app into `dist/`. |
+| `npm run pack` | Build an unpacked, ad-hoc signed app into `dist/`. |
+| `npm run build:poses` | Rebuild the kiri/tori sprite strips from `art/src/`. |
 | `npm run dist` | Build installable artifacts for the current OS. |
 | `npm run dist:win` / `dist:mac` / `dist:linux` | Per-OS installers. |
 
@@ -134,22 +138,26 @@ enter a provider key (or pick Ollama for a fully local, no-key setup).
   undoable.
 - App awareness sends only the frontmost app's **name** (never window contents),
   needs no extra permission, and can be turned off in settings.
-- The control bridge is bound to `127.0.0.1` and requires a per-machine token.
+- The control bridge is bound to `127.0.0.1` and requires a per-machine token;
+  an agent asking Kiri to look at your screen needs your OK each time (or once
+  per session).
 - With the Ollama provider, everything runs locally with no network calls.
 
 ## Permissions & platform notes
 
-- **macOS** — the typing reaction needs **Accessibility** (and sometimes **Input
-  Monitoring**); voice needs **Microphone**. Grant them in
-  `System Settings → Privacy & Security`.
-- **Windows** — security software can block the global hook; allow it if typing
-  reactions never start.
+- Nothing is required up front; the first-run welcome explains each permission.
+- **macOS** — asking about your screen needs **Screen Recording**; voice needs
+  **Microphone**; hold-to-talk needs **Accessibility** (and sometimes **Input
+  Monitoring**) — the global key hook only runs while hold-to-talk is on.
+- **Windows** — security software can block the global hook; allow it if
+  hold-to-talk never triggers.
 - **Linux** — global keyboard hooks may need extra udev rules on some distros.
 
 ## Docs
 
 - [`AI-ASSISTANT.md`](AI-ASSISTANT.md) — the AI features in detail.
 - [`AI-ROADMAP.md`](AI-ROADMAP.md) — design notes and roadmap.
+- [`RELEASING.md`](RELEASING.md) — tests, packaging, signing and auto-update.
 
 ## License
 

@@ -1,0 +1,78 @@
+:root {
+  --bg: #fbf4e4;
+  --panel: #fffdf7;
+  --soft: #f3e7cf;
+  --border: #d8bd92;
+  --text: #4f4031;
+  --muted: #8a7a63;
+  --accent: #e0795c;
+  --accent-press: #c9603f;
+  --sage: #7ba889;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-size: 13px;
+}
+body { display: flex; flex-direction: column; }
+#titlebar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 13px; background: var(--panel); border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag; font-weight: 600;
+}
+#lang {
+  -webkit-app-region: no-drag; font: inherit; font-weight: 400; color: var(--text);
+  background: var(--soft); border: 1px solid var(--border); border-radius: 8px; padding: 2px 6px;
+}
+main { flex: 1; padding: 18px 22px 8px; overflow: auto; }
+h1 { font-size: 17px; margin: 0 0 14px; }
+.lead { margin: -6px 0 14px; color: var(--muted); line-height: 1.45; }
+
+.pick { display: flex; gap: 12px; margin-bottom: 14px; }
+.pet {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 10px 8px 8px; background: var(--panel); border: 2px solid var(--border);
+  border-radius: 14px; cursor: pointer; font: inherit; color: var(--text); font-weight: 600;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.pet img { height: 112px; object-fit: contain; }
+.pet:hover { transform: translateY(-2px); }
+.pet.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(224, 121, 92, 0.18); }
+
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.field span { color: var(--muted); font-size: 12px; }
+.field input {
+  font: inherit; color: var(--text); padding: 7px 10px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--panel); outline: none;
+}
+.field input:focus { border-color: var(--accent); }
+
+.tips, .perms { margin: 0 0 16px; padding-left: 18px; line-height: 1.6; }
+.perms li { margin-bottom: 6px; }
+.check, .choice {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; margin-bottom: 8px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px; cursor: pointer;
+}
+.check input, .choice input { margin-top: 2px; accent-color: var(--accent); }
+.check span, .choice span { display: flex; flex-direction: column; gap: 3px; }
+.check small, .choice small { color: var(--muted); line-height: 1.4; }
+.choice:has(input:checked) { border-color: var(--accent); }
+
+footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: var(--panel); border-top: 1px solid var(--border);
+}
+.dots { display: flex; gap: 6px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--soft); border: 1px solid var(--border); }
+.dots i.on { background: var(--accent); border-color: var(--accent); }
+.nav { display: flex; gap: 8px; }
+button.primary, button.ghost {
+  font: inherit; font-weight: 600; padding: 7px 16px; border-radius: 999px; cursor: pointer;
+}
+button.primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); }
+button.primary:hover { background: var(--accent-press); }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+button.ghost[hidden] { display: none; }
+button.link { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; }
+button.link:hover { color: var(--text); text-decoration: underline; }

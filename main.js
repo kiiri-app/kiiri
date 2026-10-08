@@ -1,22 +1,12 @@
 "use strict";
 
-const { app, BrowserWindow, Tray, screen, ipcMain, Menu, desktopCapturer, dialog, nativeImage, globalShortcut, shell, systemPreferences } = require("electron");
-const autoUpdater = {
-  autoDownload: false,
-  autoInstallOnAppQuit: false,
-  async checkForUpdates() {},
-  async downloadUpdate() {},
-  quitAndInstall() {},
-  on() {},
-  off() {},
-  removeListener() {},
-  removeAllListeners() {},
-  emit() {},
-  setFeedURL() {},
-};
+const { app, BrowserWindow, Tray, screen, ipcMain, Menu, dialog, nativeImage, globalShortcut, shell, systemPreferences } = require("electron");
+// electron-updater (GitHub Releases, see package.json build.publish). Loaded in
+// setupAutoUpdater() for packaged builds only; null in dev → updates disabled.
+let autoUpdater = null;
 const path = require("path");
 const fs = require("fs");
-const http = require("http");
+const { createBridgeServer } = require("./hooks/bridge-server");
 const crypto = require("crypto");
 const { pathToFileURL } = require("url");
 const aiConfig = require("./ai/config");
@@ -81,6 +71,8 @@ function logError(...args) {
 
 process.on("uncaughtException", (error) => {
   logError("[Kiri] uncaught exception:", error);
+  // The smoke test must FAIL on a startup crash, not hang with the error swallowed.
+  if (IS_SMOKE_TEST) process.exit(1);
 });
 
 process.on("unhandledRejection", (reason) => {
@@ -160,7 +152,6 @@ let tray = null;
 const AGENT_DISPLAY = { "claude-code": "Claude Code", cursor: "Cursor", codex: "Codex", kiro: "Kiro", antigravity: "Antigravity" };
 let regularCheckTimer = null;
 let regularCheckRunning = false;
-let updateInstallPending = false;
 let pendingManualUpdateCheck = false;
 
 const SUPPORTED_LANGUAGES = ["en", "ko", "ja", "tr"];
@@ -225,6 +216,9 @@ const I18N = {
     pomodoroFocusLabel: "Focus",
     pomodoroRestLabel: "Break",
     pomodoroMinutes: (min) => `${min} min`,
+    stretchReminder: "Stretch reminder",
+    stretchOff: "Off",
+    stretchEvery: (min) => `Every ${min} min`,
     pomodoroCustom: "Custom",
     taskCompleteSound: "Notification sound",
     soundOff: "Off",
@@ -264,6 +258,12 @@ const I18N = {
     confirmYes: "Yes",
     confirmCancel: "Cancel",
     confirmQuestion: "Are you sure?",
+    bridgeScreenAskTitle: "An AI agent wants Kiri to look at your screen.",
+    bridgeScreenAskDetail: "Kiri will take a screenshot and send it to your AI provider. Only allow this if you started the agent yourself.",
+    bridgeScreenAskDetailQ: (q) => `Question: “${q}”\n\nKiri will take a screenshot and send it to your AI provider. Only allow this if you started the agent yourself.`,
+    bridgeScreenAllowOnce: "Allow once",
+    bridgeScreenAllowSession: "Allow until Kiri restarts",
+    bridgeScreenDeny: "Deny",
   },
   ko: {
     appMenuAbout: "Kiri에 관하여",
@@ -322,6 +322,9 @@ const I18N = {
     pomodoroFocusLabel: "집중",
     pomodoroRestLabel: "휴식",
     pomodoroMinutes: (min) => `${min}분`,
+    stretchReminder: "스트레칭 알림",
+    stretchOff: "끄기",
+    stretchEvery: (min) => `${min}분마다`,
     pomodoroCustom: "커스텀",
     taskCompleteSound: "알림음",
     soundOff: "끄기",
@@ -361,6 +364,12 @@ const I18N = {
     confirmYes: "네",
     confirmCancel: "취소",
     confirmQuestion: "진행할까요?",
+    bridgeScreenAskTitle: "AI 에이전트가 Kiri에게 화면을 보라고 요청했어요.",
+    bridgeScreenAskDetail: "Kiri가 스크린샷을 찍어 AI 제공자에게 보냅니다. 직접 실행한 에이전트일 때만 허용하세요.",
+    bridgeScreenAskDetailQ: (q) => `질문: “${q}”\n\nKiri가 스크린샷을 찍어 AI 제공자에게 보냅니다. 직접 실행한 에이전트일 때만 허용하세요.`,
+    bridgeScreenAllowOnce: "이번만 허용",
+    bridgeScreenAllowSession: "Kiri를 다시 시작할 때까지 허용",
+    bridgeScreenDeny: "거부",
   },
   ja: {
     appMenuAbout: "Kiri について",
@@ -419,6 +428,9 @@ const I18N = {
     pomodoroFocusLabel: "集中",
     pomodoroRestLabel: "休憩",
     pomodoroMinutes: (min) => `${min}分`,
+    stretchReminder: "ストレッチ通知",
+    stretchOff: "オフ",
+    stretchEvery: (min) => `${min}分ごと`,
     pomodoroCustom: "カスタム",
     taskCompleteSound: "通知音",
     soundOff: "オフ",
@@ -458,6 +470,12 @@ const I18N = {
     confirmYes: "はい",
     confirmCancel: "キャンセル",
     confirmQuestion: "よろしいですか？",
+    bridgeScreenAskTitle: "AI エージェントが Kiri に画面を見るよう求めています。",
+    bridgeScreenAskDetail: "Kiri がスクリーンショットを撮り、AI プロバイダーに送信します。自分で起動したエージェントの場合のみ許可してください。",
+    bridgeScreenAskDetailQ: (q) => `質問:「${q}」\n\nKiri がスクリーンショットを撮り、AI プロバイダーに送信します。自分で起動したエージェントの場合のみ許可してください。`,
+    bridgeScreenAllowOnce: "今回のみ許可",
+    bridgeScreenAllowSession: "Kiri の再起動まで許可",
+    bridgeScreenDeny: "拒否",
   },
   tr: {
     appMenuAbout: "Kiri Hakkında",
@@ -516,6 +534,9 @@ const I18N = {
     pomodoroFocusLabel: "Odak",
     pomodoroRestLabel: "Mola",
     pomodoroMinutes: (min) => `${min} dk`,
+    stretchReminder: "Esneme hatırlatıcısı",
+    stretchOff: "Kapalı",
+    stretchEvery: (min) => `${min} dakikada bir`,
     pomodoroCustom: "Özel",
     taskCompleteSound: "Bildirim sesi",
     soundOff: "Kapalı",
@@ -555,6 +576,12 @@ const I18N = {
     confirmYes: "Evet",
     confirmCancel: "Vazgeç",
     confirmQuestion: "Onaylıyor musun?",
+    bridgeScreenAskTitle: "Bir yapay zekâ ajanı Kiri'nin ekranına bakmasını istiyor.",
+    bridgeScreenAskDetail: "Kiri bir ekran görüntüsü alıp yapay zekâ sağlayıcına gönderecek. Ajanı sen başlattıysan izin ver.",
+    bridgeScreenAskDetailQ: (q) => `Soru: “${q}”\n\nKiri bir ekran görüntüsü alıp yapay zekâ sağlayıcına gönderecek. Ajanı sen başlattıysan izin ver.`,
+    bridgeScreenAllowOnce: "Bu seferlik izin ver",
+    bridgeScreenAllowSession: "Kiri yeniden başlayana kadar izin ver",
+    bridgeScreenDeny: "Reddet",
   },
 };
 
@@ -573,77 +600,10 @@ function defaultLanguage() {
   return normalizeLanguage(app.getLocale && app.getLocale());
 }
 
-// ── 패턴 (사용자 커스텀 무늬) ──
-// { baseColor, eyeColor, eyeBgColor, oddEye, eyeColorLeft, eyeColorRight,
-//   head: [{x, y, color}], body: [...], tail: [...] }
-// baseColor: 캣짱 기본 몸통 색 (타이핑/스트레칭 lerp의 시작점).
-// eyeColor: 양쪽 공통 눈동자 색 (oddEye=false일 때 사용).
-// eyeBgColor: 눈 배경색.
-// oddEye=true이면 eyeColorLeft/eyeColorRight 따로 적용 (viewer 기준 좌/우).
-const DEFAULT_BASE_COLOR = "#1A1A1A";
-const DEFAULT_EYE_COLOR = "#1A1A1A";
-const DEFAULT_EYE_BG_COLOR = "#FFFFFF";
-let currentPattern = {
-  selectedPresetId: null,
-  baseColor: DEFAULT_BASE_COLOR,
-  eyeColor: DEFAULT_EYE_COLOR,
-  eyeBgColor: DEFAULT_EYE_BG_COLOR,
-  oddEye: false,
-  eyeColorLeft: DEFAULT_EYE_COLOR,
-  eyeColorRight: DEFAULT_EYE_COLOR,
-  head: [], body: [], tail: [],
-  legFl: [], legFr: [], legRl: [], legRr: [],
-  earL: [], earR: [],
-};
-function patternPath() {
-  return path.join(app.getPath("userData"), "pattern.json");
-}
-function sanitizePattern(data) {
-  const pattern = data && typeof data === "object" ? data : {};
-  return {
-    selectedPresetId: typeof pattern.selectedPresetId === "string" ? pattern.selectedPresetId : null,
-    baseColor: typeof pattern.baseColor === "string" ? pattern.baseColor : DEFAULT_BASE_COLOR,
-    eyeColor: typeof pattern.eyeColor === "string" ? pattern.eyeColor : DEFAULT_EYE_COLOR,
-    eyeBgColor: typeof pattern.eyeBgColor === "string" ? pattern.eyeBgColor : DEFAULT_EYE_BG_COLOR,
-    oddEye: !!pattern.oddEye,
-    eyeColorLeft: typeof pattern.eyeColorLeft === "string" ? pattern.eyeColorLeft : (pattern.eyeColor || DEFAULT_EYE_COLOR),
-    eyeColorRight: typeof pattern.eyeColorRight === "string" ? pattern.eyeColorRight : (pattern.eyeColor || DEFAULT_EYE_COLOR),
-    head: Array.isArray(pattern.head) ? pattern.head : [],
-    body: Array.isArray(pattern.body) ? pattern.body : [],
-    tail: Array.isArray(pattern.tail) ? pattern.tail : [],
-    legFl: Array.isArray(pattern.legFl) ? pattern.legFl : [],
-    legFr: Array.isArray(pattern.legFr) ? pattern.legFr : [],
-    legRl: Array.isArray(pattern.legRl) ? pattern.legRl : [],
-    legRr: Array.isArray(pattern.legRr) ? pattern.legRr : [],
-    earL: Array.isArray(pattern.earL) ? pattern.earL : [],
-    earR: Array.isArray(pattern.earR) ? pattern.earR : [],
-  };
-}
-function loadPattern() {
-  try {
-    if (fs.existsSync(patternPath())) {
-      const data = JSON.parse(fs.readFileSync(patternPath(), "utf8"));
-      if (data && typeof data === "object") {
-        currentPattern = sanitizePattern(data);
-      }
-    }
-  } catch {}
-}
-function savePattern() {
-  try {
-    fs.writeFileSync(patternPath(), JSON.stringify(currentPattern));
-  } catch {}
-}
-function broadcastPattern() {
-  if (petWin && !petWin.isDestroyed()) {
-    petWin.webContents.send("pattern-changed", currentPattern);
-  }
-}
-
-// ── 자동 스트레칭 설정 ──
-const DEFAULT_STRETCH_INTERVAL_MIN = 30;
-const RELEASE_EXCLUDED_STRETCH_INTERVAL_MIN = 1;
-let stretchIntervalMin = DEFAULT_STRETCH_INTERVAL_MIN; // 0 = 끔
+// ── Stretch reminder: every N minutes the pet nudges you to stand up and
+// stretch (happy pose + bubble). Off by default; Tasks ▸ Stretch reminder.
+const STRETCH_REMINDER_CHOICES = [0, 30, 45, 60, 90];
+let stretchReminderMin = 0;
 let stretchTimer = null;
 let reminders = [];
 let reminderTimer = null;
@@ -662,17 +622,13 @@ let pomodoroTimer = null;
 let accessibilityPermissionGuideShown = false;
 let inputPermissionGuideShown = false;
 let catNamePromptShown = false;
+// First-run welcome window. Existing installs (a settings file already on
+// disk) count as onboarded; loadSettings() flips this for fresh ones.
+let onboardingDone = true;
 let taskCompleteSoundVolume = 0.1;
 
 function releaseBuildExcludesDevOptions() {
   return app.isPackaged;
-}
-
-function normalizeStretchIntervalForBuild(min) {
-  if (releaseBuildExcludesDevOptions() && min === RELEASE_EXCLUDED_STRETCH_INTERVAL_MIN) {
-    return DEFAULT_STRETCH_INTERVAL_MIN;
-  }
-  return min;
 }
 
 function settingsPath() {
@@ -694,8 +650,8 @@ function loadSettings() {
   try {
     if (fs.existsSync(settingsPath())) {
       const data = JSON.parse(fs.readFileSync(settingsPath(), "utf8"));
-      if (typeof data.stretchIntervalMin === "number" && data.stretchIntervalMin >= 0) {
-        stretchIntervalMin = normalizeStretchIntervalForBuild(data.stretchIntervalMin);
+      if (STRETCH_REMINDER_CHOICES.includes(data.stretchReminderMin)) {
+        stretchReminderMin = data.stretchReminderMin;
       }
       if (Array.isArray(data.reminders)) {
         reminders = data.reminders.map(sanitizeReminder).filter(Boolean);
@@ -741,13 +697,16 @@ function loadSettings() {
         pomodoroRestSec = Math.max(30, Math.min(60 * 60, Math.round(data.pomodoroRestSec)));
       }
       pomodoroRemainingSec = pomodoroFocusMin * 60;
+      if (typeof data.onboardingDone === "boolean") onboardingDone = data.onboardingDone;
+    } else {
+      onboardingDone = false; // fresh install
     }
   } catch {}
 }
 function saveSettings() {
   try {
     fs.writeFileSync(settingsPath(), JSON.stringify({
-      stretchIntervalMin,
+      stretchReminderMin,
       reminders,
       language: currentLanguage,
       catName,
@@ -756,6 +715,7 @@ function saveSettings() {
       fixedMessage,
       showReminderButtonOutside,
       catNamePromptShown,
+      onboardingDone,
       taskCompleteSoundVolume,
       agentMonitoringEnabled,
       petSize: currentPetSize,
@@ -773,12 +733,12 @@ function startStretchTimer() {
     clearInterval(stretchTimer);
     stretchTimer = null;
   }
-  if (stretchIntervalMin > 0) {
-    stretchTimer = setInterval(() => triggerStretchSequence(), stretchIntervalMin * 60 * 1000);
+  if (stretchReminderMin > 0) {
+    stretchTimer = setInterval(() => sendStretchReminder(), stretchReminderMin * 60 * 1000);
   }
 }
-function setStretchInterval(min) {
-  stretchIntervalMin = normalizeStretchIntervalForBuild(min);
+function setStretchReminder(min) {
+  stretchReminderMin = STRETCH_REMINDER_CHOICES.includes(min) ? min : 0;
   saveSettings();
   startStretchTimer();
 }
@@ -1149,11 +1109,6 @@ function startPomodoroTimer() {
         completedMode,
         nextMode: pomodoroMode,
       });
-      if (completedMode === "focus") {
-        triggerStretchSequence();
-      } else {
-        triggerPomodoroFocusStartSequence();
-      }
     }
     broadcastPomodoroState();
   }, 1000);
@@ -1332,7 +1287,6 @@ function charForSender(sender) {
 function syncGlobalsFromChar(char) {
   if (!char) return;
   catName = char.name || "Kiri";
-  currentPattern = sanitizePattern(char.pattern || currentPattern);
   if (char.position) currentPetPosition = char.position;
   if (char.size) currentPetSize = normalizePetSize(char.size);
 }
@@ -1340,7 +1294,6 @@ function syncActiveCharFromGlobals() {
   const c = activeChar();
   if (!c) return;
   c.name = catName;
-  c.pattern = currentPattern;
   c.position = currentPetPosition;
   c.size = currentPetSize;
   charStore.save(characters);
@@ -1373,7 +1326,7 @@ function sendSharedState(win) {
 // the app folder (~/.codex/pets/…), so hand it over as file:// here rather than
 // letting the renderer guess a path.
 function characterArtPayload(char) {
-  const payload = { kind: char.kind, sprite: char.sprite, set: char.set, overlay: char.overlay };
+  const payload = { kind: char.kind, set: char.set, overlay: char.overlay };
   if (char.kind === "petdex" && char.pet) {
     payload.pet = { ...char.pet, url: pathToFileURL(char.pet.sheet).href };
   }
@@ -1423,11 +1376,10 @@ function createPetWindow(char) {
   keepWindowOnTop(win);
   win.loadFile(path.join(__dirname, "renderer", "index.html"));
   win.webContents.on("did-finish-load", () => {
-    win.webContents.send("pattern-changed", sanitizePattern(char.pattern || currentPattern));
     win.webContents.send("cat-name-changed", { name: char.name, visible: showCatName });
     win.webContents.send("character-art", characterArtPayload(char));
     sendSharedState(win);
-    if (char.id === activeCharId && !catNamePromptShown) {
+    if (char.id === activeCharId && !catNamePromptShown && onboardingDone) {
       setTimeout(() => {
         if (!win || win.isDestroyed() || catNamePromptShown) return;
         win.webContents.send("cat-name-edit", char.name);
@@ -1475,13 +1427,11 @@ function initCharacters() {
       persona: "",
       kind: "poseset",
       set: "kiri",
-      pattern: currentPattern,
       position: currentPetPosition,
       size: currentPetSize,
     }, 0)];
     charStore.save(characters);
   }
-  for (const c of characters) { if (!c.pattern) c.pattern = currentPattern; }
   activeCharId = characters[0].id;
   syncGlobalsFromChar(characters[0]);
 }
@@ -1571,7 +1521,6 @@ function addPetdexCharacter(pet) {
       frames: pet.frames,
       fps: pet.fps,
     },
-    pattern: currentPattern,
     position: spawnPositionFor(display, W, H, base),
     size: currentPetSize,
   }, characters.length);
@@ -1595,7 +1544,6 @@ function addCharacter(set = "kiri") {
     persona: "",
     kind: "poseset",
     set,
-    pattern: currentPattern,
     position: spawnPositionFor(display, W, H, base),
     size: currentPetSize,
   }, idx);
@@ -1633,15 +1581,26 @@ ipcMain.handle("persona-set", (_evt, value) => {
 });
 
 function startApp() {
+  scheduleRegularChecks();
   createAllPetWindows();
   createTray();
-  startKeyHook();
-  startAgentIntegrations();
+  syncKeyHook();
+  if (onboardingDone) startAgentIntegrations();
+  else openOnboarding(); // agent hooks wait for the user's answer there
   startStretchTimer();
   startReminderTimer();
   startAutomationTimer();
   startJournalReminder();
   if (!agentSweepTimer) agentSweepTimer = setInterval(sweepAgentSessions, 60 * 1000);
+}
+
+// The global keyboard hook (uiohook — needs macOS Accessibility / Input
+// Monitoring) exists only for push-to-talk now; the typing/scroll reactions it
+// once fed belonged to the retired pixel cat. So it runs — and the OS
+// permission is asked for — only while PTT is switched on.
+function syncKeyHook() {
+  if (aiConfig.loadConfig().pttEnabled) startKeyHook();
+  else stopKeyHook();
 }
 
 function stopKeyHook() {
@@ -1708,18 +1667,46 @@ ipcMain.handle("pomodoro-focus-set", (_evt, min) => {
   return pomodoroState();
 });
 
-async function checkForUpdatesNow() {
-  return { ok: false, reason: "updates-disabled" };
+// Update flow (the pet's speech bubble is the UI): background check → an
+// "Update" button appears when a newer release exists → click downloads with
+// progress → "Restarting…" → install. A manual check (menu) also reports
+// "no updates"; background checks stay silent unless something is found.
+async function checkForUpdatesNow({ manual = false } = {}) {
+  if (!autoUpdater) return { ok: false, reason: "updates-disabled" };
+  pendingManualUpdateCheck = manual;
+  if (manual) sendUpdateState({ state: "checking" });
+  try {
+    await autoUpdater.checkForUpdates();
+    return { ok: true };
+  } catch (err) {
+    logError("[Kiri] update check failed:", err && err.message);
+    sendUpdateState({ state: manual ? "none" : "idle" });
+    pendingManualUpdateCheck = false;
+    return { ok: false, reason: "check-failed" };
+  }
 }
 
 ipcMain.handle("update-check", async () => {
   return checkForUpdatesNow({ manual: true });
 });
 ipcMain.handle("update-download", async () => {
-  return { ok: false, reason: "updates-disabled" };
+  if (!autoUpdater) return { ok: false, reason: "updates-disabled" };
+  try {
+    sendUpdateState({ state: "downloading", percent: null });
+    await autoUpdater.downloadUpdate();
+    return { ok: true };
+  } catch (err) {
+    logError("[Kiri] update download failed:", err && err.message);
+    sendUpdateState({ state: "idle" });
+    return { ok: false, reason: "download-failed" };
+  }
 });
 function installDownloadedUpdate() {
-  return { ok: false, reason: "updates-disabled" };
+  if (!autoUpdater) return { ok: false, reason: "updates-disabled" };
+  sendUpdateState({ state: "restarting" });
+  // isSilent=false, forceRunAfter=true: relaunch Kiri once installed.
+  setTimeout(() => autoUpdater.quitAndInstall(false, true), 900);
+  return { ok: true };
 }
 ipcMain.handle("update-install", () => {
   return installDownloadedUpdate();
@@ -1763,15 +1750,6 @@ ipcMain.on("set-mouse-events-enabled", (evt, enabled) => {
 
 // Window height ratio — speech bubble and jump poses need extra vertical room.
 const STRETCH_RATIO = 4.8;
-
-ipcMain.on("set-stretch-mode", () => {
-  // 더 이상 윈도우 사이즈 변경 안 함 (윈도우가 처음부터 stretch 비율) — no-op
-});
-
-ipcMain.on("set-hunting-mode", () => {
-  // Hunting is an in-SVG animation now. Keep this IPC as a no-op so older
-  // renderer calls never trigger BrowserWindow bounds changes on Windows.
-});
 
 // 우클릭 컨텍스트 메뉴
 ipcMain.on("show-context-menu", (evt) => {
@@ -1835,6 +1813,15 @@ ipcMain.on("show-context-menu", (evt) => {
         {
           label: t("automations"),
           click: () => openAutomationsWindow(),
+        },
+        {
+          label: t("stretchReminder"),
+          submenu: STRETCH_REMINDER_CHOICES.map((min) => ({
+            label: min ? t("stretchEvery", min) : t("stretchOff"),
+            type: "radio",
+            checked: stretchReminderMin === min,
+            click: () => setStretchReminder(min),
+          })),
         },
         {
           label: t("pomodoro"),
@@ -1965,7 +1952,8 @@ ipcMain.on("show-context-menu", (evt) => {
     { type: "separator" },
     {
       label: t("checkForUpdates"),
-      enabled: false,
+      enabled: !!autoUpdater,
+      click: () => checkForUpdatesNow({ manual: true }),
     },
     { label: t("appMenuQuit"), accelerator: "Cmd+Q", click: () => app.quit() },
   ]);
@@ -1973,80 +1961,8 @@ ipcMain.on("show-context-menu", (evt) => {
   menu.popup({ window: petWin });
 });
 
-// ── 스트레칭 시퀀스: 윈도우 확대 + 중앙으로 → SVG 애니메이션 → 복원 ──
-const STRETCH_DURATION_MS = 3000;
-const STRETCH_GROW_MS = 400;       // 확대 transition 시간
-const STRETCH_SHRINK_DELAY_MS = 200; // 종료 후 복원까지 여유
-const STRETCH_FILL_RATIO = 0.90;    // 화면 높이의 90%를 채우도록 (정사각 윈도우)
-let stretchInProgress = false;
-let savedStretchBounds = null;
-let focusStartInProgress = false;
-let savedFocusStartBounds = null;
-
-function triggerStretchSequence() {
-  if (!petWin || petWin.isDestroyed() || stretchInProgress) return;
-  // The break-stretch is a classic-cat animation; pose-set characters (kiri/tori)
-  // have no stretch pose, so skip it for them (feature removed from the menu).
-  if (activeChar() && activeChar().kind === "poseset") return;
-  stretchInProgress = true;
-  savedStretchBounds = petWin.getBounds();
-
-  // 캣짱이 현재 있는 디스플레이에서 실행한다. 커서 기준이면 자동 스트레칭이
-  // 다른 모니터로 튀어 애니메이션이 안 보이는 것처럼 느껴질 수 있다.
-  const display = screen.getDisplayMatching(savedStretchBounds);
-  const { x: dispX, y: dispY, width: dispW, height: dispH } = display.workArea;
-
-  // 정사각 큰 윈도우 — 화면 높이 기준 STRETCH_FILL_RATIO
-  const targetSize = Math.round(dispH * STRETCH_FILL_RATIO);
-  const newX = dispX + Math.round((dispW - targetSize) / 2);
-  const newY = dispY + Math.round((dispH - targetSize) / 2);
-
-  petWin.setBounds(
-    { x: newX, y: newY, width: targetSize, height: targetSize },
-    true
-  );
-
-  // 윈도우 확대 transition 후 SVG 애니메이션 시작
-  setTimeout(() => {
-    if (petWin && !petWin.isDestroyed()) {
-      petWin.webContents.send("do-stretch");
-    }
-  }, STRETCH_GROW_MS);
-
-  // 시퀀스 종료 후 원래 bounds 복원
-  setTimeout(() => {
-    if (petWin && !petWin.isDestroyed() && savedStretchBounds) {
-      petWin.setBounds(savedStretchBounds, true);
-    }
-    stretchInProgress = false;
-  }, STRETCH_GROW_MS + STRETCH_DURATION_MS + STRETCH_SHRINK_DELAY_MS);
-}
-
-function triggerPomodoroFocusStartSequence() {
-  if (!petWin || petWin.isDestroyed() || focusStartInProgress || stretchInProgress) return;
-  focusStartInProgress = true;
-  savedFocusStartBounds = petWin.getBounds();
-  const display = screen.getDisplayMatching(savedFocusStartBounds);
-  const { x: dispX, y: dispY, width: dispW, height: dispH } = display.workArea;
-  const targetSize = Math.round(dispH * STRETCH_FILL_RATIO);
-  const newX = dispX + Math.round((dispW - targetSize) / 2);
-  const newY = dispY + Math.round((dispH - targetSize) / 2);
-
-  petWin.setBounds({ x: newX, y: newY, width: targetSize, height: targetSize }, true);
-
-  setTimeout(() => {
-    if (petWin && !petWin.isDestroyed()) {
-      petWin.webContents.send("pomodoro-focus-start");
-    }
-  }, 160);
-
-  setTimeout(() => {
-    if (petWin && !petWin.isDestroyed() && savedFocusStartBounds) {
-      petWin.setBounds(savedFocusStartBounds, true);
-    }
-    focusStartInProgress = false;
-    savedFocusStartBounds = null;
-  }, 1400);
+function sendStretchReminder() {
+  if (petWin && !petWin.isDestroyed()) petWin.webContents.send("do-stretch");
 }
 
 function triggerJumpSequence() {
@@ -2065,7 +1981,8 @@ function buildAppMenu() {
         { type: "separator" },
         {
           label: t("checkForUpdates"),
-          enabled: false,
+          enabled: !!autoUpdater,
+          click: () => checkForUpdatesNow({ manual: true }),
         },
         { label: t("appMenuQuit"), accelerator: "Cmd+Q", click: () => app.quit() },
       ],
@@ -2261,13 +2178,53 @@ function bridgeStatus() {
 // (+ arrow when the model points at something) and returns the text so the
 // agent can act on it. Serialized behind the same automationBusy guard so two
 // screen captures never overlap.
+// /ask-screen reads whatever is on the user's screen, and any local process
+// that can read the token file can call it — so the user decides each time:
+// allow once / allow until restart / deny. One dialog at a time (concurrent
+// requests share its answer), and a denial silences further asks for a minute
+// so a misbehaving agent can't spam dialogs.
+const BRIDGE_DENY_COOLDOWN_MS = 60 * 1000;
+let bridgeScreenAllowedSession = false;
+let bridgeScreenDeniedUntil = 0;
+let bridgeScreenPrompt = null;
+function confirmBridgeScreenAccess(question) {
+  if (bridgeScreenAllowedSession) return Promise.resolve(true);
+  if (Date.now() < bridgeScreenDeniedUntil) return Promise.resolve(false);
+  if (bridgeScreenPrompt) return bridgeScreenPrompt;
+  bridgeScreenPrompt = (async () => {
+    // The pet is an always-on-top accessory app; pull focus so the alert is seen.
+    if (IS_MAC) app.focus({ steal: true });
+    // Deny is button 0 AND the default/cancel button: on macOS, giving default
+    // and cancel to one non-first button left Esc falling through to button 0
+    // (which used to be "Allow once"). With Deny first, Return, Esc and closing
+    // the alert all refuse.
+    const { response } = await dialog.showMessageBox({
+      type: "question",
+      buttons: [t("bridgeScreenDeny"), t("bridgeScreenAllowOnce"), t("bridgeScreenAllowSession")],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+      message: t("bridgeScreenAskTitle"),
+      detail: question ? t("bridgeScreenAskDetailQ", question) : t("bridgeScreenAskDetail"),
+    });
+    if (response === 2) bridgeScreenAllowedSession = true;
+    if (response !== 1 && response !== 2) bridgeScreenDeniedUntil = Date.now() + BRIDGE_DENY_COOLDOWN_MS;
+    logInfo(`[Kiri] agent screen access ${["denied", "allowed once", "allowed for session"][response] || "denied"}`);
+    return response === 1 || response === 2;
+  })().finally(() => { bridgeScreenPrompt = null; });
+  return bridgeScreenPrompt;
+}
+
 async function bridgeAskScreen(question) {
+  logInfo("[Kiri] agent asked to see the screen");
   const cfg = aiConfig.loadConfig();
   if (!cfg.enabled || !aiConfig.providerReady()) {
     return { ok: false, error: "no-provider" };
   }
   if (!petWin || petWin.isDestroyed()) return { ok: false, error: "no-pet-window" };
   if (automationBusy) return { ok: false, error: "busy" };
+  if (!(await confirmBridgeScreenAccess(question))) return { ok: false, error: "denied" };
+  if (automationBusy) return { ok: false, error: "busy" }; // taken while the dialog was up
   automationBusy = true;
   sendCatThinking(true);
   try {
@@ -2296,81 +2253,49 @@ function startAgentStateServer() {
   // screen spot with the arrow overlay + a look-at-that-spot gaze (/point), or
   // ask what the pet can do (/status). This is also what the MCP server
   // (hooks/kiri-mcp-server.js) speaks to — MCP is a stdio front-end for it.
-  const BRIDGE_ROUTES = new Set(["/agent-state", "/speak", "/point", "/status", "/ask-screen"]);
-  agentStateServer = http.createServer((req, res) => {
-    if (req.method !== "POST" || !BRIDGE_ROUTES.has(req.url)) {
-      res.writeHead(404);
-      res.end("not found");
-      return;
-    }
-    if (String(req.headers["x-kiri-token"] || "") !== token) {
-      res.writeHead(403);
-      res.end("forbidden");
-      return;
-    }
-    let body = "";
-    let size = 0;
-    req.on("data", (chunk) => {
-      size += chunk.length;
-      if (size <= 8192) body += chunk;
-    });
-    req.on("end", () => {
-      if (size > 8192) {
-        res.writeHead(413);
-        res.end("too large");
-        return;
-      }
-      try {
-        const data = JSON.parse(body || "{}");
-        if (req.url === "/agent-state") {
-          handleAgentStateEvent(data);
-        } else if (req.url === "/ask-screen") {
-          // The one thing only Kiri can do for an agent: look at the user's
-          // screen and answer about it. Async, so the response is written from
-          // the promise (and the pet shows the answer + arrow meanwhile).
-          const question = String((data && data.question) || "").slice(0, 500);
-          bridgeAskScreen(question).then((result) => {
-            res.writeHead(result.ok ? 200 : 503, { "Content-Type": "application/json" });
-            res.end(JSON.stringify(result));
-          }).catch((err) => {
-            res.writeHead(500, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: (err && err.message) || "failed" }));
-          });
-          return;
-        } else if (req.url === "/status") {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify(bridgeStatus()));
-          return;
-        } else if (req.url === "/speak") {
-          // External text is scrubbed of secrets/absolute paths before it can
-          // reach a speech bubble or the speakers (see ai/redact.js).
-          const text = aiRedact.redactForSpeech(String((data && data.text) || ""));
-          if (!text) throw new Error("no text");
-          sendCatNotice(text);
-          speakAnswer(text, { force: true }).catch(() => {});
-        } else if (req.url === "/point") {
-          // {x,y} absolute screen coords, or {nx,ny} normalized 0..1 on the
-          // display the pet lives on.
-          let x = Number(data && data.x), y = Number(data && data.y);
-          if (!Number.isFinite(x) || !Number.isFinite(y)) {
-            const nx = Number(data && data.nx), ny = Number(data && data.ny);
-            if (!Number.isFinite(nx) || !Number.isFinite(ny)) throw new Error("no point");
-            const disp = petWin && !petWin.isDestroyed()
-              ? screen.getDisplayNearestPoint({ x: petWin.getBounds().x, y: petWin.getBounds().y })
-              : screen.getPrimaryDisplay();
-            x = disp.bounds.x + Math.max(0, Math.min(1, nx)) * disp.bounds.width;
-            y = disp.bounds.y + Math.max(0, Math.min(1, ny)) * disp.bounds.height;
-          }
-          const text = aiRedact.redactForSpeech(String((data && data.text) || ""));
-          sendScreenAnswer({ point: { x, y }, text: text || undefined });
+  agentStateServer = createBridgeServer({
+    token,
+    onError: (err, route) => console.warn(`[Kiri] bridge ${route}:`, err && err.message),
+    routes: {
+      "/agent-state": (data) => { handleAgentStateEvent(data); },
+      "/status": () => ({ body: bridgeStatus() }),
+      // The one thing only Kiri can do for an agent: look at the user's screen
+      // and answer about it (after the user agrees — see confirmBridgeScreenAccess).
+      "/ask-screen": async (data) => {
+        const question = String(data.question || "").slice(0, 500);
+        try {
+          const result = await bridgeAskScreen(question);
+          const status = result.ok ? 200 : result.error === "denied" ? 403 : 503;
+          return { status, body: result };
+        } catch (err) {
+          return { status: 500, body: { ok: false, error: (err && err.message) || "failed" } };
         }
-        res.writeHead(200);
-        res.end("ok");
-      } catch {
-        res.writeHead(400);
-        res.end("bad json");
-      }
-    });
+      },
+      // External text is scrubbed of secrets/absolute paths before it can
+      // reach a speech bubble or the speakers (see ai/redact.js).
+      "/speak": (data) => {
+        const text = aiRedact.redactForSpeech(String(data.text || ""));
+        if (!text) throw new Error("no text");
+        sendCatNotice(text);
+        speakAnswer(text, { force: true }).catch(() => {});
+      },
+      // {x,y} absolute screen coords, or {nx,ny} normalized 0..1 on the
+      // display the pet lives on.
+      "/point": (data) => {
+        let x = Number(data.x), y = Number(data.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          const nx = Number(data.nx), ny = Number(data.ny);
+          if (!Number.isFinite(nx) || !Number.isFinite(ny)) throw new Error("no point");
+          const disp = petWin && !petWin.isDestroyed()
+            ? screen.getDisplayNearestPoint({ x: petWin.getBounds().x, y: petWin.getBounds().y })
+            : screen.getPrimaryDisplay();
+          x = disp.bounds.x + Math.max(0, Math.min(1, nx)) * disp.bounds.width;
+          y = disp.bounds.y + Math.max(0, Math.min(1, ny)) * disp.bounds.height;
+        }
+        const text = aiRedact.redactForSpeech(String(data.text || ""));
+        sendScreenAnswer({ point: { x, y }, text: text || undefined });
+      },
+    },
   });
   agentStateServer.on("error", (err) => {
     console.warn("[Kiri] agent state server unavailable:", err && err.message);
@@ -2745,6 +2670,7 @@ ipcMain.handle("ai-skill-delete", (_evt, id) => {
 
 function broadcastVoiceConfig() {
   broadcastAll("voice-config-changed", { enabled: aiConfig.voiceUsable() });
+  syncKeyHook(); // PTT may have been toggled
 }
 
 function runVoiceTranscript(text) {
@@ -3181,6 +3107,81 @@ function openMemoryWindow() {
   memoryWin.loadFile(path.join(__dirname, "renderer", "ai-memory.html"));
   memoryWin.on("closed", () => { memoryWin = null; });
 }
+
+// ── First-run welcome (renderer/onboarding.*) ──
+// Picks the companion + names, asks before installing AI-agent hooks into
+// other tools' configs, offers an AI setup path and explains permissions.
+let onboardingWin = null;
+function openOnboarding() {
+  if (onboardingWin && !onboardingWin.isDestroyed()) {
+    onboardingWin.show();
+    onboardingWin.focus();
+    return;
+  }
+  onboardingWin = new BrowserWindow({
+    width: 460,
+    height: 560,
+    resizable: false,
+    title: "Kiri",
+    frame: false,
+    backgroundColor: "#fbf4e4",
+    alwaysOnTop: true,
+    icon: APP_ICON_PATH,
+    webPreferences: {
+      preload: path.join(__dirname, "renderer", "onboarding-preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  onboardingWin.loadFile(path.join(__dirname, "renderer", "onboarding.html"));
+  onboardingWin.on("closed", () => {
+    onboardingWin = null;
+    // Closed without finishing (e.g. Cmd+W): keep the defaults, don't ask again.
+    if (!onboardingDone) finishOnboarding({ skipped: true });
+  });
+}
+
+function finishOnboarding(choices = {}) {
+  if (onboardingDone) return { ok: true };
+  onboardingDone = true;
+  catNamePromptShown = true;
+  const c = activeChar();
+  if (c && c.kind === "poseset" && charStore.POSESET_SETS.includes(choices.set) && c.set !== choices.set) {
+    c.set = choices.set;
+    charStore.save(characters);
+    broadcastCharacterArt(c);
+  }
+  if (choices.petName) setCatName(choices.petName);
+  if (typeof choices.userName === "string" && choices.userName.trim()) setUserName(choices.userName);
+  if (typeof choices.agentMonitoring === "boolean") agentMonitoringEnabled = choices.agentMonitoring;
+  saveSettings();
+  startAgentIntegrations();
+  refreshTray();
+  if (choices.ai === "local") {
+    aiConfig.applyProfile("local");
+    aiConfig.saveConfig({ enabled: true });
+    broadcastVoiceConfig();
+  }
+  if (onboardingWin && !onboardingWin.isDestroyed()) onboardingWin.close();
+  if (choices.ai === "key") setTimeout(() => openAiSettings(), 250);
+  return { ok: true };
+}
+
+ipcMain.handle("onboarding-get", () => {
+  const c = activeChar();
+  return {
+    language: currentLanguage,
+    userName,
+    petName: catName,
+    set: (c && c.set) || "kiri",
+    agentMonitoring: agentMonitoringEnabled,
+  };
+});
+ipcMain.handle("onboarding-language", (_evt, lang) => {
+  setLanguage(lang);
+  return currentLanguage;
+});
+ipcMain.handle("onboarding-finish", (_evt, choices) => finishOnboarding(choices && typeof choices === "object" ? choices : {}));
 
 // ── Chat window: free-form multi-turn conversation with the active character ──
 let chatWin = null;
@@ -3763,16 +3764,10 @@ function startKeyHook() {
     if (!accessibilityTrusted) showAccessibilityPermissionGuideOnce();
     if (!keyHookListenersAttached) {
       uIOhook.on("keydown", (event) => {
-        broadcastAll("key-pressed");
         evaluatePttCombo(event);
       });
       uIOhook.on("keyup", (event) => {
         evaluatePttCombo(event);
-      });
-      uIOhook.on("wheel", (event) => {
-        broadcastAll("mouse-wheel", {
-          rotation: event && typeof event.rotation === "number" ? event.rotation : 0,
-        });
       });
       keyHookListenersAttached = true;
     }
@@ -3826,6 +3821,29 @@ function sendAvailableUpdateState(kind, info) {
 }
 
 function setupAutoUpdater() {
+  if (!app.isPackaged || autoUpdater) return;
+  try {
+    ({ autoUpdater } = require("electron-updater"));
+  } catch (err) {
+    logError("[Kiri] electron-updater unavailable:", err && err.message);
+    return;
+  }
+  autoUpdater.autoDownload = false;          // the user clicks "Update" first
+  autoUpdater.autoInstallOnAppQuit = true;   // a finished download also lands on quit
+  autoUpdater.on("update-available", (info) => sendAvailableUpdateState("available", info));
+  autoUpdater.on("update-not-available", () => {
+    sendUpdateState({ state: pendingManualUpdateCheck ? "none" : "idle" });
+    pendingManualUpdateCheck = false;
+  });
+  autoUpdater.on("download-progress", (p) => {
+    sendUpdateState({ state: "downloading", percent: Math.round((p && p.percent) || 0) });
+  });
+  autoUpdater.on("update-downloaded", () => installDownloadedUpdate());
+  autoUpdater.on("error", (err) => {
+    logError("[Kiri] updater error:", err && err.message);
+    sendUpdateState({ state: "idle" });
+    pendingManualUpdateCheck = false;
+  });
 }
 
 async function regular_check() {
@@ -3839,7 +3857,7 @@ async function regular_check() {
 }
 
 function scheduleRegularChecks() {
-  if (!app.isPackaged) return;
+  if (!autoUpdater) return;
   if (regularCheckTimer) clearInterval(regularCheckTimer);
   setTimeout(() => regular_check().catch(() => {}), 10_000);
   regularCheckTimer = setInterval(() => {
@@ -3883,10 +3901,10 @@ app.whenReady().then(async () => {
     }
     currentLanguage = defaultLanguage();
     loadSettings();
-    loadPattern();
     // First run: seed starter skills in the user's language so the command
     // window ships with something useful.
     try { aiAgent.seedSkills(currentLanguage); } catch (err) { logError("[Kiri] skill seed failed:", err); }
+    setupAutoUpdater(); // before the menus, which enable "Check for Updates" from it
     buildAppMenu();
     registerGlobalShortcuts();
     startApp();

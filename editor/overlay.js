@@ -40,6 +40,7 @@ const I18N = {
     unsavedChanges: "You have unsaved changes.",
     exitDetail: "Exit anyway? (The preview will be reverted)",
     exit: "Exit",
+    staleDesign: "This design was painted on the previous drawing, so it is hidden on the pet. Adjust it and save to use it again.",
   },
   tr: {
     windowTitle: "Piksel Editörü",
@@ -72,6 +73,7 @@ const I18N = {
     unsavedChanges: "Değişiklikler kaydedilmedi.",
     exitDetail: "Yine de çıkılsın mı? (Önizleme geri alınır)",
     exit: "Çık",
+    staleDesign: "Bu tasarım önceki çizim için yapılmıştı, bu yüzden karakterde gizli. Düzenleyip kaydedersen yeniden kullanılır.",
   },
   ko: {
     windowTitle: "픽셀 편집기",
@@ -104,6 +106,7 @@ const I18N = {
     unsavedChanges: "저장하지 않은 변경이 있어요.",
     exitDetail: "그래도 나갈까요? (미리보기는 되돌려져요)",
     exit: "나가기",
+    staleDesign: "이 디자인은 이전 그림에 맞춰져 있어 캐릭터에 표시되지 않습니다. 수정 후 저장하면 다시 사용됩니다.",
   },
   ja: {
     windowTitle: "ピクセルエディター",
@@ -136,6 +139,7 @@ const I18N = {
     unsavedChanges: "未保存の変更があります。",
     exitDetail: "それでも閉じますか？（プレビューは元に戻ります）",
     exit: "閉じる",
+    staleDesign: "このデザインは以前のイラスト用のため、キャラクターには表示されません。調整して保存すると再び使えます。",
   },
 };
 
@@ -196,7 +200,20 @@ function overlayFromCells() {
     const [x, y] = k.split(",").map(Number);
     arr.push({ x, y, color });
   }
-  return { cols, rows, cells: arr };
+  return { cols, rows, cells: arr, art: artRev() };
+}
+
+// Revision of the idle art this editor paints on (from the pose manifest).
+function artRev() {
+  const m = window.POSE_MANIFEST && set && window.POSE_MANIFEST[set];
+  return (m && m.rev) || 1;
+}
+
+function showStaleNote(overlay) {
+  const note = $("stale-note");
+  const stale = !!(overlay && (overlay.art || 1) !== artRev());
+  if (note) note.hidden = !stale;
+  $("hint").hidden = stale;
 }
 
 function setDirty(v) {
@@ -381,6 +398,7 @@ variantSelect.addEventListener("change", () => {
   const p = presets.find((x) => x.id === variantSelect.value);
   if (!p) return;
   loadCells(p.overlay);
+  showStaleNote(p.overlay);
   variantName.value = p.name;
   layout();
   schedulePreview(); // marks dirty (apply by "Kaydet")
@@ -404,6 +422,7 @@ $("save-btn").addEventListener("click", async () => {
   if (!ok) return;
   await api.overlayApply(overlayFromCells());
   originalOverlay = overlayFromCells();
+  showStaleNote(null);
   setDirty(false);
 });
 
@@ -469,6 +488,7 @@ if (api.onLanguageChanged) {
   $("char-name").textContent = `· ${set.charAt(0).toUpperCase() + set.slice(1)}`;
   originalOverlay = (data && data.current) || null;
   loadCells(originalOverlay);
+  showStaleNote(originalOverlay);
   refreshVariantSelect("");
   bg.addEventListener("load", () => {
     if (!originalOverlay) rows = Math.max(4, Math.round(cols * (bg.naturalHeight || 1) / (bg.naturalWidth || 1)));

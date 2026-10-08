@@ -5,10 +5,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("electronAPI", {
   onCursorPos: (callback) =>
     ipcRenderer.on("cursor-pos", (_evt, data) => callback(data)),
-  onKeyPressed: (callback) =>
-    ipcRenderer.on("key-pressed", () => callback()),
-  onMouseWheel: (callback) =>
-    ipcRenderer.on("mouse-wheel", (_evt, event) => callback(event)),
+  // Stretch reminder (Tasks ▸ Stretch reminder) — the pet nudges you to move.
   onDoStretch: (callback) =>
     ipcRenderer.on("do-stretch", () => callback()),
   onDoJump: (callback) =>
@@ -47,8 +44,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("pomodoro-state", (_evt, state) => callback(state)),
   onPomodoroComplete: (callback) =>
     ipcRenderer.on("pomodoro-complete", (_evt, state) => callback(state)),
-  onPomodoroFocusStart: (callback) =>
-    ipcRenderer.on("pomodoro-focus-start", () => callback()),
   onUpdateState: (callback) =>
     ipcRenderer.on("update-state", (_evt, state) => callback(state)),
   onTaskCompleteSoundVolume: (callback) =>
@@ -78,8 +73,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   onScreenAskOpen: (callback) => ipcRenderer.on("screen-ask-open", () => callback()),
   setMouseEventsEnabled: (enabled) => ipcRenderer.send("set-mouse-events-enabled", enabled),
   showContextMenu: () => ipcRenderer.send("show-context-menu"),
-  setStretchMode: (enabled) => ipcRenderer.send("set-stretch-mode", enabled),
-  setHuntingMode: (enabled) => ipcRenderer.send("set-hunting-mode", enabled),
   userNameGet: () => ipcRenderer.invoke("user-name-get"),
   userNameSet: (name) => ipcRenderer.invoke("user-name-set", name),
   onPersonaEdit: (callback) =>
@@ -102,9 +95,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   taskCompleteSoundVolumeGet: () => ipcRenderer.invoke("task-complete-sound-volume-get"),
   taskCompleteSoundVolumeSet: (volume) => ipcRenderer.invoke("task-complete-sound-volume-set", volume),
 
-  // 패턴 — 펫은 main의 pattern-changed 브로드캐스트만 소비
-  onPatternChanged: (callback) =>
-    ipcRenderer.on("pattern-changed", (_evt, p) => callback(p)),
   onCharacterArt: (callback) =>
     ipcRenderer.on("character-art", (_evt, art) => callback(art)),
   onOverlayPreview: (callback) =>

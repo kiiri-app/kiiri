@@ -236,7 +236,7 @@ tek pencereye gider. Pattern/konum/boyut/isim global (`currentPattern`, `current
 - Yayınlar: tek `.send()` → tüm pencereler üzerinde döngü (her birine kendi
   `cursor-pos` offset'i ile).
 - `uiohook` tek global kalır → tüm pencerelere broadcast.
-- Pattern/preset sistemi karakter başına (her kedi farklı görünüm). `cell-mappings` ortak.
+- ~~Pattern/preset sistemi karakter başına~~ — klasik kedi ile birlikte kaldırıldı (2026-10); görünüm = kiri/tori + piksel overlay.
 - Bağlam menüsü: "Karakter ekle / kaldır / bu karakterin ayarları".
 
 ### 4.3 Karakter ↔ skill bağlama (asıl güç)

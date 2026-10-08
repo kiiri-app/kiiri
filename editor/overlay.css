@@ -70,6 +70,8 @@ html, body {
 
 #not-poseset { color: var(--muted); text-align: center; line-height: 1.7; }
 #not-poseset[hidden] { display: none; }
+#stale-note { color: #e2a33f; }
+#stale-note[hidden] { display: none; }
 
 #actionbar {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;

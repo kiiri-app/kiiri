@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self'" />
+  <link rel="stylesheet" href="onboarding.css" />
+  <title>Kiri</title>
+</head>
+<body>
+  <div id="titlebar">
+    <span data-i18n="title">Welcome to Kiri</span>
+    <select id="lang" aria-label="Language">
+      <option value="en">English</option>
+      <option value="tr">Türkçe</option>
+      <option value="ko">한국어</option>
+      <option value="ja">日本語</option>
+    </select>
+  </div>
+
+  <main>
+    <!-- 1 · companion + names -->
+    <section class="step" data-step="0">
+      <h1 data-i18n="s1Title">Hi! Who will keep you company?</h1>
+      <div class="pick">
+        <button type="button" class="pet" data-set="kiri"><img src="../svg/kiri_happy.png" alt="" /><span>Kiri</span></button>
+        <button type="button" class="pet" data-set="tori"><img src="../svg/tori_happy.png" alt="" /><span>Tori</span></button>
+      </div>
+      <label class="field"><span data-i18n="petName">Its name</span><input id="pet-name" maxlength="24" /></label>
+      <label class="field"><span data-i18n="yourName">Your name (optional)</span><input id="user-name" maxlength="24" /></label>
+    </section>
+
+    <!-- 2 · how it works + agent watching consent -->
+    <section class="step" data-step="1" hidden>
+      <h1 data-i18n="s2Title">How we get along</h1>
+      <ul class="tips">
+        <li data-i18n="tipDrag">Drag me anywhere — I hang on while you carry me.</li>
+        <li data-i18n="tipClick">Click me and I'll perk up and listen.</li>
+        <li data-i18n="tipMenu">Right-click for everything: pomodoro, reminders, AI, settings.</li>
+      </ul>
+      <label class="check">
+        <input id="agents" type="checkbox" checked />
+        <span>
+          <b data-i18n="agentsTitle">Watch my AI coding agents</b>
+          <small data-i18n="agentsBody">I'll show when Claude Code, Cursor, Codex… are working and ping you when they need approval. This adds a small hook to their settings; turn it off anytime from the menu-bar icon.</small>
+        </span>
+      </label>
+    </section>
+
+    <!-- 3 · AI brain -->
+    <section class="step" data-step="2" hidden>
+      <h1 data-i18n="s3Title">Give me a brain (optional)</h1>
+      <p class="lead" data-i18n="s3Lead">With an AI model I can look at your screen, answer questions and make files. You can always set this up later.</p>
+      <div class="choices">
+        <label class="choice"><input type="radio" name="ai" value="later" checked />
+          <span><b data-i18n="aiLater">Later</b><small data-i18n="aiLaterBody">Just be my desk buddy for now.</small></span></label>
+        <label class="choice"><input type="radio" name="ai" value="local" />
+          <span><b data-i18n="aiLocal">Local &amp; private (Ollama)</b><small data-i18n="aiLocalBody">Free, runs on this computer. Needs Ollama installed.</small></span></label>
+        <label class="choice"><input type="radio" name="ai" value="key" />
+          <span><b data-i18n="aiKey">I have an API key</b><small data-i18n="aiKeyBody">Claude, OpenAI or Gemini — I'll open the settings next.</small></span></label>
+      </div>
+    </section>
+
+    <!-- 4 · permissions, explained up front -->
+    <section class="step" data-step="3" hidden>
+      <h1 data-i18n="s4Title">About permissions</h1>
+      <p class="lead" data-i18n="s4Lead">Nothing is needed right now. Your system asks only when you first use a feature:</p>
+      <ul class="perms">
+        <li><b data-i18n="permScreen">Screen recording</b> — <span data-i18n="permScreenBody">only when you ask me about your screen. Screenshots stay in memory.</span></li>
+        <li><b data-i18n="permMic">Microphone</b> — <span data-i18n="permMicBody">only for voice questions.</span></li>
+        <li><b data-i18n="permKeys">Accessibility</b> — <span data-i18n="permKeysBody">only if you turn on hold-to-talk.</span></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <button id="skip" type="button" class="link" data-i18n="skip">Skip</button>
+    <div class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <div class="nav">
+      <button id="back" type="button" class="ghost" data-i18n="back">Back</button>
+      <button id="next" type="button" class="primary" data-i18n="next">Next</button>
+    </div>
+  </footer>
+
+  <script src="onboarding.js"></script>
+</body>
+</html>

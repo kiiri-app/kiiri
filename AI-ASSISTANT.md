@@ -88,30 +88,13 @@ komut penceresi). AI ayarlarında ikinci anahtar + transkripsiyon modeli seçimi
 > v1 streaming Realtime değil, `/v1/audio/transcriptions` kullanır (robust, canlı partial yok).
 > Streaming Realtime + konuşan yanıt = P2; bkz. `AI-ROADMAP.md`.
 
-## Karakter görünümü — Ghibli-andıran sprite'lar + karakter yapıcı
+## Karakter görünümü
 
-Klasik "rigli" kedinin yanına **düz, Ghibli-andıran (kopya değil) sprite karakter** yolu
-eklendi. Tek **parametrik SVG** (`svg/sprite.svg`) + 3 yerleşik preset:
-- **Kedibüs** (sırıtan tan kedi), **Papyonlu Kedi** (papyonlu siyah kedi), **Orman Ruhu**
-  (gri-mavi, karın şevronları, yaprak).
-
-**Yeni animasyonlar (bizim AI yapımıza göre):** kedinin "scroll → tuvalet kağıdı"
-animasyonu yerine sprite modunda:
-- **Düşünme** (AI çalışırken): hafif kafa eğme + "?" düşünce balonu.
-- **Not alma** (tekerlek): defter + kalem belirir, kalem karalar.
-- **Mutlu** (görev bitince): zıplama + parıltı. Ayrıca cursor'a göre **göz-takibi + gövde eğimi**.
-
-**Kullanıcı karakter yapıcı:** sağ tık → **🎨 Karakter Görünümü…** → canlı önizlemeli editör:
-kulak (kedi/yuvarlak/totoro), aksesuar (yok/papyon/yaprak), yüz (sırıtış/sakin), karın
-şevronu, bıyık ve 5 renk (gövde/karın/göz/detay/ağız). Preset'lerle başla, istediğin gibi
-değiştir → **Uygula** (o karaktere canlı yansır). "Klasik kedi" ile rigli kediye dönülür.
-"➕ Kedi ekle" yeni kedileri 3 preset'i dönüşümlü açar.
-
-**Mimari:** karakter kaydına `kind` ("classic"|"sprite") + `sprite` (özellik bayrakları +
-renkler) eklendi (`characters.js`). Renderer'da **ek sprite yolu** rig'e dokunmaz: sprite
-modunda tek SVG gösterilir, durumlar `:root` sınıflarıyla, renkler CSS değişkenleriyle,
-göz/gövde takibi transform ile sürülür. main `character-art` olayıyla her pencereye kendi
-görünümünü gönderir. UI: `renderer/ai-character.*`.
+> **2026-10 itibarıyla kaldırıldı:** klasik "rigli" piksel kedi ve parametrik sprite
+> karakterler (Kedibüs / Papyonlu Kedi / Orman Ruhu). Tek yerleşik karakter türü
+> kiri/tori pose-set'leridir (`art/src/` → `scripts/build-pose-sheets.py` →
+> `svg/<set>_<durum>.png` + `renderer/pose-manifest.js`); eski kayıtlar açılışta
+> kiri'ye dönüştürülür (`characters.js`). Topluluk petdex sayfaları da desteklenir.
 
 ## Çoklu karakter (bağımsız persona — Faz D)
 

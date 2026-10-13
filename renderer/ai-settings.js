@@ -14,6 +14,27 @@ const I18N = {
     profileFastDesc: "Snappy & cheap. Small cloud model, no voice.",
     profileQualityName: "Quality",
     profileQualityDesc: "Best answers + full voice. Needs an OpenAI key.",
+    styleHeading: "Writing style",
+    stylePresetLabel: "Quick pick:",
+    styleHint: "How the files I make and my task results should read. The cat's personality (how it talks) is set separately per character.",
+    styleNotePlaceholder: "Anything else? (e.g. address the reader as \"you\", use metric units)",
+    presetProfessional: "Professional",
+    presetFriendly: "Friendly",
+    presetAcademic: "Academic",
+    presetPlain: "Plain",
+    presetClear: "Clear",
+    tag_professional: "Professional",
+    tag_friendly: "Friendly",
+    tag_warm: "Warm",
+    tag_direct: "Direct",
+    tag_concise: "Concise",
+    tag_detailed: "Detailed",
+    tag_formal: "Formal",
+    tag_plain: "Plain language",
+    tag_bullets: "Bullet lists",
+    tag_activeVoice: "Active voice",
+    tag_noEmDash: "No em dashes",
+    tag_noEmoji: "No emoji",
     anthropicKeyHeading: "Anthropic API key",
     save: "Save",
     remove: "Remove",
@@ -70,6 +91,27 @@ const I18N = {
     profileFastDesc: "Çevik ve ucuz. Küçük bulut modeli, ses yok.",
     profileQualityName: "Kaliteli",
     profileQualityDesc: "En iyi yanıt + tam ses. OpenAI anahtarı gerekir.",
+    styleHeading: "Yazım üslubu",
+    stylePresetLabel: "Hızlı seçim:",
+    styleHint: "Hazırladığım dosyalar ve görev sonuçları nasıl yazılsın. Kedinin kişiliği (nasıl konuştuğu) her karakter için ayrıca ayarlanır.",
+    styleNotePlaceholder: "Eklemek istediğin bir şey var mı? (ör. okura \"siz\" diye hitap et, metrik birim kullan)",
+    presetProfessional: "Profesyonel",
+    presetFriendly: "Samimi",
+    presetAcademic: "Akademik",
+    presetPlain: "Sade",
+    presetClear: "Temizle",
+    tag_professional: "Profesyonel",
+    tag_friendly: "Samimi",
+    tag_warm: "Sıcak",
+    tag_direct: "Doğrudan",
+    tag_concise: "Kısa",
+    tag_detailed: "Ayrıntılı",
+    tag_formal: "Resmî",
+    tag_plain: "Sade dil",
+    tag_bullets: "Maddeli",
+    tag_activeVoice: "Etken çatı",
+    tag_noEmDash: "Uzun tire yok",
+    tag_noEmoji: "Emoji yok",
     anthropicKeyHeading: "Anthropic API anahtarı",
     save: "Kaydet",
     remove: "Sil",
@@ -126,6 +168,27 @@ const I18N = {
     profileFastDesc: "빠르고 저렴. 작은 클라우드 모델, 음성 없음.",
     profileQualityName: "고품질",
     profileQualityDesc: "최고의 답변 + 전체 음성. OpenAI 키가 필요해요.",
+    styleHeading: "글쓰기 스타일",
+    stylePresetLabel: "빠른 선택:",
+    styleHint: "내가 만드는 파일과 작업 결과가 어떻게 쓰일지 정해요. 고양이의 성격(말투)은 캐릭터마다 따로 설정해요.",
+    styleNotePlaceholder: "더 원하는 게 있나요? (예: 독자를 \"당신\"이라고 부르기, 미터법 사용)",
+    presetProfessional: "전문적",
+    presetFriendly: "친근함",
+    presetAcademic: "학술적",
+    presetPlain: "쉬운 글",
+    presetClear: "지우기",
+    tag_professional: "전문적",
+    tag_friendly: "친근함",
+    tag_warm: "따뜻함",
+    tag_direct: "직설적",
+    tag_concise: "간결함",
+    tag_detailed: "자세함",
+    tag_formal: "격식체",
+    tag_plain: "쉬운 말",
+    tag_bullets: "글머리표",
+    tag_activeVoice: "능동태",
+    tag_noEmDash: "긴 대시 없음",
+    tag_noEmoji: "이모지 없음",
     anthropicKeyHeading: "Anthropic API 키",
     save: "저장",
     remove: "삭제",
@@ -182,6 +245,27 @@ const I18N = {
     profileFastDesc: "軽快で低コスト。小さなクラウドモデル、音声なし。",
     profileQualityName: "高品質",
     profileQualityDesc: "最高の回答 + フル音声。OpenAI キーが必要です。",
+    styleHeading: "文章スタイル",
+    stylePresetLabel: "クイック選択:",
+    styleHint: "私が作るファイルやタスク結果の書き方です。猫の性格（話し方）はキャラクターごとに別に設定します。",
+    styleNotePlaceholder: "ほかに希望は？（例: 読み手を「あなた」と呼ぶ、メートル法を使う）",
+    presetProfessional: "ビジネス",
+    presetFriendly: "親しみやすく",
+    presetAcademic: "学術的",
+    presetPlain: "やさしく",
+    presetClear: "クリア",
+    tag_professional: "ビジネス",
+    tag_friendly: "親しみやすい",
+    tag_warm: "あたたかい",
+    tag_direct: "率直",
+    tag_concise: "簡潔",
+    tag_detailed: "詳しく",
+    tag_formal: "丁寧・格式",
+    tag_plain: "やさしい言葉",
+    tag_bullets: "箇条書き",
+    tag_activeVoice: "能動態",
+    tag_noEmDash: "ダッシュなし",
+    tag_noEmoji: "絵文字なし",
     anthropicKeyHeading: "Anthropic API キー",
     save: "保存",
     remove: "削除",
@@ -318,6 +402,18 @@ const pttEnabledEl = el("ptt-enabled");
 const pttHotkeyEl = el("ptt-hotkey");
 const ttsEnabledEl = el("tts-enabled");
 const ttsVoiceEl = el("tts-voice");
+const stylePresetsEl = el("style-presets");
+const styleTagsEl = el("style-tags");
+const styleNoteEl = el("style-note");
+
+// Writing-style presets just set a tag combination (the tags are the truth).
+const STYLE_PRESETS = [
+  { id: "professional", label: "presetProfessional", tags: ["professional", "concise", "activeVoice"] },
+  { id: "friendly", label: "presetFriendly", tags: ["friendly", "warm", "plain"] },
+  { id: "academic", label: "presetAcademic", tags: ["formal", "detailed"] },
+  { id: "plain", label: "presetPlain", tags: ["plain", "concise", "bullets"] },
+  { id: "clear", label: "presetClear", tags: [] },
+];
 
 // OpenAI voice ids are proper names — shown capitalized, no translation.
 const TTS_VOICE_LABELS = {
@@ -449,8 +545,52 @@ function renderProfiles() {
   }
 }
 
+function currentStyle() {
+  const ws = (config && config.writingStyle) || {};
+  return { tags: Array.isArray(ws.tags) ? ws.tags.slice() : [], note: ws.note || "" };
+}
+
+function renderWritingStyle() {
+  if (!styleTagsEl) return;
+  const style = currentStyle();
+  stylePresetsEl.innerHTML = "";
+  const label = document.createElement("span");
+  label.className = "sp-label";
+  label.textContent = L("stylePresetLabel");
+  stylePresetsEl.appendChild(label);
+  for (const preset of STYLE_PRESETS) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "style-preset";
+    btn.textContent = L(preset.label);
+    btn.addEventListener("click", async () => {
+      await patch({ writingStyle: { ...currentStyle(), tags: preset.tags.slice() } });
+      renderWritingStyle();
+    });
+    stylePresetsEl.appendChild(btn);
+  }
+  styleTagsEl.innerHTML = "";
+  for (const tag of config.supportedWritingStyleTags || []) {
+    const on = style.tags.includes(tag);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "style-tag" + (on ? " on" : "");
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = L(`tag_${tag}`);
+    btn.addEventListener("click", async () => {
+      const cur = currentStyle();
+      cur.tags = cur.tags.includes(tag) ? cur.tags.filter((t) => t !== tag) : [...cur.tags, tag];
+      await patch({ writingStyle: cur });
+      renderWritingStyle();
+    });
+    styleTagsEl.appendChild(btn);
+  }
+  if (document.activeElement !== styleNoteEl) styleNoteEl.value = style.note;
+}
+
 function render() {
   renderProfiles();
+  renderWritingStyle();
   enabled.checked = config.enabled;
   autoDetect.checked = config.autoDetect;
   if (appContextEl) appContextEl.checked = config.appContextEnabled !== false;
@@ -477,6 +617,7 @@ enabled.addEventListener("change", () => patch({ enabled: enabled.checked }));
 autoDetect.addEventListener("change", () => patch({ autoDetect: autoDetect.checked }));
 alwaysDrop.addEventListener("change", () => patch({ alwaysAnalyzeOnDrop: alwaysDrop.checked }));
 if (appContextEl) appContextEl.addEventListener("change", () => patch({ appContextEnabled: appContextEl.checked }));
+if (styleNoteEl) styleNoteEl.addEventListener("change", () => patch({ writingStyle: { ...currentStyle(), note: styleNoteEl.value.trim() } }));
 providerSel.addEventListener("change", async () => {
   await patch({ provider: providerSel.value });
   applyProviderUI();

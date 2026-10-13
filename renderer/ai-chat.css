@@ -30,6 +30,16 @@ html, body {
 
 #log { flex: 1; overflow-y: auto; padding: 12px 13px; display: flex; flex-direction: column; gap: 9px; }
 .empty { color: var(--muted); text-align: center; margin: auto; font-size: 13.5px; }
+.empty[hidden] { display: none; }
+.empty p { margin: 0 0 6px; }
+.empty .try { font-size: 11.5px; margin-top: 14px; }
+.examples { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.example {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 999px; padding: 6px 13px; font: inherit; font-size: 12.5px; cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.example:hover { border-color: var(--accent); background: #fbe9d7; }
 
 .msg { max-width: 82%; padding: 8px 11px; border-radius: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text; }
 .msg.user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 4px; }

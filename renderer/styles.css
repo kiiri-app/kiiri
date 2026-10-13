@@ -807,6 +807,30 @@ body[data-editing-screen-ask] #screen-ask-editor {
   display: grid;
 }
 
+#screen-ask-examples {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+#screen-ask-editor button.screen-ask-example {
+  border: 1.5px solid var(--gh-border-soft);
+  border-radius: 999px;
+  background: #fffdf7;
+  color: var(--gh-ink);
+  font: 500 10.5px/1.2 var(--gh-font);
+  padding: 4px 8px;
+  box-shadow: 0 1px 3px rgba(79, 64, 49, 0.12);
+}
+
+#screen-ask-editor button.screen-ask-example:hover {
+  border-color: var(--gh-terracotta);
+  background: #fbe9d7;
+}
+
 #pomodoro-focus-editor span {
   align-self: center;
   color: var(--gh-ink);

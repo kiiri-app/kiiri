@@ -15,7 +15,7 @@ const { classifyError } = require("./llm");
 const skillStore = require("./skills/store");
 const skillRouter = require("./skills/router");
 const skillAuthor = require("./skills/author");
-const { bundledSkills } = require("./skills/bundled");
+const { bundledSkills, instructionHash, LEGACY_HASHES, V1_IDS } = require("./skills/bundled");
 
 const pendingPlans = new Map(); // planId -> { actions }
 let planSeq = 0;
@@ -34,9 +34,14 @@ function cancelInflight() {
 function listSkills() {
   return skillStore.list();
 }
-// First-run only: seed the store with localized starter skills.
+// Seed the starter skills on first run; on later runs add new starters and
+// upgrade unedited copies (user-edited or deleted ones are left alone).
 function seedSkills(lang) {
-  return skillStore.seedIfEmpty(bundledSkills(lang));
+  return skillStore.syncBundled(bundledSkills(lang), {
+    instructionHash,
+    legacyHashes: LEGACY_HASHES,
+    legacyIds: V1_IDS,
+  });
 }
 async function authorSkill(description) {
   return skillAuthor.authorSkill(description);
@@ -70,6 +75,7 @@ async function runCommand({ commandText, catName, persona, memory } = {}) {
       catName,
       persona,
       memory,
+      style: cfg.writingStyle,
       instruction,
       commandText: text,
       allowedTypes,

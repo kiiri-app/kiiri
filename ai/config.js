@@ -77,7 +77,25 @@ const DEFAULTS = Object.freeze({
   ttsVoice: "alloy",
   // Last one-click profile the user applied (informational; "" = custom/none).
   activeProfile: "",
+  // Writing style for written work (files + drop-task outputs): tag chips +
+  // a free-text note. Separate from the per-character persona (how it talks).
+  writingStyle: { tags: [], note: "" },
 });
+
+// Tag ids the settings UI offers; prompts.js maps each to an instruction line.
+const WRITING_STYLE_TAGS = [
+  "professional", "friendly", "warm", "direct", "concise", "detailed",
+  "formal", "plain", "bullets", "activeVoice", "noEmDash", "noEmoji",
+];
+
+function sanitizeWritingStyle(raw) {
+  const data = raw && typeof raw === "object" ? raw : {};
+  const tags = Array.isArray(data.tags)
+    ? [...new Set(data.tags.filter((t) => WRITING_STYLE_TAGS.includes(t)))]
+    : [];
+  const note = String(data.note == null ? "" : data.note).trim().slice(0, 300);
+  return { tags, note };
+}
 
 let cached = null;
 
@@ -140,6 +158,7 @@ function sanitizeConfig(raw) {
     ttsEnabled: !!data.ttsEnabled,
     ttsVoice: SUPPORTED_TTS_VOICES.includes(data.ttsVoice) ? data.ttsVoice : DEFAULTS.ttsVoice,
     activeProfile: PROFILE_IDS.includes(data.activeProfile) ? data.activeProfile : "",
+    writingStyle: sanitizeWritingStyle(data.writingStyle),
   };
 }
 
@@ -303,6 +322,7 @@ function redactedConfig() {
     ttsUsable: ttsUsable(),
     profiles: PROFILE_IDS,
     activeProfile: c.activeProfile || "",
+    supportedWritingStyleTags: WRITING_STYLE_TAGS,
   };
 }
 
@@ -352,6 +372,7 @@ module.exports = {
   SUPPORTED_PTT_HOTKEYS,
   SUPPORTED_TTS_VOICES,
   PROFILE_IDS,
+  WRITING_STYLE_TAGS,
   applyProfile,
   voiceUsable,
   pttUsable,

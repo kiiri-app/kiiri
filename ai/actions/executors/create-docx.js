@@ -20,7 +20,14 @@ async function renderDocx(payload) {
     }
     const paras = Array.isArray(sec && sec.paragraphs) ? sec.paragraphs : [];
     for (const p of paras) {
-      children.push(new Paragraph({ children: [new TextRun(String(p || ""))] }));
+      const line = String(p || "");
+      // "- item" / "• item" → a real Word bullet instead of a literal dash.
+      const bullet = /^\s*[-•*]\s+/.exec(line);
+      if (bullet) {
+        children.push(new Paragraph({ children: [new TextRun(line.slice(bullet[0].length))], bullet: { level: 0 } }));
+      } else {
+        children.push(new Paragraph({ children: [new TextRun(line)] }));
+      }
     }
   }
 
@@ -47,7 +54,7 @@ class CreateDocxExecutor extends Executor {
               type: "object",
               properties: {
                 heading: { type: "string" },
-                paragraphs: { type: "array", items: { type: "string" } },
+                paragraphs: { type: "array", items: { type: "string" }, description: "her biri bir paragraf; \"- \" ile başlayan satır madde işareti olur" },
               },
               required: ["paragraphs"],
             },

@@ -83,6 +83,7 @@ const fixedMessageCancel = document.getElementById("fixed-message-cancel");
 const screenAskEditor = document.getElementById("screen-ask-editor");
 const screenAskInput = document.getElementById("screen-ask-input");
 const screenAskCancel = document.getElementById("screen-ask-cancel");
+const screenAskExamples = document.getElementById("screen-ask-examples");
 const reminderClockButton = document.getElementById("reminder-clock-button");
 const voiceListenButton = document.getElementById("voice-listen-button");
 const reminderPanel = document.getElementById("reminder-panel");
@@ -188,6 +189,7 @@ const I18N = {
     personaGuide: "Give this cat a personality — it shapes how it answers in AI tasks.",
     personaPlaceholder: "e.g. a cheerful and concise tutor",
     screenAskPlaceholder: "Ask about your screen…",
+    screenAskExamples: ["What does this error mean?", "Summarize this briefly", "What should I do next here?"],
     micDenied: "Couldn't access the microphone.",
     voiceListening: "Listening…",
     stretchNudge: (name) => `${name || "Hey"}, time to stand up and stretch!`,
@@ -234,6 +236,7 @@ const I18N = {
     personaGuide: "이 고양이에게 성격을 부여하세요. AI 작업 응답 방식에 반영됩니다.",
     personaPlaceholder: "예: 밝고 간결한 튜터",
     screenAskPlaceholder: "화면에 대해 물어보세요…",
+    screenAskExamples: ["이 오류는 무슨 뜻이야?", "이걸 짧게 요약해 줘", "여기서 다음에 뭘 해야 해?"],
     micDenied: "마이크에 접근할 수 없다냥.",
     voiceListening: "듣고 있다냥…",
     stretchNudge: (name) => `${name || "집사야"}, 일어나서 스트레칭하자냥!`,
@@ -280,6 +283,7 @@ const I18N = {
     personaGuide: "この猫に性格を与えます。AIタスクでの応答の仕方に反映されます。",
     personaPlaceholder: "例: 明るく簡潔なチューター",
     screenAskPlaceholder: "画面について聞いてください…",
+    screenAskExamples: ["このエラーはどういう意味？", "これを短く要約して", "ここで次に何をすればいい？"],
     micDenied: "マイクにアクセスできないにゃ。",
     voiceListening: "聞いてるにゃ…",
     stretchNudge: (name) => `${name ? `${name}さん` : "ご主人"}、立ってストレッチするにゃ！`,
@@ -326,6 +330,7 @@ const I18N = {
     personaGuide: "Bu kediye bir kişilik ver — AI görevlerinde nasıl yanıt vereceğini etkiler.",
     personaPlaceholder: "ör. neşeli ve özlü bir hoca",
     screenAskPlaceholder: "Ekranın hakkında bir şey sor…",
+    screenAskExamples: ["Bu hata ne demek?", "Bunu kısaca özetle", "Burada sonra ne yapmalıyım?"],
     micDenied: "Mikrofona erişilemedi.",
     voiceListening: "Dinliyorum…",
     stretchNudge: (name) => `${name || "Dostum"}, kalk biraz esne!`,
@@ -847,11 +852,30 @@ function openScreenAskEditor() {
   if (!screenAskEditor || !screenAskInput) return;
   screenAskInput.value = "";
   screenAskInput.setAttribute("placeholder", tr("screenAskPlaceholder"));
+  renderScreenAskExamples();
   document.body.dataset.editingScreenAsk = "1";
   requestAnimationFrame(() => { screenAskInput.focus(); });
 }
 function closeScreenAskEditor() {
   delete document.body.dataset.editingScreenAsk;
+}
+// One-tap example questions under the box — the first thing a new user sees
+// is what they can actually ask.
+function renderScreenAskExamples() {
+  if (!screenAskExamples) return;
+  screenAskExamples.innerHTML = "";
+  const list = tr("screenAskExamples");
+  for (const q of Array.isArray(list) ? list : []) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "screen-ask-example";
+    btn.textContent = q;
+    btn.addEventListener("click", async () => {
+      closeScreenAskEditor();
+      try { await window.electronAPI.askScreen(q); } catch {}
+    });
+    screenAskExamples.appendChild(btn);
+  }
 }
 if (screenAskEditor && screenAskInput) {
   screenAskEditor.addEventListener("submit", async (event) => {

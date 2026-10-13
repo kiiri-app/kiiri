@@ -65,6 +65,62 @@ function seedIfEmpty(skills) {
   return clean;
 }
 
+// ---- Bundled-skill sync ----
+// Sidecar metadata: which bundled ids were ever seeded (so a skill the user
+// deleted is never resurrected) + the instruction hash each was seeded with (so
+// an unedited copy can be upgraded when the bundled text changes).
+function metaPath() {
+  return path.join(app.getPath("userData"), "ai-skills-meta.json");
+}
+function loadMeta() {
+  try {
+    const m = JSON.parse(fs.readFileSync(metaPath(), "utf8"));
+    if (m && Array.isArray(m.seeded)) return { seeded: m.seeded, hashes: m.hashes || {} };
+  } catch {}
+  return null;
+}
+function persistMeta(meta) {
+  try { fs.writeFileSync(metaPath(), JSON.stringify(meta, null, 2), "utf8"); } catch {}
+}
+
+// Bring the store in line with the current bundled set:
+//   - first run (no store file): seed everything;
+//   - bundled id never seeded before: add it (new starter skill);
+//   - stored copy unedited (hash matches what we seeded, or a known legacy
+//     version): replace with the current version;
+//   - edited or deleted by the user: leave alone.
+// opts: { instructionHash(text), legacyHashes:Set, legacyIds:[] }
+function syncBundled(skills, opts = {}) {
+  const hash = opts.instructionHash || ((t) => String(t));
+  const legacy = opts.legacyHashes || new Set();
+  const bundled = (Array.isArray(skills) ? skills : []).map(sanitize).filter(Boolean);
+  const firstRun = !fs.existsSync(storePath());
+  const meta = loadMeta() || { seeded: firstRun ? [] : (opts.legacyIds || []).slice(), hashes: {} };
+  const all = firstRun ? [] : load();
+  let changed = firstRun;
+
+  for (const b of bundled) {
+    const h = hash(b.instruction);
+    const idx = all.findIndex((s) => s.id === b.id);
+    if (idx < 0) {
+      if (!meta.seeded.includes(b.id)) { all.push(b); changed = true; }
+    } else {
+      const cur = hash(all[idx].instruction);
+      if (cur !== h && (cur === meta.hashes[b.id] || legacy.has(cur))) {
+        all[idx] = b;
+        changed = true;
+      }
+    }
+    if (!meta.seeded.includes(b.id)) meta.seeded.push(b.id);
+    const now = all.find((s) => s.id === b.id);
+    if (now && hash(now.instruction) === h) meta.hashes[b.id] = h;
+  }
+
+  if (changed) persist(all);
+  persistMeta(meta);
+  return all;
+}
+
 function save(skill) {
   const clean = sanitize(skill, 0);
   if (!clean) return list();
@@ -80,4 +136,4 @@ function remove(id) {
   return all;
 }
 
-module.exports = { list, save, remove, seedIfEmpty, sanitize, VALID_TOOLS };
+module.exports = { list, save, remove, seedIfEmpty, syncBundled, sanitize, VALID_TOOLS };

@@ -39,6 +39,10 @@ const I18N = {
     back: "Back",
     next: "Next",
     done: "Let's go!",
+    tryTitle: "Then try asking me:",
+    try1: "Right-click ▸ Ask about my screen ▸ “What does this error mean?”",
+    try2: "Drop me onto a long article ▸ “Summarize”",
+    try3: "Right-click ▸ Give Kiri a command ▸ “Turn these meeting notes into minutes”",
   },
   tr: {
     title: "Kiri'ye hoş geldin",
@@ -71,6 +75,10 @@ const I18N = {
     back: "Geri",
     next: "İleri",
     done: "Hadi başlayalım!",
+    tryTitle: "Sonra bana şunları sorabilirsin:",
+    try1: "Sağ tık ▸ Ekranımı sor ▸ “Bu hata ne demek?”",
+    try2: "Beni uzun bir makalenin üstüne bırak ▸ “Özetle”",
+    try3: "Sağ tık ▸ Kiri'ye komut ver ▸ “Bu toplantı notlarını tutanağa çevir”",
   },
   ko: {
     title: "Kiri에 오신 걸 환영해요",
@@ -103,6 +111,10 @@ const I18N = {
     back: "이전",
     next: "다음",
     done: "시작하자!",
+    tryTitle: "그다음 이렇게 물어보세요:",
+    try1: "오른쪽 클릭 ▸ 내 화면에 대해 묻기 ▸ “이 오류는 무슨 뜻이야?”",
+    try2: "긴 글 위에 나를 놓기 ▸ “요약”",
+    try3: "오른쪽 클릭 ▸ 명령하기 ▸ “이 회의 메모를 회의록으로 정리해 줘”",
   },
   ja: {
     title: "Kiri へようこそ",
@@ -135,6 +147,10 @@ const I18N = {
     back: "戻る",
     next: "次へ",
     done: "はじめよう！",
+    tryTitle: "そのあと、こう聞いてみて:",
+    try1: "右クリック ▸ 画面について聞く ▸「このエラーはどういう意味？」",
+    try2: "長い記事の上に私を置く ▸「要約」",
+    try3: "右クリック ▸ Kiri に指示する ▸「この会議メモを議事録にして」",
   },
 };
 

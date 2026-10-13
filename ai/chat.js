@@ -1,35 +1,91 @@
 "use strict";
 
 // Free-form chat: a multi-turn text conversation with the pet. Distinct from the
-// screen-question flow (no screenshot) and the command agent (no tools). Holds
-// one in-memory conversation per character id; the running history is sent on
-// each turn so the model keeps context. History is capped to keep tokens sane.
+// screen-question flow (no screenshot) and the command agent (no tools). One
+// conversation per character id, persisted to {userData}/chats/<charId>.json so
+// it survives restarts ("pick up where you left off"). The window shows the
+// stored thread (capped at MAX_STORED); only the last MAX_TURNS go to the model.
 
+const fs = require("fs");
+const path = require("path");
+const { app } = require("electron");
 const config = require("./config");
 const llm = require("./llm");
 const { classifyError } = llm;
 const { chatSystem } = require("./prompts");
 
-const MAX_TURNS = 24;           // keep the last N messages (user+assistant)
-const sessions = new Map();     // charId -> [{ role, text, ts }]
+const MAX_TURNS = 24;           // last N messages (user+assistant) sent to the model
+const MAX_STORED = 200;         // messages kept on disk / shown in the window
+const sessions = new Map();     // charId -> [{ role, text, ts }] (lazy-loaded cache)
 let controller = null;
 
+function chatDir() {
+  return path.join(app.getPath("userData"), "chats");
+}
+
+// charId is app-generated but sanitize so it can never escape the chats dir.
+function chatFile(charId) {
+  const base = String(charId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80) || "default";
+  return path.join(chatDir(), `${base}.json`);
+}
+
+function loadSession(key) {
+  if (sessions.has(key)) return sessions.get(key);
+  let arr = [];
+  try {
+    const data = JSON.parse(fs.readFileSync(chatFile(key), "utf8"));
+    if (Array.isArray(data)) {
+      arr = data
+        .filter((m) => m && (m.role === "user" || m.role === "assistant") && typeof m.text === "string")
+        .map((m) => ({ role: m.role, text: m.text, ts: Number(m.ts) || 0 }))
+        .slice(-MAX_STORED);
+    }
+  } catch {}
+  sessions.set(key, arr);
+  return arr;
+}
+
+function persist(key) {
+  try {
+    fs.mkdirSync(chatDir(), { recursive: true });
+    fs.writeFileSync(chatFile(key), JSON.stringify(sessions.get(key) || []), "utf8");
+  } catch (err) {
+    console.warn("[Kiri][ai] chat save failed:", err && err.message);
+  }
+}
+
 function history(charId) {
-  return sessions.get(charId || "_") || [];
+  return loadSession(charId || "_");
+}
+
+// The slice the model sees: last MAX_TURNS, never starting on an assistant turn
+// (keeps role alternation sane for providers that require user-first).
+function contextWindow(arr) {
+  const out = arr.slice(-MAX_TURNS);
+  while (out.length && out[0].role !== "user") out.shift();
+  return out;
 }
 
 function reset(charId) {
-  sessions.delete(charId || "_");
+  const key = charId || "_";
+  sessions.set(key, []);
+  try { fs.unlinkSync(chatFile(key)); } catch {}
   return { ok: true };
+}
+
+// A deleted character's conversation goes with it.
+function deleteChar(charId) {
+  const key = charId || "_";
+  sessions.delete(key);
+  try { fs.unlinkSync(chatFile(key)); } catch {}
 }
 
 function pushTurn(charId, role, text) {
   const key = charId || "_";
-  const arr = sessions.get(key) || [];
+  const arr = loadSession(key);
   arr.push({ role, text: String(text || ""), ts: Date.now() });
-  // Trim oldest but never start on an assistant turn (keeps role alternation sane).
-  while (arr.length > MAX_TURNS) arr.shift();
-  sessions.set(key, arr);
+  while (arr.length > MAX_STORED) arr.shift();
+  persist(key);
   return arr;
 }
 
@@ -51,7 +107,7 @@ async function send(userText, opts = {}, onDelta) {
   controller = new AbortController();
   const callOpts = {
     system: chatSystem(cfg.responseLanguage, opts.catName, opts.persona, opts.memory, opts.appContext),
-    messages: history(charId).map((m) => ({ role: m.role, text: m.text })),
+    messages: contextWindow(history(charId)).map((m) => ({ role: m.role, text: m.text })),
     maxTokens: 1024,
     think: false,
     signal: controller.signal,
@@ -70,7 +126,7 @@ async function send(userText, opts = {}, onDelta) {
     // Drop the user turn we optimistically pushed if the call failed, so a retry
     // doesn't duplicate it.
     const arr = sessions.get(charId);
-    if (arr && arr.length && arr[arr.length - 1].role === "user") arr.pop();
+    if (arr && arr.length && arr[arr.length - 1].role === "user") { arr.pop(); persist(charId); }
     return { error: info.code, message: info.message };
   } finally {
     controller = null;
@@ -81,4 +137,4 @@ function cancel() {
   if (controller) { try { controller.abort(); } catch {} controller = null; }
 }
 
-module.exports = { send, cancel, reset, history };
+module.exports = { send, cancel, reset, history, deleteChar, contextWindow };

@@ -36,7 +36,45 @@ function appContextBlock(appName) {
   return `Kullanıcı şu an "${app}" uygulamasında. Soru belirsizse bu uygulamanın bağlamına göre yorumla (ör. kod editörüyse kod/hata, tarayıcıysa web sayfası).`;
 }
 
-function systemPrompt(lang, catName, persona, memory) {
+// Writing style ("how written work reads") — separate from the pet persona
+// ("how the cat talks"). Applies to files the agent makes and to drop-task
+// outputs. Tag ids are validated in config.js (WRITING_STYLE_TAGS).
+const WRITING_STYLE_LINES = {
+  professional: "Profesyonel ve güven veren bir ton kullan.",
+  friendly: "Samimi ve yakın bir ton kullan.",
+  warm: "Sıcak ve nazik ol.",
+  direct: "Doğrudan ol; lafı dolandırma, sonucu başta söyle.",
+  concise: "Kısa tut; gereksiz cümle ve tekrar olmasın.",
+  detailed: "Ayrıntılı ol; gerekçeleri ve örnekleri ver.",
+  formal: "Resmî bir dil kullan (siz hitabı, argo yok).",
+  plain: "Sade dil kullan: kısa cümleler, jargon yok; varsa açıkla.",
+  bullets: "Mümkün olan yerde maddeli liste kullan.",
+  activeVoice: "Edilgen yerine etken çatı kullan (\"yapıldı\" değil \"ekip yaptı\").",
+  noEmDash: "Uzun tire (—) kullanma; virgül ya da nokta kullan.",
+  noEmoji: "Emoji kullanma.",
+};
+
+function writingStyleBlock(style) {
+  const tags = style && Array.isArray(style.tags) ? style.tags : [];
+  const lines = tags.map((t) => WRITING_STYLE_LINES[t]).filter(Boolean);
+  const note = style && style.note ? String(style.note).trim() : "";
+  if (!lines.length && !note) return "";
+  return [
+    ``,
+    `Yazım üslubu (kullanıcının tercihi — ürettiğin tüm metinlerde uygula):`,
+    ...lines.map((l) => `- ${l}`),
+    note ? `- ${note}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+// Source-fidelity rules for anything document-shaped (River-style discipline):
+// never invent people, dates or figures; mark gaps instead of guessing.
+const FIDELITY_RULES = [
+  `- Kullanıcının vermediği isim, tarih, rakam ya da alıntıyı UYDURMA. Eksik bilgiyi tahmin etmek yerine [teyit edilecek] gibi bir yer tutucu bırak.`,
+  `- Kesinleşmemiş konuları ("muhtemelen", "bakarız") karar gibi yazma; ayrıca belirt.`,
+];
+
+function systemPrompt(lang, catName, persona, memory, style) {
   const name = (catName && String(catName).trim()) || "Kiri";
   const langName = languageName(lang);
   const personaLine = persona && String(persona).trim()
@@ -48,6 +86,7 @@ function systemPrompt(lang, catName, persona, memory) {
     `Kullanıcı seni ekrandaki bir içeriğin üzerine bıraktı; sana o bölgenin ekran görüntüsü verildi.`,
     `Görüntüyü incele ve istenen görevi yap.`,
     memoryBlock(memory),
+    writingStyleBlock(style),
     ``,
     `Kurallar:`,
     `- Yanıtı her zaman ${langName} dilinde ver.`,
@@ -177,7 +216,7 @@ function chatSystem(lang, catName, persona, memory, appName) {
 }
 
 // System prompt for the action/command agent (text-driven, may use tools).
-function agentSystemPrompt(lang, catName, persona, memory) {
+function agentSystemPrompt(lang, catName, persona, memory, style) {
   const name = (catName && String(catName).trim()) || "Kiri";
   const langName = languageName(lang);
   const personaLine = persona && String(persona).trim()
@@ -189,9 +228,13 @@ function agentSystemPrompt(lang, catName, persona, memory) {
     `Kullanıcının komutunu yerine getirmek için sana verilen ARAÇLARDAN uygun olanı çağır.`,
     memoryBlock(memory),
     `Bir dosya/sunum/belge isteniyorsa içeriği (slayt başlıkları, maddeler, paragraflar) SEN üret — zengin, doğru ve isteğe uygun olsun.`,
+    writingStyleBlock(style),
     ``,
     `Kurallar:`,
     `- Aksiyon gerektiren istekte mutlaka bir araç çağır; sadece metinle geçiştirme.`,
+    `- Talimat birden fazla dosya istiyorsa her dosya için AYRI bir araç çağrısını aynı yanıtta yap.`,
+    `- Belgede madde işareti için paragrafı "- " ile başlat.`,
+    ...FIDELITY_RULES,
     `- Araç gerektirmeyen (sohbet/soru) bir istekse düz metinle, ${langName} dilinde yanıtla.`,
     `- Dosya adları kısa ve sade olsun.`,
     `- Tüm metinsel içerik ${langName} dilinde olsun.`,
@@ -204,14 +247,15 @@ function skillAuthorSystem(lang) {
   return [
     `Kullanıcı, daha sonra komutla tekrar çalıştıracağı bir otomasyon (skill) tarif ediyor.`,
     `Bunu yeniden kullanılabilir bir skill tanımına çevir.`,
-    `Kullanılabilir araçlar: create_pptx (sunum), create_docx (Word), write_file (md/txt/html).`,
+    `Kullanılabilir araçlar: create_pptx (sunum), create_docx (Word), create_xlsx (Excel tablosu), create_csv (CSV), create_json (JSON), write_file (md/txt/html).`,
+    `Birden fazla dosya gerekiyorsa (ör. belge + tablo) birden fazla araç seçebilirsin.`,
     `Yalnızca aşağıdaki şemaya uyan GEÇERLİ JSON döndür, başka hiçbir şey yazma:`,
     `{`,
     `  "name": "kısa skill adı (${langName})",`,
     `  "emoji": "tek emoji",`,
     `  "triggers": ["komutu tetikleyecek 2-4 kısa ifade"],`,
     `  "instruction": "skill çalışınca modelin izleyeceği talimat (${langName})",`,
-    `  "tools": ["create_pptx|create_docx|write_file arasından kullanılacaklar"]`,
+    `  "tools": ["create_pptx|create_docx|create_xlsx|create_csv|create_json|write_file arasından kullanılacaklar"]`,
     `}`,
   ].join("\n");
 }
@@ -232,6 +276,8 @@ module.exports = {
   regionQuestionSystem,
   chatSystem,
   agentSystemPrompt,
+  writingStyleBlock,
+  WRITING_STYLE_LINES,
   skillAuthorSystem,
   skillAuthorUser,
 };

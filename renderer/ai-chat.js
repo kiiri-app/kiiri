@@ -5,13 +5,17 @@
 
 const I18N = {
   en: { windowTitle: "Chat", title: "Chat", close: "Close", reset: "New chat",
-    empty: "Say hi to Kiri — ask anything.", placeholder: "Message Kiri…", send: "Send" },
+    empty: "Say hi to Kiri — ask anything.", placeholder: "Message Kiri…", send: "Send",
+    trySaying: "Try saying:", examples: ["Help me plan today in three steps", "Suggest a 5-minute break", "Explain this concept simply: …"] },
   tr: { windowTitle: "Sohbet", title: "Sohbet", close: "Kapat", reset: "Yeni sohbet",
-    empty: "Kiri'ye merhaba de — ne istersen sor.", placeholder: "Kiri'ye yaz…", send: "Gönder" },
+    empty: "Kiri'ye merhaba de — ne istersen sor.", placeholder: "Kiri'ye yaz…", send: "Gönder",
+    trySaying: "Şunu deneyebilirsin:", examples: ["Bugünü üç adımda planlamama yardım et", "Bana 5 dakikalık bir mola öner", "Şu kavramı basitçe anlat: …"] },
   ko: { windowTitle: "대화", title: "대화", close: "닫기", reset: "새 대화",
-    empty: "Kiri에게 인사해요 — 무엇이든 물어보세요.", placeholder: "Kiri에게 메시지…", send: "보내기" },
+    empty: "Kiri에게 인사해요 — 무엇이든 물어보세요.", placeholder: "Kiri에게 메시지…", send: "보내기",
+    trySaying: "이렇게 말해 보세요:", examples: ["오늘 할 일을 세 단계로 계획해 줘", "5분 휴식 방법을 추천해 줘", "이 개념을 쉽게 설명해 줘: …"] },
   ja: { windowTitle: "チャット", title: "チャット", close: "閉じる", reset: "新しいチャット",
-    empty: "Kiri に挨拶しよう — 何でも聞いてね。", placeholder: "Kiri にメッセージ…", send: "送信" },
+    empty: "Kiri に挨拶しよう — 何でも聞いてね。", placeholder: "Kiri にメッセージ…", send: "送信",
+    trySaying: "たとえば:", examples: ["今日の予定を3ステップで立てたい", "5分でできる休憩を提案して", "この概念をやさしく説明して: …"] },
 };
 
 let lang = "en";
@@ -34,6 +38,33 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n]").forEach((n) => { n.textContent = L(n.dataset.i18n); });
   document.querySelectorAll("[data-i18n-aria]").forEach((n) => { n.setAttribute("aria-label", L(n.dataset.i18nAria)); });
   document.querySelectorAll("[data-i18n-ph]").forEach((n) => { n.setAttribute("placeholder", L(n.dataset.i18nPh)); });
+  renderExamples();
+}
+
+// Example prompts on the empty state. A prompt ending in "…" is a template:
+// it fills the box for the user to finish; the rest send right away.
+function renderExamples() {
+  const box = el("examples");
+  if (!box) return;
+  box.innerHTML = "";
+  for (const text of L("examples") || []) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "example";
+    btn.textContent = text;
+    btn.addEventListener("click", () => {
+      if (streaming) return;
+      if (text.endsWith("…")) {
+        input.value = text.replace(/…$/, "");
+        input.focus();
+        input.dispatchEvent(new Event("input"));
+        return;
+      }
+      input.value = text;
+      submit();
+    });
+    box.appendChild(btn);
+  }
 }
 
 function scrollToEnd() { logEl.scrollTop = logEl.scrollHeight; }

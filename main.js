@@ -1559,6 +1559,7 @@ function removeCharacter(id) {
   characters = characters.filter((c) => c.id !== id);
   charStore.save(characters);
   aiMemory.deleteChar(id); // a removed character's history goes with it
+  aiChat.deleteChar(id);
   if (win && !win.isDestroyed()) {
     win.close(); // closed handler cleans the maps + reassigns active
   } else {

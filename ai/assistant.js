@@ -138,7 +138,7 @@ async function runTask({ captureId, taskId, catName, persona, memory } = {}) {
   const controller = newController();
   try {
     const { text } = await llm.callVision({
-      system: systemPrompt(cfg.responseLanguage, catName, persona, memory),
+      system: systemPrompt(cfg.responseLanguage, catName, persona, memory, cfg.writingStyle),
       userText: taskUserText(task, cfg.responseLanguage),
       imageBase64: capture.base64,
       mediaType: capture.mediaType,

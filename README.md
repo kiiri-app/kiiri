@@ -116,6 +116,11 @@ npm start
 Open the character's right-click menu → **🐾 AI Assistant…** to enable AI and
 enter a provider key (or pick Ollama for a fully local, no-key setup).
 
+To keep your API keys off this machine, deploy
+[kiiri-proxy](https://github.com/kiiri-app/kiiri-proxy) to your Cloudflare account
+and pick **Your own proxy** as the provider. Chat, screen questions and voice
+then all go through it, and the app only stores a proxy token.
+
 ### Other scripts
 
 | Script | What it does |

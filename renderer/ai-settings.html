@@ -70,6 +70,24 @@
           <button id="clear-gemini-key" type="button" class="link-btn" data-i18n="remove">Remove</button>
         </div>
       </div>
+      <div id="proxy-row" hidden>
+        <label class="field">
+          <span data-i18n="proxyAddress">Proxy address</span>
+          <input type="url" id="proxy-base" autocomplete="off" spellcheck="false" placeholder="https://kiiri-proxy.you.workers.dev" />
+        </label>
+        <div class="key-row">
+          <input type="password" id="proxy-token" placeholder="Proxy token" data-i18n-ph="proxyTokenPlaceholder" autocomplete="off" spellcheck="false" />
+          <button id="save-proxy-token" type="button" class="primary-btn" data-i18n="save">Save</button>
+        </div>
+        <div class="key-meta">
+          <span id="proxy-token-status" class="status">No key yet</span>
+          <button id="clear-proxy-token" type="button" class="link-btn" data-i18n="remove">Remove</button>
+        </div>
+        <div class="key-meta">
+          <span id="proxy-test-status" class="status" role="status"></span>
+          <button id="test-proxy" type="button" class="primary-btn" data-i18n="proxyTest">Test connection</button>
+        </div>
+      </div>
       <p class="hint" id="provider-hint"></p>
     </section>
 
@@ -118,6 +136,7 @@
         <span data-i18n="transcribeModel">Transcription model</span>
         <select id="transcribe-model"></select>
       </label>
+      <p class="hint" id="audio-via-proxy" data-i18n="audioViaProxy" hidden>Voice goes through your proxy — no OpenAI key needed here.</p>
       <p class="hint" data-i18n="voiceHint">When on, a 🎤 button appears next to the cat. Click → speak → the command runs (it stops automatically when you stop talking).</p>
       <label class="row toggle-row">
         <span data-i18n="pttEnable">Push-to-talk: ask about my screen</span>

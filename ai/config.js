@@ -34,13 +34,16 @@ const PROFILES = [
 ];
 const PROFILE_IDS = PROFILES.map((p) => p.id);
 
-// Multi-provider: Claude (Anthropic), OpenAI, Gemini, and Ollama (local/offline).
-// OpenAI/Gemini/Ollama all speak the OpenAI Chat Completions format.
-const SUPPORTED_PROVIDERS = ["anthropic", "openai", "gemini", "ollama"];
+// Multi-provider: Claude (Anthropic), OpenAI, Gemini, Ollama (local/offline), and
+// "proxy" — the user's own kiiri-proxy (or any OpenAI-compatible endpoint), where
+// provider keys live on their server and the app only holds a proxy token.
+// Everything except Anthropic speaks the OpenAI Chat Completions format.
+const SUPPORTED_PROVIDERS = ["anthropic", "openai", "gemini", "ollama", "proxy"];
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 const DEFAULT_OLLAMA_MODEL = "llama3.2-vision";
 const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
+const DEFAULT_PROXY_MODEL = "kiiri-smart";
 
 const DEFAULTS = Object.freeze({
   enabled: false,
@@ -50,6 +53,8 @@ const DEFAULTS = Object.freeze({
   geminiModel: DEFAULT_GEMINI_MODEL,
   ollamaModel: DEFAULT_OLLAMA_MODEL,
   ollamaBaseUrl: DEFAULT_OLLAMA_BASE_URL,
+  proxyBaseUrl: "",
+  proxyModel: DEFAULT_PROXY_MODEL,
   responseLanguage: "tr",
   // When false, only an Option/Alt-held drop triggers analysis. When true,
   // every drop of the cat runs an analysis.
@@ -97,6 +102,21 @@ function sanitizeWritingStyle(raw) {
   return { tags, note };
 }
 
+// Proxy base URL: https anywhere, plain http only for a local dev proxy (so a
+// token never crosses the network unencrypted). Stored without a trailing "/" or
+// "/v1" — resolveProvider adds "/v1". Anything else → "" (not configured).
+function sanitizeProxyUrl(value) {
+  const raw = String(value == null ? "" : value).trim();
+  if (!raw) return "";
+  let u;
+  try { u = new URL(raw); } catch { return ""; }
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+  if (u.protocol !== "https:" && !(u.protocol === "http:" && local)) return "";
+  if (u.username || u.password) return "";
+  const path = u.pathname.replace(/\/+$/, "").replace(/\/v1$/, "");
+  return `${u.origin}${path}`.slice(0, 300);
+}
+
 let cached = null;
 
 function configPath() {
@@ -140,6 +160,8 @@ function sanitizeConfig(raw) {
     geminiModel: cleanStr(data.geminiModel, DEFAULT_GEMINI_MODEL),
     ollamaModel: cleanStr(data.ollamaModel, DEFAULT_OLLAMA_MODEL),
     ollamaBaseUrl: cleanStr(data.ollamaBaseUrl, DEFAULT_OLLAMA_BASE_URL, 200),
+    proxyBaseUrl: sanitizeProxyUrl(data.proxyBaseUrl),
+    proxyModel: cleanStr(data.proxyModel, DEFAULT_PROXY_MODEL),
     responseLanguage: SUPPORTED_RESPONSE_LANGUAGES.includes(data.responseLanguage)
       ? data.responseLanguage
       : DEFAULTS.responseLanguage,
@@ -208,6 +230,7 @@ function saveConfig(patch) {
 const ANTHROPIC_KEY_FILE = "ai-key.bin";
 const OPENAI_KEY_FILE = "openai-key.bin";
 const GEMINI_KEY_FILE = "gemini-key.bin";
+const PROXY_TOKEN_FILE = "proxy-token.bin";
 
 function writeSecret(file, rawKey) {
   const key = String(rawKey || "").trim();
@@ -275,6 +298,16 @@ const getGeminiKey = () => readSecret(GEMINI_KEY_FILE);
 const hasGeminiKey = () => hasSecret(GEMINI_KEY_FILE);
 const clearGeminiKey = () => clearSecret(GEMINI_KEY_FILE);
 
+// Own proxy (kiiri-proxy / any OpenAI-compatible endpoint): bearer token
+const setProxyToken = (k) => writeSecret(PROXY_TOKEN_FILE, k);
+const getProxyToken = () => readSecret(PROXY_TOKEN_FILE);
+const hasProxyToken = () => hasSecret(PROXY_TOKEN_FILE);
+const clearProxyToken = () => clearSecret(PROXY_TOKEN_FILE);
+
+function proxyReady() {
+  return !!(loadConfig().proxyBaseUrl && hasProxyToken());
+}
+
 // Resolves the active provider into { id, model, apiKey, baseUrl }. OpenAI/Gemini/
 // Ollama use the OpenAI-compatible chat-completions format (baseUrl set); Anthropic
 // uses its own SDK (baseUrl null).
@@ -287,6 +320,8 @@ function resolveProvider() {
       return { id: "gemini", model: c.geminiModel, apiKey: getGeminiKey(), baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai" };
     case "ollama":
       return { id: "ollama", model: c.ollamaModel, apiKey: null, baseUrl: `${String(c.ollamaBaseUrl || "http://localhost:11434").replace(/\/+$/, "")}/v1` };
+    case "proxy":
+      return { id: "proxy", model: c.proxyModel, apiKey: getProxyToken(), baseUrl: `${c.proxyBaseUrl}/v1` };
     case "anthropic":
     default:
       return { id: "anthropic", model: c.model, apiKey: getApiKey(), baseUrl: null };
@@ -299,6 +334,7 @@ function providerReady() {
   if (c.provider === "openai") return hasOpenAiKey();
   if (c.provider === "gemini") return hasGeminiKey();
   if (c.provider === "ollama") return true; // local; reachability checked at call time
+  if (c.provider === "proxy") return proxyReady();
   return hasApiKey();
 }
 
@@ -310,6 +346,8 @@ function redactedConfig() {
     hasApiKey: hasApiKey(),
     hasOpenAiKey: hasOpenAiKey(),
     hasGeminiKey: hasGeminiKey(),
+    hasProxyToken: hasProxyToken(),
+    audioVia: audioVia(),
     providerReady: providerReady(),
     encryptionAvailable: !!(safeStorage && safeStorage.isEncryptionAvailable()),
     supportedModels: SUPPORTED_MODELS,
@@ -326,24 +364,42 @@ function redactedConfig() {
   };
 }
 
-// Spoken answers usable: toggle on + either an OpenAI key (cloud TTS) or the
-// macOS `say` fallback.
+// Where speech (TTS + STT) goes. With the own-proxy provider selected, audio
+// goes through the proxy too (that's the point: no keys on this machine);
+// otherwise it needs the user's OpenAI key. null = no cloud audio available.
+function audioVia() {
+  const c = loadConfig();
+  if (c.provider === "proxy" && proxyReady()) return "proxy";
+  if (hasOpenAiKey()) return "openai";
+  return null;
+}
+
+// { baseUrl, apiKey, via } for the OpenAI-style /audio/* endpoints, or null.
+function audioRoute() {
+  const via = audioVia();
+  if (via === "proxy") return { via, baseUrl: `${loadConfig().proxyBaseUrl}/v1`, apiKey: getProxyToken() };
+  if (via === "openai") return { via, baseUrl: "https://api.openai.com/v1", apiKey: getOpenAiKey() };
+  return null;
+}
+
+// Spoken answers usable: toggle on + either cloud TTS (OpenAI key or proxy) or
+// the macOS `say` fallback.
 function ttsUsable() {
   const c = loadConfig();
-  return !!(c.ttsEnabled && (hasOpenAiKey() || process.platform === "darwin"));
+  return !!(c.ttsEnabled && (audioVia() || process.platform === "darwin"));
 }
 
-// True only when voice is usable (toggle on + key present).
+// True only when voice is usable (toggle on + a speech-to-text route).
 function voiceUsable() {
   const c = loadConfig();
-  return !!(c.voiceEnabled && hasOpenAiKey());
+  return !!(c.voiceEnabled && audioVia());
 }
 
-// Push-to-talk usable: its own toggle + STT (OpenAI key) + a ready vision
-// provider to answer the screen question.
+// Push-to-talk usable: its own toggle + STT + a ready vision provider to answer
+// the screen question.
 function pttUsable() {
   const c = loadConfig();
-  return !!(c.pttEnabled && hasOpenAiKey() && providerReady());
+  return !!(c.pttEnabled && audioVia() && providerReady());
 }
 
 module.exports = {
@@ -366,8 +422,15 @@ module.exports = {
   getGeminiKey,
   hasGeminiKey,
   clearGeminiKey,
+  setProxyToken,
+  getProxyToken,
+  hasProxyToken,
+  clearProxyToken,
+  sanitizeProxyUrl,
   resolveProvider,
   providerReady,
+  audioVia,
+  audioRoute,
   SUPPORTED_PROVIDERS,
   SUPPORTED_PTT_HOTKEYS,
   SUPPORTED_TTS_VOICES,

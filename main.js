@@ -14,6 +14,7 @@ const aiAssistant = require("./ai/assistant");
 const aiAgent = require("./ai/agent");
 const aiVoice = require("./ai/voice");
 const aiTts = require("./ai/tts");
+const { checkProxy } = require("./ai/providers/proxy-check");
 const aiAutomations = require("./ai/automations");
 const aiAppContext = require("./ai/appcontext");
 const aiChat = require("./ai/chat");
@@ -2327,14 +2328,14 @@ function sendCatNotice(message) {
   }
 }
 
-// Spoken answers (TTS): cloud synthesis when an OpenAI key exists (audio bytes
+// Spoken answers (TTS): cloud synthesis via OpenAI or the own proxy (audio bytes
 // are played inside the pet window at the notification-sound volume), macOS
 // `say` otherwise. `force` lets the local bridge /speak endpoint bypass the
 // settings toggle — an external agent asking us to speak IS the user intent.
 async function speakAnswer(text, { force = false } = {}) {
   const cfg = aiConfig.loadConfig();
   if (!text || (!force && !cfg.ttsEnabled)) return;
-  if (aiConfig.hasOpenAiKey()) {
+  if (aiConfig.audioVia()) {
     const r = await aiTts.synthesize(text);
     if (r && r.ok && petWin && !petWin.isDestroyed()) {
       petWin.webContents.send("tts-audio", { audio: r.audio, mime: r.mime });
@@ -2729,6 +2730,22 @@ ipcMain.handle("ai-clear-openai-key", () => {
 });
 ipcMain.handle("ai-set-gemini-key", (_evt, key) => aiConfig.setGeminiKey(key));
 ipcMain.handle("ai-clear-gemini-key", () => aiConfig.clearGeminiKey());
+// Own proxy: the token is a secret like the provider keys; voice availability
+// can change with it (audio goes through the proxy), so re-broadcast.
+ipcMain.handle("ai-set-proxy-token", (_evt, token) => {
+  const r = aiConfig.setProxyToken(token);
+  broadcastVoiceConfig();
+  return r;
+});
+ipcMain.handle("ai-clear-proxy-token", () => {
+  const r = aiConfig.clearProxyToken();
+  broadcastVoiceConfig();
+  return r;
+});
+ipcMain.handle("ai-proxy-test", () => {
+  const c = aiConfig.loadConfig();
+  return checkProxy(c.proxyBaseUrl, aiConfig.getProxyToken());
+});
 
 function broadcastCharacterArt(c) {
   const win = petWins.get(c.id);

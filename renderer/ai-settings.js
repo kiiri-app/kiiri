@@ -51,6 +51,20 @@ const I18N = {
     hintAnthropic: "Key: the 'Anthropic API key' section above.",
     hintOpenai: "Key: the key in the 'Voice (OpenAI)' section below (shared).",
     hintGemini: "Key: the Gemini key here.",
+    providerProxy: "Your own proxy (self-host)",
+    proxyAddress: "Proxy address",
+    proxyTokenPlaceholder: "Proxy token",
+    proxyTest: "Test connection",
+    proxyTesting: "Testing…",
+    proxyOk: "Connected ✓ Models: {models}",
+    proxyErrAuth: "The proxy rejected this token.",
+    proxyErrUnreachable: "Can't reach the proxy. Check the address.",
+    proxyErrTimeout: "The proxy didn't answer in time.",
+    proxyErrNotConfigured: "Add the address and a token first (and PROXY_TOKENS on the proxy).",
+    proxyErrStatus: "The proxy answered with an error ({status}).",
+    proxyUrlInvalid: "Use an https:// address (http:// only for localhost).",
+    hintProxy: "Your API keys stay on your own server (kiiri-proxy on Cloudflare, or any OpenAI-compatible endpoint). Kiiri only keeps the token. Models: kiiri-smart, kiiri-fast.",
+    audioViaProxy: "Voice goes through your proxy — no OpenAI key needed here.",
     hintOllama: "Local/offline — no key needed. Ollama must be running with a vision model pulled (e.g. `ollama pull llama3.2-vision`).",
     autoDetect: "Detect content and suggest tasks",
     alwaysDrop: "Analyze on every drop",
@@ -128,6 +142,20 @@ const I18N = {
     hintAnthropic: "Anahtar: yukarıdaki 'Anthropic API anahtarı' bölümü.",
     hintOpenai: "Anahtar: aşağıdaki 'Ses (OpenAI)' bölümündeki anahtar (paylaşılır).",
     hintGemini: "Anahtar: buradaki Gemini anahtarı.",
+    providerProxy: "Kendi proxy'n (self-host)",
+    proxyAddress: "Proxy adresi",
+    proxyTokenPlaceholder: "Proxy token'ı",
+    proxyTest: "Bağlantıyı test et",
+    proxyTesting: "Test ediliyor…",
+    proxyOk: "Bağlandı ✓ Modeller: {models}",
+    proxyErrAuth: "Proxy bu token'ı kabul etmedi.",
+    proxyErrUnreachable: "Proxy'ye ulaşılamıyor. Adresi kontrol et.",
+    proxyErrTimeout: "Proxy zamanında yanıt vermedi.",
+    proxyErrNotConfigured: "Önce adresi ve token'ı gir (proxy'de de PROXY_TOKENS tanımlı olmalı).",
+    proxyErrStatus: "Proxy hata döndürdü ({status}).",
+    proxyUrlInvalid: "https:// ile başlayan bir adres kullan (http:// yalnızca localhost için).",
+    hintProxy: "API anahtarların kendi sunucunda kalır (Cloudflare'de kiiri-proxy ya da OpenAI-uyumlu herhangi bir uç). Kiiri yalnızca token'ı saklar. Modeller: kiiri-smart, kiiri-fast.",
+    audioViaProxy: "Ses de proxy'n üzerinden gider; burada OpenAI anahtarı gerekmez.",
     hintOllama: "Yerel/offline — anahtar gerekmez. Ollama çalışıyor olmalı ve bir vision modeli indirilmeli (ör. `ollama pull llama3.2-vision`).",
     autoDetect: "İçeriği algıla ve görev öner",
     alwaysDrop: "Her bırakışta analiz et",
@@ -205,6 +233,20 @@ const I18N = {
     hintAnthropic: "키: 위의 'Anthropic API 키' 섹션.",
     hintOpenai: "키: 아래 '음성 (OpenAI)' 섹션의 키 (공유됨).",
     hintGemini: "키: 여기의 Gemini 키.",
+    providerProxy: "내 프록시 (셀프 호스팅)",
+    proxyAddress: "프록시 주소",
+    proxyTokenPlaceholder: "프록시 토큰",
+    proxyTest: "연결 테스트",
+    proxyTesting: "테스트 중…",
+    proxyOk: "연결됨 ✓ 모델: {models}",
+    proxyErrAuth: "프록시가 이 토큰을 거부했어요.",
+    proxyErrUnreachable: "프록시에 연결할 수 없어요. 주소를 확인해 주세요.",
+    proxyErrTimeout: "프록시가 제때 응답하지 않았어요.",
+    proxyErrNotConfigured: "먼저 주소와 토큰을 입력하세요 (프록시에도 PROXY_TOKENS가 필요해요).",
+    proxyErrStatus: "프록시가 오류를 반환했어요 ({status}).",
+    proxyUrlInvalid: "https:// 주소를 사용하세요 (http://는 localhost만).",
+    hintProxy: "API 키는 내 서버에 남아요 (Cloudflare의 kiiri-proxy 또는 OpenAI 호환 엔드포인트). Kiiri는 토큰만 보관해요. 모델: kiiri-smart, kiiri-fast.",
+    audioViaProxy: "음성도 프록시를 거쳐요. 여기에는 OpenAI 키가 필요 없어요.",
     hintOllama: "로컬/오프라인 — 키가 필요 없어요. Ollama가 실행 중이고 vision 모델이 설치되어 있어야 해요 (예: `ollama pull llama3.2-vision`).",
     autoDetect: "내용을 인식해 작업 추천",
     alwaysDrop: "떨어뜨릴 때마다 분석",
@@ -282,6 +324,20 @@ const I18N = {
     hintAnthropic: "キー: 上の「Anthropic API キー」セクション。",
     hintOpenai: "キー: 下の「音声 (OpenAI)」セクションのキー（共有）。",
     hintGemini: "キー: ここの Gemini キー。",
+    providerProxy: "自分のプロキシ（セルフホスト）",
+    proxyAddress: "プロキシのアドレス",
+    proxyTokenPlaceholder: "プロキシのトークン",
+    proxyTest: "接続をテスト",
+    proxyTesting: "テスト中…",
+    proxyOk: "接続しました ✓ モデル: {models}",
+    proxyErrAuth: "プロキシがこのトークンを拒否しました。",
+    proxyErrUnreachable: "プロキシに接続できません。アドレスを確認してください。",
+    proxyErrTimeout: "プロキシが時間内に応答しませんでした。",
+    proxyErrNotConfigured: "先にアドレスとトークンを入力してください（プロキシ側にも PROXY_TOKENS が必要です）。",
+    proxyErrStatus: "プロキシがエラーを返しました（{status}）。",
+    proxyUrlInvalid: "https:// のアドレスを使ってください（http:// は localhost のみ）。",
+    hintProxy: "API キーは自分のサーバーに残ります（Cloudflare の kiiri-proxy、または OpenAI 互換のエンドポイント）。Kiiri はトークンだけを保存します。モデル: kiiri-smart、kiiri-fast。",
+    audioViaProxy: "音声もプロキシ経由です。ここで OpenAI キーは不要です。",
     hintOllama: "ローカル/オフライン — キー不要。Ollama が起動していて vision モデルが必要です（例: `ollama pull llama3.2-vision`）。",
     autoDetect: "内容を検出してタスクを提案",
     alwaysDrop: "ドロップのたびに分析",
@@ -331,6 +387,7 @@ function providerLabels() {
     openai: "OpenAI (GPT-4o)",
     gemini: "Google Gemini",
     ollama: L("providerOllama"),
+    proxy: L("providerProxy"),
   };
 }
 const MODEL_FIELD = {
@@ -338,18 +395,21 @@ const MODEL_FIELD = {
   openai: "openaiModel",
   gemini: "geminiModel",
   ollama: "ollamaModel",
+  proxy: "proxyModel",
 };
 const MODEL_SUGGESTIONS = {
   anthropic: ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"],
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-4.1"],
   gemini: ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
   ollama: ["llama3.2-vision", "llava", "qwen2.5vl", "minicpm-v"],
+  proxy: ["kiiri-smart", "kiiri-fast"],
 };
 const PROVIDER_HINT_KEY = {
   anthropic: "hintAnthropic",
   openai: "hintOpenai",
   gemini: "hintGemini",
   ollama: "hintOllama",
+  proxy: "hintProxy",
 };
 const LANG_LABELS = { tr: "Türkçe", en: "English", ko: "한국어", ja: "日本語" };
 function transcribeLabels() {
@@ -386,6 +446,17 @@ const saveGeminiKey = el("save-gemini-key");
 const clearGeminiKey = el("clear-gemini-key");
 const geminiKeyStatus = el("gemini-key-status");
 const providerHint = el("provider-hint");
+const proxyRow = el("proxy-row");
+const proxyBase = el("proxy-base");
+const proxyTokenEl = el("proxy-token");
+const saveProxyToken = el("save-proxy-token");
+const clearProxyToken = el("clear-proxy-token");
+const proxyTokenStatus = el("proxy-token-status");
+const testProxyBtn = el("test-proxy");
+const proxyTestStatus = el("proxy-test-status");
+const audioViaProxyEl = el("audio-via-proxy");
+// Models the last successful proxy test reported (feeds the model datalist).
+let proxyModels = null;
 const langSel = el("response-language");
 const autoDetect = el("auto-detect");
 const alwaysDrop = el("always-drop");
@@ -508,15 +579,32 @@ function renderGeminiStatus() {
   }
 }
 
+function renderProxyStatus() {
+  if (config.hasProxyToken) {
+    proxyTokenStatus.textContent = L("keySaved");
+    proxyTokenStatus.classList.add("ok");
+    clearProxyToken.hidden = false;
+  } else {
+    proxyTokenStatus.textContent = L("noKey");
+    proxyTokenStatus.classList.remove("ok");
+    clearProxyToken.hidden = true;
+  }
+  if (audioViaProxyEl) audioViaProxyEl.hidden = config.audioVia !== "proxy";
+}
+
 function applyProviderUI() {
   const p = config.provider || "anthropic";
   providerModel.value = config[MODEL_FIELD[p]] || "";
-  modelSuggestions.innerHTML = (MODEL_SUGGESTIONS[p] || [])
+  const suggestions = p === "proxy" && proxyModels && proxyModels.length ? proxyModels : MODEL_SUGGESTIONS[p];
+  modelSuggestions.innerHTML = (suggestions || [])
     .map((m) => `<option value="${m}"></option>`)
     .join("");
   ollamaBaseRow.hidden = p !== "ollama";
   ollamaBase.value = config.ollamaBaseUrl || "";
   geminiKeyRow.hidden = p !== "gemini";
+  proxyRow.hidden = p !== "proxy";
+  if (document.activeElement !== proxyBase) proxyBase.value = config.proxyBaseUrl || "";
+  renderProxyStatus();
   providerHint.textContent = PROVIDER_HINT_KEY[p] ? L(PROVIDER_HINT_KEY[p]) : "";
   renderGeminiStatus();
 }
@@ -627,6 +715,53 @@ providerModel.addEventListener("change", () => {
   patch({ [field]: providerModel.value.trim() });
 });
 ollamaBase.addEventListener("change", () => patch({ ollamaBaseUrl: ollamaBase.value.trim() }));
+proxyBase.addEventListener("change", async () => {
+  const value = proxyBase.value.trim();
+  await patch({ proxyBaseUrl: value });
+  // Main normalises (drops "/v1", trailing "/") and rejects non-https URLs.
+  proxyBase.value = config.proxyBaseUrl || "";
+  setProxyTestStatus(value && !config.proxyBaseUrl ? L("proxyUrlInvalid") : "", false);
+  renderProxyStatus();
+});
+saveProxyToken.addEventListener("click", async () => {
+  const value = proxyTokenEl.value.trim();
+  if (!value) return;
+  const res = await window.aiAPI.setProxyToken(value);
+  if (res && res.ok) {
+    proxyTokenEl.value = "";
+    config = await window.aiAPI.configGet();
+    renderProxyStatus();
+  } else {
+    proxyTokenStatus.textContent = L("saveFailed") + ((res && res.reason) || L("errorWord"));
+  }
+});
+clearProxyToken.addEventListener("click", async () => {
+  await window.aiAPI.clearProxyToken();
+  config = await window.aiAPI.configGet();
+  renderProxyStatus();
+});
+function setProxyTestStatus(text, ok) {
+  proxyTestStatus.textContent = text;
+  proxyTestStatus.classList.toggle("ok", !!ok);
+}
+const PROXY_ERRORS = { auth: "proxyErrAuth", unreachable: "proxyErrUnreachable", timeout: "proxyErrTimeout", not_configured: "proxyErrNotConfigured", status: "proxyErrStatus" };
+testProxyBtn.addEventListener("click", async () => {
+  testProxyBtn.disabled = true;
+  setProxyTestStatus(L("proxyTesting"), false);
+  try {
+    const r = await window.aiAPI.proxyTest();
+    if (r && r.ok) {
+      proxyModels = r.models || [];
+      setProxyTestStatus(L("proxyOk").replace("{models}", proxyModels.join(", ") || "—"), true);
+      applyProviderUI();
+    } else {
+      const key = PROXY_ERRORS[r && r.reason] || "proxyErrUnreachable";
+      setProxyTestStatus(L(key).replace("{status}", String((r && r.status) || "")), false);
+    }
+  } finally {
+    testProxyBtn.disabled = false;
+  }
+});
 saveGeminiKey.addEventListener("click", async () => {
   const value = geminiKeyEl.value.trim();
   if (!value) return;

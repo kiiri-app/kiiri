@@ -1,14 +1,14 @@
 "use strict";
 
 // Voice TTS — the mirror of voice.js (STT): runs in the main process so keys
-// never reach the renderer. Primary: OpenAI speech synthesis (returns audio
-// bytes for the pet window to play). Fallback: the macOS `say` command, which
-// works offline and without any key.
+// never reach the renderer. Primary: OpenAI-style speech synthesis, either
+// straight to OpenAI or through the user's own proxy (config.audioRoute), which
+// returns audio bytes for the pet window to play. Fallback: the macOS `say`
+// command, which works offline and without any key.
 
 const { spawn } = require("child_process");
 const config = require("./config");
 
-const ENDPOINT = "https://api.openai.com/v1/audio/speech";
 const TTS_MODEL = "gpt-4o-mini-tts";
 // macOS built-in voices per response language for the `say` fallback.
 const SAY_VOICES = { tr: "Yelda", en: "Samantha", ko: "Yuna", ja: "Kyoko" };
@@ -26,14 +26,14 @@ function trimForSpeech(text, max = 700) {
 
 async function synthesize(text) {
   const cfg = config.loadConfig();
-  const key = config.getOpenAiKey();
+  const route = config.audioRoute();
   const input = trimForSpeech(text);
-  if (!key) return { error: "no_key" };
+  if (!route || !route.apiKey) return { error: "no_key" };
   if (!input) return { error: "empty" };
   try {
-    const res = await fetch(ENDPOINT, {
+    const res = await fetch(`${route.baseUrl}/audio/speech`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${route.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: TTS_MODEL,
         voice: cfg.ttsVoice || "alloy",

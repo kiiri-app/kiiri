@@ -36,3 +36,21 @@ test("applyUserDataPath never throws, even if Electron refuses", () => {
   const app = { getPath: () => { throw new Error("not ready"); }, setPath: () => {} };
   assert.doesNotThrow(() => applyUserDataPath(app));
 });
+
+test("a legacy install starts under the legacy name so saved keys still decrypt", () => {
+  const calls = [];
+  const fsMod = require("fs");
+  const orig = fsMod.existsSync;
+  fsMod.existsSync = (p) => p === path.join(LEGACY, "settings.json");
+  try {
+    const app = { getPath: () => APP_DATA, setPath: (k, v) => calls.push(["setPath", k, v]), setName: (n) => calls.push(["setName", n]) };
+    applyUserDataPath(app);
+    assert.deepEqual(calls, [["setName", "Kiri"], ["setPath", "userData", LEGACY]]);
+    calls.length = 0;
+    fsMod.existsSync = () => false; // fresh install: new name, no rename call
+    applyUserDataPath(app);
+    assert.deepEqual(calls, [["setPath", "userData", CURRENT]]);
+  } finally {
+    fsMod.existsSync = orig;
+  }
+});

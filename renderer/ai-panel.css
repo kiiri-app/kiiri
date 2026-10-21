@@ -148,3 +148,6 @@ section { padding: 10px 12px 12px; }
 #cancel-btn { display: block; margin: 0 auto; width: auto; padding: 6px 16px; }
 #journal-btn { width: 100%; margin-top: 8px; }
 #journal-btn.done { background: #4caf7d; border-color: #4caf7d; color: #fff; }
+
+/* `display` rules would otherwise beat the hidden attribute. */
+[hidden] { display: none !important; }

@@ -63,3 +63,6 @@ main { padding: 8px 13px 14px; }
   background: transparent; border: none; color: var(--accent); cursor: pointer;
   font-size: 11.5px; padding: 3px 0 0; font-weight: 600;
 }
+
+/* `display` rules would otherwise beat the hidden attribute. */
+[hidden] { display: none !important; }

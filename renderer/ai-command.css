@@ -65,6 +65,8 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .ghost-btn:hover { color: var(--text); }
 
 #resp { margin-top: 12px; }
+/* `display` rules below would otherwise beat the hidden attribute. */
+[hidden] { display: none !important; }
 .busy { display: flex; align-items: center; gap: 10px; color: var(--muted); }
 .spinner { display: flex; gap: 5px; }
 .spinner span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: b 1s infinite ease-in-out; }

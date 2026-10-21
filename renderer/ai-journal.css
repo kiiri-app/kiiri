@@ -85,3 +85,6 @@ textarea {
   border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; width: 100%;
 }
 textarea:focus { outline: none; border-color: var(--accent); }
+
+/* `display` rules would otherwise beat the hidden attribute. */
+[hidden] { display: none !important; }

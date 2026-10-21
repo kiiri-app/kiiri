@@ -16,6 +16,7 @@ const I18N = {
     cancel: "Cancel",
     planTitle: "Here's what I'll do:",
     approve: "Approve",
+    webSources: (n) => `🔎 Searched the web · ${n} source${n === 1 ? "" : "s"}`,
     creating: "Creating…",
     runFailed: "Couldn't run it.",
     errorGeneric: "Something went wrong.",
@@ -47,6 +48,7 @@ const I18N = {
     cancel: "İptal",
     planTitle: "Şunu yapacağım:",
     approve: "Onayla",
+    webSources: (n) => `🔎 Web'de arandı · ${n} kaynak`,
     creating: "Oluşturuyorum…",
     runFailed: "Çalıştırılamadı.",
     errorGeneric: "Hata oluştu.",
@@ -78,6 +80,7 @@ const I18N = {
     cancel: "취소",
     planTitle: "이렇게 할 거다냥:",
     approve: "승인",
+    webSources: (n) => `🔎 웹 검색 · 출처 ${n}개`,
     creating: "만드는 중이다냥…",
     runFailed: "실행하지 못했어요.",
     errorGeneric: "문제가 생겼다냥.",
@@ -109,6 +112,7 @@ const I18N = {
     cancel: "キャンセル",
     planTitle: "こうするにゃ:",
     approve: "承認",
+    webSources: (n) => `🔎 Web を検索 · 出典 ${n} 件`,
     creating: "作成中だにゃ…",
     runFailed: "実行できませんでした。",
     errorGeneric: "エラーが起きたにゃ。",
@@ -131,9 +135,10 @@ const I18N = {
 };
 
 let lang = "en";
-function L(key) {
+function L(key, ...args) {
   const table = I18N[lang] || I18N.en;
-  return table[key] || I18N.en[key] || key;
+  const v = table[key] || I18N.en[key] || key;
+  return typeof v === "function" ? v(...args) : v;
 }
 function applyI18n() {
   document.documentElement.lang = lang;
@@ -158,6 +163,9 @@ const respBusyLabel = $("resp-busy-label");
 const respText = $("resp-text");
 const respPlan = $("resp-plan");
 const planList = $("plan-list");
+const planSources = $("plan-sources");
+const planSourcesTitle = $("plan-sources-title");
+const planSourcesList = $("plan-sources-list");
 const respResult = $("resp-result");
 const resultList = $("result-list");
 
@@ -203,6 +211,18 @@ function showPlan(data) {
     li.textContent = a.summary || a.type;
     planList.appendChild(li);
   }
+  // Pages the agent read on the web — plain text (title · host), not links.
+  const sources = Array.isArray(data.sources) ? data.sources : [];
+  planSourcesList.innerHTML = "";
+  for (const src of sources.slice(0, 6)) {
+    const li = document.createElement("li");
+    let host = "";
+    try { host = new URL(src.url).hostname.replace(/^www\./, ""); } catch {}
+    li.textContent = host ? `${src.title} · ${host}` : src.title;
+    planSourcesList.appendChild(li);
+  }
+  planSourcesTitle.textContent = L("webSources", sources.length);
+  planSources.hidden = !sources.length;
   resp.hidden = false;
   respPlan.hidden = false;
   syncSize();

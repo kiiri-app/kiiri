@@ -136,7 +136,31 @@ async function callChatStream({ apiKey, model, system, messages, maxTokens, thin
 // Tool-use (planning) call. Returns the assistant's text plus any tool calls it
 // wants to make. We do NOT auto-execute — the caller previews + gets approval,
 // then runs the executors. Optional image lets a command also see the screen.
-async function callWithTools({ apiKey, model, system, userText, tools, imageBase64, mediaType, maxTokens, think, signal }) {
+// Anthropic's server-side web search. The dynamic-filtering variant needs Opus
+// 4.6+ / Sonnet 4.6+; anything else (Haiku, Fable, older) gets the basic one.
+function webSearchTool(model) {
+  const dynamic = /claude-(opus-(5|4-8|4-7|4-6)|sonnet-(5|4-6))/.test(String(model || ""));
+  return { type: dynamic ? "web_search_20260209" : "web_search_20250305", name: "web_search", max_uses: 5 };
+}
+
+// Pages the model actually got back from web_search, deduped, in order.
+function collectSources(blocks) {
+  const seen = new Set();
+  const out = [];
+  for (const b of blocks) {
+    if (!b || b.type !== "web_search_tool_result" || !Array.isArray(b.content)) continue; // error = object
+    for (const r of b.content) {
+      if (!r || r.type !== "web_search_result" || !r.url || seen.has(r.url)) continue;
+      seen.add(r.url);
+      out.push({ title: String(r.title || r.url), url: String(r.url) });
+    }
+  }
+  return out.slice(0, 12);
+}
+
+const MAX_CONTINUATIONS = 4;
+
+async function callWithTools({ apiKey, model, system, userText, tools, imageBase64, mediaType, maxTokens, think, webSearch, signal }) {
   const SDK = loadSDK();
   const client = new SDK({ apiKey, maxRetries: 1 });
   const content = [];
@@ -145,23 +169,31 @@ async function callWithTools({ apiKey, model, system, userText, tools, imageBase
   }
   content.push({ type: "text", text: userText });
 
+  const messages = [{ role: "user", content }];
   const params = {
     model,
     max_tokens: maxTokens || 4096,
     system,
-    tools: tools || [],
-    messages: [{ role: "user", content }],
+    tools: [...(tools || []), ...(webSearch ? [webSearchTool(model)] : [])],
   };
   if (think && supportsAdaptiveThinking(model)) {
     params.thinking = { type: "adaptive" };
   }
-  const message = await client.messages.create(params, { signal, timeout: 120000 });
-  const blocks = message.content || [];
+  // A long server-side search loop can stop with pause_turn: send the paused
+  // turn back as-is (no extra "continue" message) and the server resumes.
+  const blocks = [];
+  let message;
+  for (let i = 0; i <= MAX_CONTINUATIONS; i++) {
+    message = await client.messages.create({ ...params, messages }, { signal, timeout: webSearch ? 240000 : 120000 });
+    blocks.push(...(message.content || []));
+    if (message.stop_reason !== "pause_turn") break;
+    messages.push({ role: "assistant", content: message.content });
+  }
   const text = blocks.filter((b) => b && b.type === "text").map((b) => b.text).join("").trim();
   const toolUses = blocks
     .filter((b) => b && b.type === "tool_use")
     .map((b) => ({ id: b.id, name: b.name, input: b.input || {} }));
-  return { text, toolUses, stopReason: message.stop_reason, model: message.model };
+  return { text, toolUses, sources: collectSources(blocks), stopReason: message.stop_reason, model: message.model };
 }
 
-module.exports = { callVision, callVisionStream, callChatStream, callWithTools, classifyError, supportsAdaptiveThinking };
+module.exports = { callVision, callVisionStream, callChatStream, callWithTools, classifyError, supportsAdaptiveThinking, webSearchTool, collectSources };

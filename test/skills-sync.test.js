@@ -41,7 +41,7 @@ function writeV1Store(lang, edits = {}) {
 test("first run seeds every bundled skill, including sop-doc", () => {
   reset();
   const all = store.syncBundled(bundled.bundledSkills("tr"), opts);
-  assert.equal(all.length, 6);
+  assert.equal(all.length, 7);
   assert.ok(all.find((s) => s.id === "bundled-sop-doc"));
   const mt = all.find((s) => s.id === "bundled-meeting-notes");
   assert.deepEqual(mt.tools, ["create_docx", "create_xlsx"]);
@@ -80,7 +80,7 @@ test("a skill edited after seeding is left alone on later syncs", () => {
 test("every bundled language has every skill and a valid tool list", () => {
   for (const lang of ["tr", "en", "ko", "ja"]) {
     const list = bundled.bundledSkills(lang);
-    assert.equal(list.length, 6);
+    assert.equal(list.length, 7);
     for (const s of list) {
       assert.ok(store.sanitize(s), `${lang}/${s.id} sanitizes`);
       assert.ok(s.instruction.length <= 2000, `${lang}/${s.id} fits`);

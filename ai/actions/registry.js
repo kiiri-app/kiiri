@@ -9,6 +9,7 @@ const { WriteFileExecutor } = require("./executors/write-file");
 const { CreateXlsxExecutor } = require("./executors/create-xlsx");
 const { CreateCsvExecutor } = require("./executors/create-csv");
 const { CreateJsonExecutor } = require("./executors/create-json");
+const { CreatePdfExecutor } = require("./executors/create-pdf");
 
 const executors = new Map();
 
@@ -38,5 +39,6 @@ register(new WriteFileExecutor());
 register(new CreateXlsxExecutor());
 register(new CreateCsvExecutor());
 register(new CreateJsonExecutor());
+register(new CreatePdfExecutor());
 
 module.exports = { register, get, all, toolSchemas };

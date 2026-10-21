@@ -70,6 +70,8 @@ const I18N = {
     alwaysDrop: "Analyze on every drop",
     appContext: "App awareness (tell answers which app you're in)",
     appContextHint: "When on, screen answers know your frontmost app (name only, e.g. \"VS Code\") for sharper replies. macOS only; no extra permission.",
+    webSearch: "Web research for commands",
+    webSearchHint: "When on, \"research X and make a report\" commands can search the web and list the pages they used. Works with Anthropic (Claude) only; searches are billed to your key.",
     triggerHint: "When off: hold <b>Option/Alt</b> and drop the cat → analysis starts.",
     voiceHeading: "Voice (OpenAI) — voice commands",
     voiceEnable: "Enable voice commands",
@@ -161,6 +163,8 @@ const I18N = {
     alwaysDrop: "Her bırakışta analiz et",
     appContext: "Uygulama farkındalığı (yanıtlar hangi uygulamada olduğunu bilsin)",
     appContextHint: "Açıkken ekran yanıtları öndeki uygulamanı bilir (yalnızca ad, ör. \"VS Code\") ve daha isabetli olur. Yalnızca macOS; ek izin gerekmez.",
+    webSearch: "Komutlarda web araştırması",
+    webSearchHint: "Açıkken \"X'i araştır, rapor yap\" gibi komutlar web'de arama yapar ve kullandığı sayfaları listeler. Yalnızca Anthropic (Claude) ile çalışır; aramalar anahtarına faturalanır.",
     triggerHint: "Kapalıyken: <b>Option/Alt</b> tuşunu basılı tutup kediyi bırak → analiz başlar.",
     voiceHeading: "Ses (OpenAI) — sesli komut",
     voiceEnable: "Sesli komutu aç",
@@ -252,6 +256,8 @@ const I18N = {
     alwaysDrop: "떨어뜨릴 때마다 분석",
     appContext: "앱 인식 (답변이 현재 앱을 알도록)",
     appContextHint: "켜면 화면 답변이 최상위 앱(이름만, 예: \"VS Code\")을 알아 더 정확해져요. macOS 전용; 추가 권한 불필요.",
+    webSearch: "명령에서 웹 조사",
+    webSearchHint: "켜면 \"X를 조사해서 보고서 만들어 줘\" 같은 명령이 웹을 검색하고 사용한 페이지를 보여 줘요. Anthropic(Claude)에서만 작동하며 검색 비용은 내 키로 청구돼요.",
     triggerHint: "꺼져 있을 때: <b>Option/Alt</b> 키를 누른 채 고양이를 놓으면 → 분석이 시작돼요.",
     voiceHeading: "음성 (OpenAI) — 음성 명령",
     voiceEnable: "음성 명령 켜기",
@@ -343,6 +349,8 @@ const I18N = {
     alwaysDrop: "ドロップのたびに分析",
     appContext: "アプリ認識（回答が今どのアプリか把握）",
     appContextHint: "オンにすると画面回答が最前面のアプリ（名前のみ、例:\"VS Code\"）を把握し、より的確になります。macOS のみ; 追加権限不要。",
+    webSearch: "コマンドでの Web 調査",
+    webSearchHint: "オンにすると「X を調べてレポートにして」のようなコマンドが Web を検索し、使ったページを一覧にします。Anthropic（Claude）のみ対応。検索料金は自分のキーに請求されます。",
     triggerHint: "オフのとき: <b>Option/Alt</b> を押しながら猫をドロップ → 分析が始まります。",
     voiceHeading: "音声 (OpenAI) — 音声コマンド",
     voiceEnable: "音声コマンドをオン",
@@ -461,6 +469,7 @@ const langSel = el("response-language");
 const autoDetect = el("auto-detect");
 const alwaysDrop = el("always-drop");
 const appContextEl = el("app-context");
+const webSearchEl = el("web-search");
 const customList = el("custom-list");
 const customForm = el("custom-form");
 const vEnabled = el("voice-enabled");
@@ -682,6 +691,7 @@ function render() {
   enabled.checked = config.enabled;
   autoDetect.checked = config.autoDetect;
   if (appContextEl) appContextEl.checked = config.appContextEnabled !== false;
+  if (webSearchEl) webSearchEl.checked = config.webSearchEnabled !== false;
   alwaysDrop.checked = config.alwaysAnalyzeOnDrop;
   fillSelect(providerSel, config.supportedProviders || [], providerLabels(), config.provider);
   fillSelect(langSel, config.supportedResponseLanguages || [], LANG_LABELS, config.responseLanguage);
@@ -705,6 +715,7 @@ enabled.addEventListener("change", () => patch({ enabled: enabled.checked }));
 autoDetect.addEventListener("change", () => patch({ autoDetect: autoDetect.checked }));
 alwaysDrop.addEventListener("change", () => patch({ alwaysAnalyzeOnDrop: alwaysDrop.checked }));
 if (appContextEl) appContextEl.addEventListener("change", () => patch({ appContextEnabled: appContextEl.checked }));
+if (webSearchEl) webSearchEl.addEventListener("change", () => patch({ webSearchEnabled: webSearchEl.checked }));
 if (styleNoteEl) styleNoteEl.addEventListener("change", () => patch({ writingStyle: { ...currentStyle(), note: styleNoteEl.value.trim() } }));
 providerSel.addEventListener("change", async () => {
   await patch({ provider: providerSel.value });

@@ -65,6 +65,9 @@ const DEFAULTS = Object.freeze({
   // answers are sharper. Zero extra permission; the screenshot already reveals
   // far more, so this is on by default. Toggle off to stop sending the app name.
   appContextEnabled: true,
+  // Let the command agent search the web (Anthropic's server-side web_search) for
+  // research-style requests. Only effective with the Anthropic provider.
+  webSearchEnabled: true,
   // Logical-pixel size of the region captured around the cat.
   captureWidth: 720,
   captureHeight: 520,
@@ -168,6 +171,7 @@ function sanitizeConfig(raw) {
     alwaysAnalyzeOnDrop: !!data.alwaysAnalyzeOnDrop,
     autoDetect: data.autoDetect === undefined ? DEFAULTS.autoDetect : !!data.autoDetect,
     appContextEnabled: data.appContextEnabled === undefined ? DEFAULTS.appContextEnabled : !!data.appContextEnabled,
+    webSearchEnabled: data.webSearchEnabled === undefined ? DEFAULTS.webSearchEnabled : !!data.webSearchEnabled,
     captureWidth: clampInt(data.captureWidth, 240, 2000, DEFAULTS.captureWidth),
     captureHeight: clampInt(data.captureHeight, 200, 2000, DEFAULTS.captureHeight),
     customTasks,
@@ -338,6 +342,12 @@ function providerReady() {
   return hasApiKey();
 }
 
+// Web search runs as Anthropic's server tool, so it only exists on that provider.
+function webSearchUsable() {
+  const c = loadConfig();
+  return !!c.webSearchEnabled && resolveProvider().id === "anthropic" && hasApiKey();
+}
+
 // Renderer-safe view of config (no secret key material).
 function redactedConfig() {
   const c = loadConfig();
@@ -429,6 +439,7 @@ module.exports = {
   sanitizeProxyUrl,
   resolveProvider,
   providerReady,
+  webSearchUsable,
   audioVia,
   audioRoute,
   SUPPORTED_PROVIDERS,

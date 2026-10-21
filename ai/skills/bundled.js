@@ -22,6 +22,8 @@ const TRIGGERS = {
   "summary-doc": ["özet belge", "özet çıkar", "summary doc", "summarize to doc", "요약 문서", "要約ドキュメント"],
   "slide-deck": ["sunum", "slayt", "slide deck", "make slides", "presentation", "발표 자료", "スライド", "プレゼン"],
   "sop-doc": ["sop", "süreç belgesi", "prosedür", "process doc", "procedure", "업무 절차", "절차서", "手順書"],
+  // ≤ 8 triggers (store cap); longer phrasings ("araştırma raporu", "research report") contain these.
+  "research-report": ["araştır", "pdf rapor", "research", "pdf report", "조사해", "조사 보고서", "調べて", "調査レポート"],
 };
 
 // Per-language name + instruction for each starter skill.
@@ -132,6 +134,45 @@ const LOCALE = {
   },
 };
 
+// v3: research → PDF. Web search is on when the provider allows it (see
+// config.webSearchUsable); the instruction covers both cases honestly.
+LOCALE.tr["research-report"] = {
+  name: "Araştırma raporu (PDF)", emoji: "🔎",
+  instruction: [
+    "Kullanıcının verdiği konuyu araştır ve create_pdf ile bir PDF raporu üret.",
+    "Web araması kullanabiliyorsan önce birkaç farklı kaynaktan güncel bilgiyi topla ve kullandığın sayfaları sources alanına ekle.",
+    "Bölümler: Özet (3-4 cümle); Bulgular (maddeli, rakam ve tarihleriyle); Bağlam ve karşılaştırma; Sonuç ve öneriler; Belirsizlikler (kaynakların çeliştiği ya da bilginin eksik olduğu yerler).",
+    "Kaynakta olmayan rakam ya da alıntı uydurma. Web erişimin yoksa raporun başında bilgilerin güncel olmayabileceğini ve hangi tarihe kadar olduğunu belirt.",
+  ].join("\n"),
+};
+LOCALE.en["research-report"] = {
+  name: "Research report (PDF)", emoji: "🔎",
+  instruction: [
+    "Research the topic the user gave and produce a PDF report with create_pdf.",
+    "If you can use web search, first gather current information from a few different sources and list the pages you used in the sources field.",
+    "Sections: Summary (3-4 sentences); Findings (bulleted, with figures and dates); Context and comparison; Conclusion and recommendations; Uncertainties (where sources disagree or information is missing).",
+    "Don't invent figures or quotes that aren't in a source. If you have no web access, say at the top that the information may be out of date and up to when it runs.",
+  ].join("\n"),
+};
+LOCALE.ko["research-report"] = {
+  name: "조사 보고서 (PDF)", emoji: "🔎",
+  instruction: [
+    "사용자가 준 주제를 조사해 create_pdf로 PDF 보고서를 만들어요.",
+    "웹 검색을 쓸 수 있으면 먼저 여러 출처에서 최신 정보를 모으고, 사용한 페이지를 sources 필드에 넣어요.",
+    "섹션: 요약(3-4문장); 발견 사항(불릿, 수치와 날짜 포함); 맥락과 비교; 결론과 제안; 불확실한 점(출처가 엇갈리거나 정보가 부족한 곳).",
+    "출처에 없는 수치나 인용은 만들지 마요. 웹 접근이 없으면 보고서 첫머리에 정보가 최신이 아닐 수 있고 언제까지의 정보인지 밝혀요.",
+  ].join("\n"),
+};
+LOCALE.ja["research-report"] = {
+  name: "調査レポート（PDF）", emoji: "🔎",
+  instruction: [
+    "ユーザーが示したテーマを調べ、create_pdf で PDF レポートを作成する。",
+    "Web 検索が使えるなら、まず複数の情報源から最新情報を集め、使ったページを sources フィールドに入れる。",
+    "セクション: 概要（3〜4文）; 調査結果（箇条書き、数値と日付つき）; 背景と比較; 結論と提案; 不確かな点（情報源が食い違う、または情報が足りない箇所）。",
+    "情報源にない数値や引用は作らない。Web にアクセスできない場合は、冒頭で情報が最新でない可能性と、いつ時点の情報かを明記する。",
+  ].join("\n"),
+};
+
 const TOOLS = {
   "report-table": ["create_xlsx"],
   "csv-data": ["create_csv"],
@@ -139,9 +180,10 @@ const TOOLS = {
   "summary-doc": ["create_docx"],
   "slide-deck": ["create_pptx"],
   "sop-doc": ["create_docx", "create_xlsx"],
+  "research-report": ["create_pdf"],
 };
 
-const ORDER = ["meeting-notes", "sop-doc", "summary-doc", "report-table", "slide-deck", "csv-data"];
+const ORDER = ["research-report", "meeting-notes", "sop-doc", "summary-doc", "report-table", "slide-deck", "csv-data"];
 
 // Ids shipped by the first (v1) seed — an existing install that has no sync
 // metadata yet was seeded with exactly these.

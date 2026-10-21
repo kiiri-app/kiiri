@@ -216,7 +216,7 @@ function chatSystem(lang, catName, persona, memory, appName) {
 }
 
 // System prompt for the action/command agent (text-driven, may use tools).
-function agentSystemPrompt(lang, catName, persona, memory, style) {
+function agentSystemPrompt(lang, catName, persona, memory, style, { webSearch = false } = {}) {
   const name = (catName && String(catName).trim()) || "Kiri";
   const langName = languageName(lang);
   const personaLine = persona && String(persona).trim()
@@ -234,6 +234,9 @@ function agentSystemPrompt(lang, catName, persona, memory, style) {
     `- Aksiyon gerektiren istekte mutlaka bir araç çağır; sadece metinle geçiştirme.`,
     `- Talimat birden fazla dosya istiyorsa her dosya için AYRI bir araç çağrısını aynı yanıtta yap.`,
     `- Belgede madde işareti için paragrafı "- " ile başlat.`,
+    webSearch
+      ? `- Güncel bilgi, haber, fiyat, rakam ya da araştırma gerektiren isteklerde önce web_search ile ara, sonra dosyayı oluştur. Kullandığın sayfaları kaynak göster: create_pdf'te sources alanında, diğer belgelerde sondaki "Kaynaklar" bölümünde (başlık + adres). Kaynakta bulamadığın bilgiyi uydurma.`
+      : `- Web'e erişimin yok. Güncel bilgi gerekiyorsa bunu belgede açıkça belirt ve yalnızca bildiklerini, ne zamana ait olduğunu söyleyerek yaz; kaynak ya da adres uydurma.`,
     ...FIDELITY_RULES,
     `- Araç gerektirmeyen (sohbet/soru) bir istekse düz metinle, ${langName} dilinde yanıtla.`,
     `- Dosya adları kısa ve sade olsun.`,
@@ -247,7 +250,7 @@ function skillAuthorSystem(lang) {
   return [
     `Kullanıcı, daha sonra komutla tekrar çalıştıracağı bir otomasyon (skill) tarif ediyor.`,
     `Bunu yeniden kullanılabilir bir skill tanımına çevir.`,
-    `Kullanılabilir araçlar: create_pptx (sunum), create_docx (Word), create_xlsx (Excel tablosu), create_csv (CSV), create_json (JSON), write_file (md/txt/html).`,
+    `Kullanılabilir araçlar: create_pptx (sunum), create_docx (Word), create_pdf (PDF rapor), create_xlsx (Excel tablosu), create_csv (CSV), create_json (JSON), write_file (md/txt/html).`,
     `Birden fazla dosya gerekiyorsa (ör. belge + tablo) birden fazla araç seçebilirsin.`,
     `Yalnızca aşağıdaki şemaya uyan GEÇERLİ JSON döndür, başka hiçbir şey yazma:`,
     `{`,
@@ -255,7 +258,7 @@ function skillAuthorSystem(lang) {
     `  "emoji": "tek emoji",`,
     `  "triggers": ["komutu tetikleyecek 2-4 kısa ifade"],`,
     `  "instruction": "skill çalışınca modelin izleyeceği talimat (${langName})",`,
-    `  "tools": ["create_pptx|create_docx|create_xlsx|create_csv|create_json|write_file arasından kullanılacaklar"]`,
+    `  "tools": ["create_pptx|create_docx|create_pdf|create_xlsx|create_csv|create_json|write_file arasından kullanılacaklar"]`,
     `}`,
   ].join("\n");
 }

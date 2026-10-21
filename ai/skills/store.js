@@ -7,7 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { app } = require("electron");
 
-const VALID_TOOLS = ["create_pptx", "create_docx", "write_file", "create_xlsx", "create_csv", "create_json"];
+const VALID_TOOLS = ["create_pptx", "create_docx", "write_file", "create_xlsx", "create_csv", "create_json", "create_pdf"];
 
 function storePath() {
   return path.join(app.getPath("userData"), "ai-skills.json");

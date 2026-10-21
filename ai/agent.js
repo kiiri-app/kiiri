@@ -79,6 +79,7 @@ async function runCommand({ commandText, catName, persona, memory } = {}) {
       instruction,
       commandText: text,
       allowedTypes,
+      webSearch: config.webSearchUsable(),
       signal: controller.signal,
     });
   } catch (err) {
@@ -100,6 +101,7 @@ async function runCommand({ commandText, catName, persona, memory } = {}) {
     skill: matched ? { name: matched.name, emoji: matched.emoji } : null,
     text: result.text,
     actions: result.actions.map((a) => ({ type: a.type, summary: a.summary })),
+    sources: result.sources || [],
   };
 }
 

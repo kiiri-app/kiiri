@@ -9,20 +9,21 @@ const registry = require("./registry");
 const llm = require("../llm");
 const { agentSystemPrompt } = require("../prompts");
 
-// Returns { actions: [{ type, input, summary }], text }
-async function plan({ lang, catName, persona, memory, style, instruction, commandText, allowedTypes, signal }) {
+// Returns { actions: [{ type, input, summary }], text, sources: [{ title, url }] }
+async function plan({ lang, catName, persona, memory, style, instruction, commandText, allowedTypes, webSearch, signal }) {
   const tools = registry.toolSchemas(allowedTypes);
   const parts = [];
   if (instruction) parts.push(instruction.trim());
   parts.push(`Kullanıcının komutu: "${String(commandText || "").trim()}"`);
   const userText = parts.join("\n\n");
 
-  const { text, toolUses } = await llm.callWithTools({
-    system: agentSystemPrompt(lang, catName, persona, memory, style),
+  const { text, toolUses, sources } = await llm.callWithTools({
+    system: agentSystemPrompt(lang, catName, persona, memory, style, { webSearch: !!webSearch }),
     userText,
     tools,
-    maxTokens: 4096,
+    maxTokens: webSearch ? 8192 : 4096, // researched reports run longer
     think: false,
+    webSearch: !!webSearch,
     signal,
   });
 
@@ -38,7 +39,7 @@ async function plan({ lang, catName, persona, memory, style, instruction, comman
     actions.push({ type: tu.name, input: tu.input, summary, approval: executor.approval });
   }
 
-  return { actions, text };
+  return { actions, text, sources: Array.isArray(sources) ? sources : [] };
 }
 
 module.exports = { plan };

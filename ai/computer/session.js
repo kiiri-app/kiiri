@@ -26,6 +26,7 @@ const CONFIRM_TIMEOUT_MS = 3 * 60 * 1000;
 const STRIP_W = 480;
 const STRIP_H = 46;
 const STRIP_H_CONFIRM = 150;
+const STRIP_H_CONFIRM_MAX = 320;
 const SETTLE_MS = 180; // let the UI react before the next action / screenshot
 
 function delay(ms) { return new Promise((r) => setTimeout(r, ms)); }
@@ -226,6 +227,14 @@ function createComputerSession(deps) {
       run.confirmId = id;
       if (strip && !strip.isDestroyed()) { placeStrip(STRIP_H_CONFIRM); strip.setIgnoreMouseEvents(false); }
       stripSend("cu-confirm", { id, kind: info.kind, category: info.category || "", reason: info.reason || "", summary: info.summary || "", question: info.question || "", app: info.app || "" });
+      // Fit the card: a reason can wrap to two or three lines (Turkish, Korean),
+      // and a fixed height cut the Allow / Deny buttons off.
+      setTimeout(() => {
+        if (done || !strip || strip.isDestroyed()) return;
+        strip.webContents.executeJavaScript("Math.ceil(document.documentElement.scrollHeight)")
+          .then((h) => { if (!done) placeStrip(Math.max(STRIP_H_CONFIRM, Math.min(STRIP_H_CONFIRM_MAX, Number(h) || 0))); })
+          .catch(() => {});
+      }, 80);
       if (deps.onConfirmShown) deps.onConfirmShown();
     });
   }

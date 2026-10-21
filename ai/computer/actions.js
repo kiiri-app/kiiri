@@ -101,21 +101,21 @@ function summarizeAction(name, input = {}, { secret = false } = {}) {
   switch (name) {
     case "screenshot": return "📸 screenshot";
     case "zoom": return `🔎 zoom ${Array.isArray(input.region) ? `[${input.region.map((v) => Math.round(v)).join(", ")}]` : ""}`;
-    case "left_click": return `🖱 click ${fmtPoint(input.coordinate)}${mods}`.trim();
-    case "right_click": return `🖱 right-click ${fmtPoint(input.coordinate)}${mods}`.trim();
-    case "middle_click": return `🖱 middle-click ${fmtPoint(input.coordinate)}${mods}`.trim();
-    case "double_click": return `🖱 double-click ${fmtPoint(input.coordinate)}${mods}`.trim();
-    case "triple_click": return `🖱 triple-click ${fmtPoint(input.coordinate)}${mods}`.trim();
-    case "left_click_drag": return `🖱 drag ${fmtPoint(input.start_coordinate)} → ${fmtPoint(input.coordinate)}`;
-    case "mouse_move": return `🖱 move ${fmtPoint(input.coordinate)}`;
-    case "left_mouse_down": return "🖱 mouse down";
-    case "left_mouse_up": return "🖱 mouse up";
-    case "scroll": return `🖱 scroll ${input.scroll_direction || ""} ×${input.scroll_amount || 3} ${fmtPoint(input.coordinate)}`.trim();
+    case "left_click": return `🖱️ click ${fmtPoint(input.coordinate)}${mods}`.trim();
+    case "right_click": return `🖱️ right-click ${fmtPoint(input.coordinate)}${mods}`.trim();
+    case "middle_click": return `🖱️ middle-click ${fmtPoint(input.coordinate)}${mods}`.trim();
+    case "double_click": return `🖱️ double-click ${fmtPoint(input.coordinate)}${mods}`.trim();
+    case "triple_click": return `🖱️ triple-click ${fmtPoint(input.coordinate)}${mods}`.trim();
+    case "left_click_drag": return `🖱️ drag ${fmtPoint(input.start_coordinate)} → ${fmtPoint(input.coordinate)}`;
+    case "mouse_move": return `🖱️ move ${fmtPoint(input.coordinate)}`;
+    case "left_mouse_down": return "🖱️ mouse down";
+    case "left_mouse_up": return "🖱️ mouse up";
+    case "scroll": return `🖱️ scroll ${input.scroll_direction || ""} ×${input.scroll_amount || 3} ${fmtPoint(input.coordinate)}`.trim();
     case "type": return `⌨️ type “${secret ? "••••••" : clip(input.text, 48)}”`;
     case "key": return `⌨️ key ${clip(input.text, 30)}${Number(input.repeat) > 1 ? ` ×${input.repeat}` : ""}`;
     case "hold_key": return `⌨️ hold ${clip(input.text, 30)} ${input.duration || 1}s`;
     case "wait": return `⏳ wait ${input.duration || 1}s`;
-    case "cursor_position": return "🖱 cursor position";
+    case "cursor_position": return "🖱️ cursor position";
     case "confirm_with_user": return `❓ ${clip(input.question, 80)}`;
     default: return name;
   }

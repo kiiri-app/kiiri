@@ -26,6 +26,8 @@ const aiJournal = require("./ai/journal/store");
 const aiCardgen = require("./ai/journal/cardgen");
 const aiMemory = require("./ai/memory/store");
 const aiRedact = require("./ai/redact");
+const { createComputerSession } = require("./ai/computer/session");
+const { detectComputerIntent } = require("./ai/computer/intent");
 const petdex = require("./ai/petdex");
 const charStore = require("./characters");
 const { localizedTasks } = require("./ai/tasks");
@@ -112,6 +114,7 @@ let aiPanelReady = false;
 let aiPanelPendingMenu = null;
 let aiCommandReady = false;
 let aiCommandPendingVoice = null;
+let aiCommandPendingMode = null;
 let aiBusy = false;
 let cursorPollTimer = null;
 let keyHookStarted = false;
@@ -193,6 +196,10 @@ const I18N = {
     chatTitle: "Chat",
     chatMemoryTitle: "Chat",
     aiCommand: "💬 Give Kiri a command…",
+    aiComputer: "🖱 Do it on my computer…",
+    cuConfirmNotice: "Should I do this step? Check the bar at the top.",
+    cuStepsWord: "steps",
+    cuStatus: (st) => ({ done: "Done", denied: "Stopped — you said no", stopped: "Stopped", step_limit: "Stopped — step limit", time_limit: "Stopped — time limit", errors: "Stopped — too many errors", refused: "Declined", error: "Failed" })[st] || st,
     aiJournal: "📚 Knowledge Journal…",
     setCatPersona: "Set this cat's personality…",
     pixelEditor: "🖌️ Edit pixels…",
@@ -299,6 +306,10 @@ const I18N = {
     chatTitle: "대화",
     chatMemoryTitle: "대화",
     aiCommand: "💬 Kiri에게 명령하기…",
+    aiComputer: "🖱 내 컴퓨터에서 하기…",
+    cuConfirmNotice: "이 단계를 해도 될까요? 위쪽 막대를 확인해 주세요.",
+    cuStepsWord: "단계",
+    cuStatus: (st) => ({ done: "완료", denied: "중지 — 거부함", stopped: "중지됨", step_limit: "중지 — 단계 한도", time_limit: "중지 — 시간 한도", errors: "중지 — 오류가 너무 많음", refused: "거절됨", error: "실패" })[st] || st,
     aiJournal: "📚 지식 노트…",
     setCatPersona: "이 고양이의 성격 설정…",
     pixelEditor: "🖌️ 픽셀 편집…",
@@ -405,6 +416,10 @@ const I18N = {
     chatTitle: "チャット",
     chatMemoryTitle: "チャット",
     aiCommand: "💬 Kiri に指示する…",
+    aiComputer: "🖱 パソコンで実行…",
+    cuConfirmNotice: "このステップを実行していい？上のバーを確認してね。",
+    cuStepsWord: "ステップ",
+    cuStatus: (st) => ({ done: "完了", denied: "停止 — 拒否されました", stopped: "停止しました", step_limit: "停止 — ステップ上限", time_limit: "停止 — 時間切れ", errors: "停止 — エラーが多すぎます", refused: "辞退しました", error: "失敗" })[st] || st,
     aiJournal: "📚 ナレッジノート…",
     setCatPersona: "この猫の性格を設定…",
     pixelEditor: "🖌️ ピクセル編集…",
@@ -511,6 +526,10 @@ const I18N = {
     chatTitle: "Sohbet",
     chatMemoryTitle: "Sohbet",
     aiCommand: "💬 Kiri'ye komut ver…",
+    aiComputer: "🖱 Bilgisayarımda yap…",
+    cuConfirmNotice: "Bu adımı yapayım mı? Üstteki şeride bak.",
+    cuStepsWord: "adım",
+    cuStatus: (st) => ({ done: "Tamamlandı", denied: "Durdu — reddettin", stopped: "Durduruldu", step_limit: "Durdu — adım sınırı", time_limit: "Durdu — süre sınırı", errors: "Durdu — çok fazla hata", refused: "Reddedildi", error: "Başarısız" })[st] || st,
     aiJournal: "📚 Bilgi Defteri…",
     setCatPersona: "Bu kedinin kişiliğini ayarla…",
     pixelEditor: "🖌️ Pikselleri düzenle…",
@@ -1747,6 +1766,12 @@ ipcMain.on("drag-window-ended", (evt) => {
 ipcMain.on("set-mouse-events-enabled", (evt, enabled) => {
   const win = BrowserWindow.fromWebContents(evt.sender);
   if (!win || win.isDestroyed()) return;
+  // While Kiiri drives the computer the cats stay fully click-through, so a
+  // synthetic click on a spot behind a cat reaches the app underneath.
+  if (computerSessionInstance && computerSessionInstance.isRunning()) {
+    win.setIgnoreMouseEvents(true);
+    return;
+  }
   if (enabled) {
     win.setIgnoreMouseEvents(false);
   } else {
@@ -1784,6 +1809,11 @@ ipcMain.on("show-context-menu", (evt) => {
     {
       label: t("aiCommand"),
       click: () => openAiCommand(),
+    },
+    {
+      label: t("aiComputer"),
+      enabled: !computerSession().isRunning(),
+      click: () => openAiCommand({ mode: "computer" }),
     },
     {
       label: (() => { const d = aiJournal.dueCount(); return t("aiJournal") + (d > 0 ? ` (${d})` : ""); })(),
@@ -2578,12 +2608,18 @@ ipcMain.handle("ai-custom-task-delete", (_evt, id) => {
 
 // ── Command agent window (text-driven actions + skills) ──
 
-function openAiCommand() {
+// opts.mode: "computer" opens the window with the "do it on my computer"
+// toggle on (right-click menu entry).
+function openAiCommand(opts = {}) {
+  const mode = opts.mode === "computer" ? "computer" : null;
   if (aiCommandWin && !aiCommandWin.isDestroyed()) {
     aiCommandWin.show();
     aiCommandWin.focus();
+    if (mode && aiCommandReady) aiCommandWin.webContents.send("ai-command-mode", mode);
+    else if (mode) aiCommandPendingMode = mode;
     return;
   }
+  aiCommandPendingMode = mode;
   aiCommandReady = false;
   aiCommandWin = new BrowserWindow({
     width: 400,
@@ -2608,6 +2644,10 @@ function openAiCommand() {
   aiCommandWin.loadFile(path.join(__dirname, "renderer", "ai-command.html"));
   aiCommandWin.webContents.on("did-finish-load", () => {
     aiCommandReady = true;
+    if (aiCommandPendingMode) {
+      aiCommandWin.webContents.send("ai-command-mode", aiCommandPendingMode);
+      aiCommandPendingMode = null;
+    }
     if (aiCommandPendingVoice) {
       aiCommandWin.webContents.send("ai-voice-run", aiCommandPendingVoice);
       aiCommandPendingVoice = null;
@@ -2617,6 +2657,7 @@ function openAiCommand() {
     aiCommandWin = null;
     aiCommandReady = false;
     aiCommandPendingVoice = null;
+    aiCommandPendingMode = null;
   });
 }
 
@@ -2656,6 +2697,53 @@ ipcMain.handle("ai-agent-approve", async (_evt, planId) => {
   }
 });
 ipcMain.on("ai-agent-cancel", (_evt, planId) => aiAgent.cancel(planId));
+
+// ── Computer use: plan → approve → Kiiri drives mouse + keyboard ──
+// Started only from the command window (typed / voice). Deliberately not
+// exposed on the local bridge / MCP server: external agents can't drive input.
+let computerSessionInstance = null;
+function computerSession() {
+  if (computerSessionInstance) return computerSessionInstance;
+  computerSessionInstance = createComputerSession({
+    catName: () => catName,
+    keepOnTop: (win) => keepWindowOnTop(win),
+    petWindows: () => Array.from(petWins.values()),
+    setWorking: (on, success) => {
+      if (!petWin || petWin.isDestroyed()) return;
+      petWin.webContents.send("ai-task-state", { agentId: "kiri-computer", state: on ? "working" : "idle" });
+      if (!on && success) petWin.webContents.send("ai-task-complete", { agentId: "kiri-ai" });
+    },
+    onConfirmShown: () => sendCatNotice(t("cuConfirmNotice")),
+    hideCommand: () => { if (aiCommandWin && !aiCommandWin.isDestroyed()) aiCommandWin.hide(); },
+    showCommand: () => {
+      if (aiCommandWin && !aiCommandWin.isDestroyed()) { aiCommandWin.show(); aiCommandWin.focus(); }
+    },
+    remember: (task, out) => {
+      const detail = [`${t("cuStatus", out.status)} · ${out.steps || 0} ${t("cuStepsWord")}`, out.text || ""].filter(Boolean).join("\n");
+      rememberForActiveChar("computer", `🖱 ${String(task).slice(0, 160)}`, detail);
+    },
+  });
+  return computerSessionInstance;
+}
+ipcMain.handle("ai-computer-detect", (_evt, text) => detectComputerIntent(text));
+ipcMain.handle("ai-computer-plan", async (_evt, text) => {
+  sendCatThinking(true);
+  try {
+    return await computerSession().prepare(text);
+  } finally {
+    sendCatThinking(false);
+  }
+});
+ipcMain.handle("ai-computer-start", (_evt, runId) => computerSession().start(String(runId || "")));
+ipcMain.on("ai-computer-cancel", () => computerSession().cancelPending());
+ipcMain.on("ai-computer-open-accessibility", () => computerSession().openAccessibilitySettings());
+// Strip controls: only the strip itself may answer a confirmation or pause.
+ipcMain.on("cu-pause", (evt, on) => { if (computerSession().isStripSender(evt.sender)) computerSession().setPaused(!!on); });
+ipcMain.on("cu-stop", () => computerSession().stop());
+ipcMain.on("cu-confirm-answer", (evt, p) => {
+  if (computerSession().isStripSender(evt.sender)) computerSession().answerConfirm(p && p.id, !!(p && p.allowed));
+});
+ipcMain.on("cu-strip-hover", (evt, over) => { if (computerSession().isStripSender(evt.sender)) computerSession().stripHover(!!over); });
 ipcMain.handle("ai-agent-undo", (_evt, payload) => aiAgent.undo(payload || {}));
 ipcMain.on("ai-agent-open", (_evt, filePath) => aiAgent.openItem(filePath));
 
@@ -3698,7 +3786,8 @@ function pttComboFromHotkey(hotkey) {
 }
 
 function evaluatePttCombo(event) {
-  if (!event || !aiConfig.pttUsable()) {
+  // Synthetic modifier presses from a computer-use run must not start PTT.
+  if (!event || !aiConfig.pttUsable() || (computerSessionInstance && computerSessionInstance.isRunning())) {
     if (pttActive) stopPtt();
     return;
   }
@@ -3980,6 +4069,7 @@ app.whenReady().then(async () => {
 });
 
 app.on("will-quit", () => {
+  if (computerSessionInstance) computerSessionInstance.stop();
   stopKeyHook();
   if (cursorPollTimer) {
     clearInterval(cursorPollTimer);

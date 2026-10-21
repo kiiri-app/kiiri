@@ -141,6 +141,15 @@
         <input type="checkbox" id="web-search" />
       </label>
       <p class="hint" data-i18n="webSearchHint">When on, "research X and make a report" commands can search the web and list the pages they used. Works with Anthropic (Claude) only; searches are billed to your key.</p>
+      <label class="row toggle-row">
+        <span data-i18n="computerUse">Do it on my computer (mouse + keyboard)</span>
+        <input type="checkbox" id="computer-use" />
+      </label>
+      <label class="row toggle-row small">
+        <span data-i18n="computerUseSteps">Max steps per task</span>
+        <span class="range-wrap"><input type="range" id="computer-steps" min="10" max="60" step="5" /> <b id="computer-steps-val">30</b></span>
+      </label>
+      <p class="hint" data-i18n="computerUseHint">Kiiri shows a plan first, asks before risky steps (sending, paying, deleting, passwords) and stops with Esc. Works with Claude (your Anthropic key) or Kiiri Cloud; each step is a request on your key.</p>
     </section>
 
     <section class="group">

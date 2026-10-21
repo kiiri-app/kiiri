@@ -82,6 +82,10 @@ const DEFAULTS = Object.freeze({
   // Let the command agent search the web (Anthropic's server-side web_search) for
   // research-style requests. Only effective with the Anthropic provider.
   webSearchEnabled: true,
+  // Computer use: Kiiri can operate the mouse + keyboard for a task the user
+  // approved (Anthropic key or Kiiri Cloud). Max actions per run, 10–60.
+  computerUseEnabled: true,
+  computerUseMaxSteps: 30,
   // Logical-pixel size of the region captured around the cat.
   captureWidth: 720,
   captureHeight: 520,
@@ -192,6 +196,8 @@ function sanitizeConfig(raw) {
     autoDetect: data.autoDetect === undefined ? DEFAULTS.autoDetect : !!data.autoDetect,
     appContextEnabled: data.appContextEnabled === undefined ? DEFAULTS.appContextEnabled : !!data.appContextEnabled,
     webSearchEnabled: data.webSearchEnabled === undefined ? DEFAULTS.webSearchEnabled : !!data.webSearchEnabled,
+    computerUseEnabled: data.computerUseEnabled === undefined ? DEFAULTS.computerUseEnabled : !!data.computerUseEnabled,
+    computerUseMaxSteps: clampInt(data.computerUseMaxSteps, 10, 60, DEFAULTS.computerUseMaxSteps),
     captureWidth: clampInt(data.captureWidth, 240, 2000, DEFAULTS.captureWidth),
     captureHeight: clampInt(data.captureHeight, 200, 2000, DEFAULTS.captureHeight),
     customTasks,
@@ -485,6 +491,7 @@ module.exports = {
   loadConfig,
   saveConfig,
   sanitizeCustomTask,
+  sanitizeConfig,
   setApiKey,
   getApiKey,
   hasApiKey,

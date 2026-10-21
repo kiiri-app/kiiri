@@ -23,7 +23,10 @@
 
     <form id="command-form">
       <textarea id="command-input" rows="2" placeholder="What should I do? (e.g. make a 5-slide deck about AI)" data-i18n-ph="commandPlaceholder"></textarea>
-      <button type="submit" id="command-send" class="primary-btn" data-i18n="send">Send</button>
+      <div class="form-row">
+        <button type="button" id="mode-toggle" class="mode-btn" aria-pressed="false" data-i18n="modeComputer">🖱 On my computer</button>
+        <button type="submit" id="command-send" class="primary-btn" data-i18n="send">Send</button>
+      </div>
     </form>
 
     <!-- response area -->
@@ -51,6 +54,36 @@
 
       <div id="resp-result" hidden>
         <div id="result-list" class="result-list"></div>
+      </div>
+
+      <!-- computer use: plan approval -->
+      <div id="resp-cu-plan" hidden>
+        <div class="plan-title" data-i18n="cuPlanTitle">I'll do this on your computer:</div>
+        <div id="cu-plan-text" class="cu-plan"></div>
+        <p id="cu-plan-hint" class="hint"></p>
+        <div class="plan-actions">
+          <button id="cu-reject" type="button" class="ghost-btn" data-i18n="cancel">Cancel</button>
+          <button id="cu-approve" type="button" class="primary-btn" data-i18n="cuApprove">Approve &amp; start</button>
+        </div>
+      </div>
+
+      <!-- computer use: outcome + per-action log -->
+      <div id="resp-cu-result" hidden>
+        <div id="cu-status" class="cu-status"></div>
+        <div id="cu-text" class="resp-text"></div>
+        <details id="cu-log-wrap" open>
+          <summary id="cu-log-title"></summary>
+          <ol id="cu-log" class="cu-log"></ol>
+        </details>
+      </div>
+
+      <!-- computer use: macOS Accessibility permission -->
+      <div id="resp-cu-perm" hidden>
+        <div class="plan-title" data-i18n="cuPermTitle">One permission first</div>
+        <div id="cu-perm-text" class="resp-text"></div>
+        <div class="plan-actions">
+          <button id="cu-open-settings" type="button" class="primary-btn" data-i18n="cuOpenSettings">Open System Settings</button>
+        </div>
       </div>
     </section>
   </main>

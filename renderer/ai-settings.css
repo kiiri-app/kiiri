@@ -146,3 +146,6 @@ textarea { resize: vertical; }
 .quota-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--panel-soft, #f3e7cf); overflow: hidden; }
 .quota-bar span { display: block; height: 100%; width: 0; background: var(--accent, #e0795c); transition: width .3s; }
 .status.err { color: var(--danger, #cf5b46); }
+.range-wrap { display: inline-flex; align-items: center; gap: 6px; }
+.range-wrap input[type="range"] { width: 130px; accent-color: var(--accent, #e0795c); }
+.range-wrap b { min-width: 22px; text-align: right; font-variant-numeric: tabular-nums; }

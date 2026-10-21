@@ -57,6 +57,14 @@ contextBridge.exposeInMainWorld("aiAPI", {
   resizeCommand: (size) => ipcRenderer.send("ai-command-resize", size),
   onVoiceRun: (cb) => ipcRenderer.on("ai-voice-run", (_e, text) => cb(text)),
 
+  // Computer use (plan → approve → Kiiri drives mouse + keyboard)
+  computerDetect: (text) => ipcRenderer.invoke("ai-computer-detect", text),
+  computerPlan: (text) => ipcRenderer.invoke("ai-computer-plan", text),
+  computerStart: (runId) => ipcRenderer.invoke("ai-computer-start", runId),
+  computerCancel: () => ipcRenderer.send("ai-computer-cancel"),
+  computerOpenAccessibility: () => ipcRenderer.send("ai-computer-open-accessibility"),
+  onCommandMode: (cb) => ipcRenderer.on("ai-command-mode", (_e, mode) => cb(mode)),
+
   // Knowledge journal (SM-2 spaced repetition)
   journalDue: () => ipcRenderer.invoke("ai-journal-due"),
   journalList: () => ipcRenderer.invoke("ai-journal-list"),

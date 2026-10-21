@@ -24,6 +24,7 @@ const KIND_LABEL = {
   task: "📝 Görev",
   screen: "🔍 Ekran sorusu",
   command: "📦 Dosya",
+  computer: "🖱 Bilgisayar",
   note: "🗒️ Not",
 };
 

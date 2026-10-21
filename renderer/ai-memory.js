@@ -10,7 +10,7 @@ const I18N = {
     memoryHint: "Kiri remembers its recent work here and uses it as context — so it picks up where you left off.",
     openFile: "Open .md", clearAll: "Clear all",
     memoryEmpty: "No memories yet — do an AI task and it'll show up here.",
-    kindTask: "📝 Task", kindScreen: "🔍 Screen", kindCommand: "📦 File", kindNote: "🗒️ Note",
+    kindTask: "📝 Task", kindScreen: "🔍 Screen", kindCommand: "📦 File", kindComputer: "🖱 Computer", kindNote: "🗒️ Note",
     more: "Show more", less: "Show less",
     confirmClear: "Clear all of this character's memory?",
   },
@@ -19,7 +19,7 @@ const I18N = {
     memoryHint: "Kiri son işlerini burada hatırlar ve bağlam olarak kullanır — böylece kaldığın yerden devam eder.",
     openFile: ".md aç", clearAll: "Hepsini temizle",
     memoryEmpty: "Henüz hafıza yok — bir AI görevi yap, burada görünsün.",
-    kindTask: "📝 Görev", kindScreen: "🔍 Ekran", kindCommand: "📦 Dosya", kindNote: "🗒️ Not",
+    kindTask: "📝 Görev", kindScreen: "🔍 Ekran", kindCommand: "📦 Dosya", kindComputer: "🖱 Bilgisayar", kindNote: "🗒️ Not",
     more: "Daha fazla", less: "Daha az",
     confirmClear: "Bu karakterin tüm hafızası silinsin mi?",
   },
@@ -28,7 +28,7 @@ const I18N = {
     memoryHint: "Kiri가 최근 작업을 여기에 기억하고 맥락으로 사용해요 — 이어서 계속할 수 있어요.",
     openFile: ".md 열기", clearAll: "모두 지우기",
     memoryEmpty: "아직 기억이 없어요 — AI 작업을 하면 여기에 나타나요.",
-    kindTask: "📝 작업", kindScreen: "🔍 화면", kindCommand: "📦 파일", kindNote: "🗒️ 노트",
+    kindTask: "📝 작업", kindScreen: "🔍 화면", kindCommand: "📦 파일", kindComputer: "🖱 컴퓨터", kindNote: "🗒️ 노트",
     more: "더 보기", less: "접기",
     confirmClear: "이 캐릭터의 기억을 모두 지울까요?",
   },
@@ -37,7 +37,7 @@ const I18N = {
     memoryHint: "Kiri は最近の作業をここに覚えて文脈として使います — 続きから再開できます。",
     openFile: ".md を開く", clearAll: "すべて消去",
     memoryEmpty: "まだ記憶がありません — AI タスクをするとここに表示されます。",
-    kindTask: "📝 タスク", kindScreen: "🔍 画面", kindCommand: "📦 ファイル", kindNote: "🗒️ ノート",
+    kindTask: "📝 タスク", kindScreen: "🔍 画面", kindCommand: "📦 ファイル", kindComputer: "🖱 パソコン操作", kindNote: "🗒️ ノート",
     more: "もっと見る", less: "折りたたむ",
     confirmClear: "このキャラクターの記憶をすべて消去しますか？",
   },
@@ -61,6 +61,7 @@ function kindLabel(kind) {
   if (kind === "task") return L("kindTask");
   if (kind === "screen") return L("kindScreen");
   if (kind === "command") return L("kindCommand");
+  if (kind === "computer") return L("kindComputer");
   return L("kindNote");
 }
 

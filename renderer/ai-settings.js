@@ -90,6 +90,9 @@ const I18N = {
     appContext: "App awareness (tell answers which app you're in)",
     appContextHint: "When on, screen answers know your frontmost app (name only, e.g. \"VS Code\") for sharper replies. macOS only; no extra permission.",
     webSearch: "Web research for commands",
+    computerUse: "Do it on my computer (mouse + keyboard)",
+    computerUseHint: "Kiiri shows a plan first, asks before risky steps (sending, paying, deleting, passwords) and stops with Esc. Works with Claude (your Anthropic key) or Kiiri Cloud; each step is a request on your key.",
+    computerUseSteps: "Max steps per task",
     webSearchHint: "When on, \"research X and make a report\" commands can search the web and list the pages they used. Works with Anthropic (Claude) only; searches are billed to your key.",
     triggerHint: "When off: hold <b>Option/Alt</b> and drop the cat → analysis starts.",
     voiceHeading: "Voice (OpenAI) — voice commands",
@@ -202,6 +205,9 @@ const I18N = {
     appContext: "Uygulama farkındalığı (yanıtlar hangi uygulamada olduğunu bilsin)",
     appContextHint: "Açıkken ekran yanıtları öndeki uygulamanı bilir (yalnızca ad, ör. \"VS Code\") ve daha isabetli olur. Yalnızca macOS; ek izin gerekmez.",
     webSearch: "Komutlarda web araştırması",
+    computerUse: "Bilgisayarımda yap (fare + klavye)",
+    computerUseHint: "Kiiri önce bir plan gösterir, riskli adımlardan (gönderme, ödeme, silme, şifre) önce sorar, Esc ile durur. Claude (Anthropic anahtarın) ya da Kiiri Cloud ile çalışır; her adım anahtarına bir istektir.",
+    computerUseSteps: "Görev başına en fazla adım",
     webSearchHint: "Açıkken \"X'i araştır, rapor yap\" gibi komutlar web'de arama yapar ve kullandığı sayfaları listeler. Yalnızca Anthropic (Claude) ile çalışır; aramalar anahtarına faturalanır.",
     triggerHint: "Kapalıyken: <b>Option/Alt</b> tuşunu basılı tutup kediyi bırak → analiz başlar.",
     voiceHeading: "Ses (OpenAI) — sesli komut",
@@ -314,6 +320,9 @@ const I18N = {
     appContext: "앱 인식 (답변이 현재 앱을 알도록)",
     appContextHint: "켜면 화면 답변이 최상위 앱(이름만, 예: \"VS Code\")을 알아 더 정확해져요. macOS 전용; 추가 권한 불필요.",
     webSearch: "명령에서 웹 조사",
+    computerUse: "내 컴퓨터에서 하기 (마우스 + 키보드)",
+    computerUseHint: "Kiiri가 먼저 계획을 보여 주고, 위험한 단계(보내기, 결제, 삭제, 비밀번호) 전에는 물어보며 Esc로 멈춰요. Claude(내 Anthropic 키) 또는 Kiiri Cloud에서 작동하고, 단계마다 요청 하나가 내 키로 청구돼요.",
+    computerUseSteps: "작업당 최대 단계",
     webSearchHint: "켜면 \"X를 조사해서 보고서 만들어 줘\" 같은 명령이 웹을 검색하고 사용한 페이지를 보여 줘요. Anthropic(Claude)에서만 작동하며 검색 비용은 내 키로 청구돼요.",
     triggerHint: "꺼져 있을 때: <b>Option/Alt</b> 키를 누른 채 고양이를 놓으면 → 분석이 시작돼요.",
     voiceHeading: "음성 (OpenAI) — 음성 명령",
@@ -426,6 +435,9 @@ const I18N = {
     appContext: "アプリ認識（回答が今どのアプリか把握）",
     appContextHint: "オンにすると画面回答が最前面のアプリ（名前のみ、例:\"VS Code\"）を把握し、より的確になります。macOS のみ; 追加権限不要。",
     webSearch: "コマンドでの Web 調査",
+    computerUse: "パソコンで実行（マウス + キーボード）",
+    computerUseHint: "Kiiri はまずプランを見せ、危ない操作（送信・支払い・削除・パスワード）の前に確認し、Esc で止まります。Claude（自分の Anthropic キー）か Kiiri Cloud で動作し、ステップごとに 1 リクエストが課金されます。",
+    computerUseSteps: "タスクごとの最大ステップ数",
     webSearchHint: "オンにすると「X を調べてレポートにして」のようなコマンドが Web を検索し、使ったページを一覧にします。Anthropic（Claude）のみ対応。検索料金は自分のキーに請求されます。",
     triggerHint: "オフのとき: <b>Option/Alt</b> を押しながら猫をドロップ → 分析が始まります。",
     voiceHeading: "音声 (OpenAI) — 音声コマンド",
@@ -568,6 +580,9 @@ const autoDetect = el("auto-detect");
 const alwaysDrop = el("always-drop");
 const appContextEl = el("app-context");
 const webSearchEl = el("web-search");
+const computerUseEl = el("computer-use");
+const computerStepsEl = el("computer-steps");
+const computerStepsVal = el("computer-steps-val");
 const customList = el("custom-list");
 const customForm = el("custom-form");
 const vEnabled = el("voice-enabled");
@@ -824,6 +839,8 @@ function render() {
   autoDetect.checked = config.autoDetect;
   if (appContextEl) appContextEl.checked = config.appContextEnabled !== false;
   if (webSearchEl) webSearchEl.checked = config.webSearchEnabled !== false;
+  if (computerUseEl) computerUseEl.checked = config.computerUseEnabled !== false;
+  if (computerStepsEl) { computerStepsEl.value = String(config.computerUseMaxSteps || 30); computerStepsVal.textContent = computerStepsEl.value; }
   alwaysDrop.checked = config.alwaysAnalyzeOnDrop;
   fillSelect(providerSel, config.supportedProviders || [], providerLabels(), config.provider);
   fillSelect(langSel, config.supportedResponseLanguages || [], LANG_LABELS, config.responseLanguage);
@@ -895,6 +912,11 @@ autoDetect.addEventListener("change", () => patch({ autoDetect: autoDetect.check
 alwaysDrop.addEventListener("change", () => patch({ alwaysAnalyzeOnDrop: alwaysDrop.checked }));
 if (appContextEl) appContextEl.addEventListener("change", () => patch({ appContextEnabled: appContextEl.checked }));
 if (webSearchEl) webSearchEl.addEventListener("change", () => patch({ webSearchEnabled: webSearchEl.checked }));
+if (computerUseEl) computerUseEl.addEventListener("change", () => patch({ computerUseEnabled: computerUseEl.checked }));
+if (computerStepsEl) {
+  computerStepsEl.addEventListener("input", () => { computerStepsVal.textContent = computerStepsEl.value; });
+  computerStepsEl.addEventListener("change", () => patch({ computerUseMaxSteps: Number(computerStepsEl.value) }));
+}
 if (styleNoteEl) styleNoteEl.addEventListener("change", () => patch({ writingStyle: { ...currentStyle(), note: styleNoteEl.value.trim() } }));
 providerSel.addEventListener("change", async () => {
   await patch({ provider: providerSel.value });

@@ -35,6 +35,30 @@ const I18N = {
     triggersLabel: "Triggers:",
     toolsLabel: "Tools:",
     skillCreateFailed: "Couldn't create the skill.",
+    modeComputer: "🖱 On my computer",
+    cuPlanning: "Looking at your screen…",
+    cuPlanTitle: "I'll do this on your computer:",
+    cuPlanHint: (n) => `Up to ${n} steps · I'll ask before anything risky · Esc or ■ Stop ends it`,
+    cuApprove: "Approve & start",
+    cuRunning: "Working on your computer…",
+    cuPermTitle: "One permission first",
+    cuOpenSettings: "Open System Settings",
+    cuLogTitle: (n) => `What I did (${n} step${n === 1 ? "" : "s"})`,
+    cuAllowed: "allowed", cuDenied: "denied",
+    cuStatus: { done: "✓ Done", denied: "Stopped — you said no", stopped: "Stopped", step_limit: "Stopped — reached the step limit", time_limit: "Stopped — 8-minute limit", errors: "Stopped — 3 errors in a row", refused: "Declined", error: "Failed" },
+    cuErr: {
+      disabled: "The AI Assistant is off — turn it on in settings.",
+      cu_disabled: "\"Do it on my computer\" is off — turn it on in AI Assistant settings.",
+      no_key: "Add your Anthropic API key or sign in to Kiiri Cloud first.",
+      unsupported_provider: "Computer use works with Claude (your Anthropic key) or Kiiri Cloud. Switch the provider in AI Assistant settings.",
+      plan_required: "Computer use is part of Kiiri Plus.",
+      accessibility: "To move the mouse and type for you, Kiiri needs the Accessibility permission. Open System Settings → Privacy & Security → Accessibility, turn on Kiiri, then send the task again.",
+      screen_permission: "Kiiri needs the Screen Recording permission to see your screen (System Settings → Privacy & Security → Screen Recording).",
+      platform: "Computer use isn't supported on this system.",
+      busy: "I'm already using the computer — stop that run first.",
+      expired: "This plan expired — send the task again.",
+    },
+    cuRefused: "I won't do that one:",
   },
   tr: {
     windowTitle: "Kiri'ye komut ver",
@@ -67,6 +91,30 @@ const I18N = {
     triggersLabel: "Tetikler:",
     toolsLabel: "Araçlar:",
     skillCreateFailed: "Skill oluşturulamadı.",
+    modeComputer: "🖱 Bilgisayarımda",
+    cuPlanning: "Ekranına bakıyorum…",
+    cuPlanTitle: "Bilgisayarında şunu yapacağım:",
+    cuPlanHint: (n) => `En fazla ${n} adım · Riskli bir şeyden önce sorarım · Esc ya da ■ Durdur ile bitir`,
+    cuApprove: "Onayla ve başla",
+    cuRunning: "Bilgisayarında çalışıyorum…",
+    cuPermTitle: "Önce bir izin gerekiyor",
+    cuOpenSettings: "Sistem Ayarları'nı aç",
+    cuLogTitle: (n) => `Yaptıklarım (${n} adım)`,
+    cuAllowed: "izin verildi", cuDenied: "reddedildi",
+    cuStatus: { done: "✓ Tamamlandı", denied: "Durdu — reddettin", stopped: "Durduruldu", step_limit: "Durdu — adım sınırına geldim", time_limit: "Durdu — 8 dakika sınırı", errors: "Durdu — üst üste 3 hata", refused: "Reddedildi", error: "Başarısız" },
+    cuErr: {
+      disabled: "AI Asistan kapalı — ayarlardan aç.",
+      cu_disabled: "\"Bilgisayarımda yap\" kapalı — AI Asistan ayarlarından aç.",
+      no_key: "Önce Anthropic API anahtarını gir ya da Kiiri Cloud'a giriş yap.",
+      unsupported_provider: "Bilgisayar kullanımı Claude (Anthropic anahtarın) ya da Kiiri Cloud ile çalışır. Sağlayıcıyı AI Asistan ayarlarından değiştir.",
+      plan_required: "Bilgisayar kullanımı Kiiri Plus'a dahil.",
+      accessibility: "Fareyi oynatıp senin yerine yazabilmem için Erişilebilirlik izni gerekiyor. Sistem Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik'ten Kiiri'yi aç, sonra görevi yeniden gönder.",
+      screen_permission: "Ekranını görebilmem için Ekran Kaydı izni gerekiyor (Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı).",
+      platform: "Bu sistemde bilgisayar kullanımı desteklenmiyor.",
+      busy: "Zaten bilgisayarı kullanıyorum — önce onu durdur.",
+      expired: "Planın süresi doldu — görevi yeniden gönder.",
+    },
+    cuRefused: "Bunu yapmayacağım:",
   },
   ko: {
     windowTitle: "Kiri에게 명령하기",
@@ -99,6 +147,30 @@ const I18N = {
     triggersLabel: "트리거:",
     toolsLabel: "도구:",
     skillCreateFailed: "스킬을 만들지 못했어요.",
+    modeComputer: "🖱 내 컴퓨터에서",
+    cuPlanning: "화면을 보는 중이다냥…",
+    cuPlanTitle: "컴퓨터에서 이렇게 할 거다냥:",
+    cuPlanHint: (n) => `최대 ${n}단계 · 위험한 단계 전에는 물어볼게요 · Esc 또는 ■ 중지로 끝내기`,
+    cuApprove: "승인하고 시작",
+    cuRunning: "컴퓨터에서 작업 중이다냥…",
+    cuPermTitle: "먼저 권한이 필요해요",
+    cuOpenSettings: "시스템 설정 열기",
+    cuLogTitle: (n) => `한 일 (${n}단계)`,
+    cuAllowed: "허용됨", cuDenied: "거부됨",
+    cuStatus: { done: "✓ 완료", denied: "중지 — 거부함", stopped: "중지됨", step_limit: "중지 — 단계 한도 도달", time_limit: "중지 — 8분 한도", errors: "중지 — 연속 3번 오류", refused: "거절됨", error: "실패" },
+    cuErr: {
+      disabled: "AI 어시스턴트가 꺼져 있어요 — 설정에서 켜 주세요.",
+      cu_disabled: "\"내 컴퓨터에서 하기\"가 꺼져 있어요 — AI 어시스턴트 설정에서 켜 주세요.",
+      no_key: "먼저 Anthropic API 키를 입력하거나 Kiiri Cloud에 로그인해 주세요.",
+      unsupported_provider: "컴퓨터 사용은 Claude(내 Anthropic 키) 또는 Kiiri Cloud에서만 돼요. AI 어시스턴트 설정에서 제공자를 바꿔 주세요.",
+      plan_required: "컴퓨터 사용은 Kiiri Plus에 포함돼요.",
+      accessibility: "마우스를 움직이고 대신 입력하려면 손쉬운 사용 권한이 필요해요. 시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용에서 Kiiri를 켠 뒤 다시 보내 주세요.",
+      screen_permission: "화면을 보려면 화면 기록 권한이 필요해요 (시스템 설정 → 개인정보 보호 및 보안 → 화면 기록).",
+      platform: "이 시스템에서는 컴퓨터 사용을 지원하지 않아요.",
+      busy: "이미 컴퓨터를 사용 중이에요 — 먼저 중지해 주세요.",
+      expired: "계획이 만료됐어요 — 다시 보내 주세요.",
+    },
+    cuRefused: "이건 하지 않을게요:",
   },
   ja: {
     windowTitle: "Kiri に指示する",
@@ -131,6 +203,30 @@ const I18N = {
     triggersLabel: "トリガー:",
     toolsLabel: "ツール:",
     skillCreateFailed: "スキルを作成できませんでした。",
+    modeComputer: "🖱 パソコンで",
+    cuPlanning: "画面を見ているにゃ…",
+    cuPlanTitle: "パソコンでこうするにゃ:",
+    cuPlanHint: (n) => `最大 ${n} ステップ · 危ない操作の前に確認します · Esc か ■ 停止で終了`,
+    cuApprove: "承認して開始",
+    cuRunning: "パソコンを操作中だにゃ…",
+    cuPermTitle: "先に許可が必要です",
+    cuOpenSettings: "システム設定を開く",
+    cuLogTitle: (n) => `やったこと（${n} ステップ）`,
+    cuAllowed: "許可", cuDenied: "拒否",
+    cuStatus: { done: "✓ 完了", denied: "停止 — 拒否されました", stopped: "停止しました", step_limit: "停止 — ステップ上限", time_limit: "停止 — 8 分の上限", errors: "停止 — 3 回連続エラー", refused: "辞退しました", error: "失敗" },
+    cuErr: {
+      disabled: "AI アシスタントがオフです — 設定でオンにしてください。",
+      cu_disabled: "「パソコンで実行」がオフです — AI アシスタント設定でオンにしてください。",
+      no_key: "先に Anthropic API キーを入力するか、Kiiri Cloud にサインインしてください。",
+      unsupported_provider: "パソコン操作は Claude（自分の Anthropic キー）か Kiiri Cloud で使えます。AI アシスタント設定でプロバイダを切り替えてください。",
+      plan_required: "パソコン操作は Kiiri Plus の機能です。",
+      accessibility: "マウス操作や入力を代わりに行うには「アクセシビリティ」の許可が必要です。システム設定 → プライバシーとセキュリティ → アクセシビリティで Kiiri をオンにして、もう一度送ってください。",
+      screen_permission: "画面を見るには「画面収録」の許可が必要です（システム設定 → プライバシーとセキュリティ → 画面収録）。",
+      platform: "このシステムではパソコン操作に対応していません。",
+      busy: "すでにパソコンを操作中です — 先に停止してください。",
+      expired: "プランの期限が切れました — もう一度送ってください。",
+    },
+    cuRefused: "これはやめておきます:",
   },
 };
 
@@ -184,6 +280,10 @@ function hideAll() {
   respText.hidden = true;
   respPlan.hidden = true;
   respResult.hidden = true;
+  for (const id of ["resp-cu-plan", "resp-cu-result", "resp-cu-perm"]) {
+    const node = document.getElementById(id);
+    if (node) node.hidden = true;
+  }
 }
 
 function showBusy(label) {
@@ -273,7 +373,119 @@ function showResults(results) {
   syncSize();
 }
 
+// ---- Computer use ----
+const modeToggle = $("mode-toggle");
+const respCuPlan = $("resp-cu-plan");
+const respCuResult = $("resp-cu-result");
+const respCuPerm = $("resp-cu-perm");
+let computerMode = false;
+let currentRunId = null;
+let cuPlanning = false;
+
+function setComputerMode(on) {
+  computerMode = !!on;
+  modeToggle.setAttribute("aria-pressed", computerMode ? "true" : "false");
+}
+modeToggle.addEventListener("click", () => { setComputerMode(!computerMode); commandInput.focus(); });
+
+function cuErrorText(res) {
+  const map = L("cuErr");
+  return (map && map[res.error]) || res.message || L("errorGeneric");
+}
+
+function showCuPermission(text) {
+  hideAll();
+  $("cu-perm-text").textContent = text;
+  resp.hidden = false;
+  respCuPerm.hidden = false;
+  syncSize();
+}
+
+function showCuPlan(res) {
+  hideAll();
+  currentRunId = res.runId;
+  $("cu-plan-text").textContent = res.plan;
+  $("cu-plan-hint").textContent = L("cuPlanHint", res.maxSteps || 30);
+  resp.hidden = false;
+  respCuPlan.hidden = false;
+  syncSize();
+}
+
+function showCuResult(res) {
+  hideAll();
+  const status = $("cu-status");
+  const labels = L("cuStatus");
+  status.textContent = (labels && labels[res.status]) || res.status || "";
+  status.className = "cu-status " + (res.status === "done" ? "ok" : "bad");
+  const extra = res.error && res.error !== "error" ? cuErrorText(res) : "";
+  $("cu-text").textContent = [res.text, extra].filter(Boolean).join("\n\n");
+  const log = Array.isArray(res.log) ? res.log : [];
+  const list = $("cu-log");
+  list.innerHTML = "";
+  for (const e of log) {
+    const li = document.createElement("li");
+    let line = e.summary || e.name;
+    if (e.risk || e.name === "confirm_with_user") line += ` — ⚠️ ${e.confirmed ? L("cuAllowed") : L("cuDenied")}`;
+    if (!e.ok && e.error && e.name !== "confirm_with_user") line += ` — ✕ ${e.error}`;
+    li.textContent = line;
+    if (!e.ok && e.name !== "confirm_with_user") li.className = "err";
+    else if (e.risk) li.className = "risk";
+    list.appendChild(li);
+  }
+  $("cu-log-title").textContent = L("cuLogTitle", res.steps || 0);
+  $("cu-log-wrap").hidden = !log.length;
+  resp.hidden = false;
+  respCuResult.hidden = false;
+  syncSize();
+}
+
+async function submitComputer(text) {
+  showBusy(L("cuPlanning"));
+  cuPlanning = true;
+  const res = await api.computerPlan(text);
+  cuPlanning = false;
+  if (!res) return showText(L("errorGeneric"));
+  if (res.error === "accessibility") return showCuPermission(cuErrorText(res));
+  if (res.error) return showText(cuErrorText(res));
+  if (res.type === "refused") return showText(res.text ? `${L("cuRefused")} ${res.text}` : L("errorGeneric"));
+  if (res.type === "computer-plan") return showCuPlan(res);
+  showText(L("errorGeneric"));
+}
+
+$("cu-approve").addEventListener("click", async () => {
+  const runId = currentRunId;
+  currentRunId = null;
+  if (!runId) return;
+  showBusy(L("cuRunning"));
+  const res = await api.computerStart(runId);
+  if (!res) return showText(L("errorGeneric"));
+  if (res.error === "accessibility") return showCuPermission(cuErrorText(res));
+  if (!res.status) return showText(cuErrorText(res));
+  showCuResult(res);
+});
+$("cu-reject").addEventListener("click", () => {
+  currentRunId = null;
+  api.computerCancel();
+  hideAll();
+  syncSize();
+});
+$("cu-open-settings").addEventListener("click", () => api.computerOpenAccessibility());
+if (api.onCommandMode) {
+  api.onCommandMode((mode) => {
+    selectTab("command");
+    setComputerMode(mode === "computer");
+    commandInput.focus();
+  });
+}
+
 async function submitCommand(text) {
+  // Computer use: the toggle, or an explicit "/pc …" / "on my computer …"
+  // phrasing. File-generation commands stay with the command agent.
+  let routed = null;
+  try { routed = await api.computerDetect(text); } catch {}
+  if (computerMode || (routed && routed.computer)) {
+    return submitComputer((routed && routed.text) || text);
+  }
   showBusy(L("thinking"));
   const res = await api.agentRun(text);
   if (!res || res.error) {
@@ -294,6 +506,7 @@ commandForm.addEventListener("submit", (e) => {
 });
 
 $("resp-cancel").addEventListener("click", () => {
+  if (cuPlanning) { cuPlanning = false; api.computerCancel(); }
   api.agentCancel(currentPlanId);
   hideAll();
   syncSize();

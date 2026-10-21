@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <link rel="stylesheet" href="computer-strip.css" />
+  <title>Kiiri</title>
+</head>
+<body>
+  <div id="card">
+    <div id="bar">
+      <span class="paw">🐾</span>
+      <span id="label">Kiiri is using your computer</span>
+      <span class="dot">·</span>
+      <span id="steps">step 0/30</span>
+      <span id="phase"></span>
+      <span class="spacer"></span>
+      <button id="pause" type="button">⏸ Pause</button>
+      <button id="stop" type="button">■ Stop</button>
+    </div>
+    <div id="confirm" hidden>
+      <div id="confirm-title">⚠️ Check this step</div>
+      <div id="confirm-reason"></div>
+      <div id="confirm-summary"></div>
+      <div class="confirm-actions">
+        <button id="deny" type="button" class="ghost">Deny — stop</button>
+        <button id="allow" type="button" class="primary">Allow this step</button>
+      </div>
+    </div>
+  </div>
+  <script src="computer-strip.js"></script>
+</body>
+</html>

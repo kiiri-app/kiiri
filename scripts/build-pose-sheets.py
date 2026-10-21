@@ -145,6 +145,23 @@ def feature_area(im, kind):
     return float(np.max(ndimage.sum(m, lab, range(1, n + 1))))
 
 
+def head_width(im, frac=0.42):
+    """Width of the head, which is what the eye reads as "size": the 95th
+    percentile row width in the top `frac` of the silhouette, after an opening
+    that strips whiskers, tail tips and pencil lines (thin strokes)."""
+    al = np.array(im)[..., 3] > 128
+    ys = np.nonzero(al.any(1))[0]
+    r = max(2, round((ys[-1] - ys[0]) * 0.014))
+    op = ndimage.binary_opening(al, structure=np.ones((2 * r + 1, 2 * r + 1)))
+    lab, n = ndimage.label(op)
+    if not n:
+        return 0.0
+    big = lab == (np.argmax(ndimage.sum(op, lab, range(1, n + 1))) + 1)
+    ys = np.nonzero(big.any(1))[0]
+    top, bot = ys[0], ys[-1]
+    return float(np.percentile(big[top:int(top + (bot - top) * frac)].sum(1), 95))
+
+
 def row_centroid_x(im, from_bottom, frac=0.05):
     """x centroid of the opaque pixels in the top/bottom `frac` of the art —
     the feet (standing) or the grab point (hanging)."""
@@ -226,10 +243,20 @@ def build_set(name, cfg):
 
     manifest = {"rev": ART_REV, "w": W, "h": H, "eyes": pupils(idle, load(cfg["eyes"]), box, idle_scale, (W, H)), "states": {}}
 
+    # Every state is scaled so its head is as wide as the idle head (on screen).
+    # The bow/nose ratio above is only a sheet-level first guess: the artist drew
+    # those features at different proportions per sheet, so states came out up
+    # to ~15% bigger or smaller than idle and visibly "jumped" on a state change.
+    # Side views read narrower, so a state uses its front-facing frames only
+    # (move: the "hang" group) and applies that scale to all its frames.
+    idle_head = head_width(idle.crop(box)) * idle_scale
     for state, st in cfg["states"].items():
         cells, ratio = sheets[st["sheet"]]
-        f = SHEET_UPSCALE * (ratio / sheets["work"][1])  # same body size as idle
         groups = st.get("groups") or {"all": st["cells"]}
+        front = groups.get("hang", next(iter(groups.values())))
+        heads = sorted(head_width(cells[k]) for k in front)
+        f = idle_head / heads[len(heads) // 2]
+        print(f"  {name}_{state}: head scale {f / (SHEET_UPSCALE * (ratio / sheets['work'][1])):.3f}x vs feature ratio")
         frames, group_idx = [], {}
         for gname, keys in groups.items():
             group_idx[gname] = list(range(len(frames), len(frames) + len(keys)))

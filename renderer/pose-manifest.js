@@ -21,9 +21,9 @@ window.POSE_MANIFEST = {
   "states": {
    "move": {
     "frames": 6,
-    "cw": 400,
-    "ch": 644,
-    "ox": -49.7,
+    "cw": 444,
+    "ch": 716,
+    "ox": -71.7,
     "oy": 0.0,
     "groups": {
      "hang": [
@@ -40,24 +40,24 @@ window.POSE_MANIFEST = {
    },
    "working": {
     "frames": 4,
-    "cw": 354,
-    "ch": 556,
-    "ox": -24.6,
-    "oy": -111.0
+    "cw": 351,
+    "ch": 554,
+    "ox": -22.6,
+    "oy": -109.0
    },
    "listening": {
     "frames": 1,
-    "cw": 322,
-    "ch": 550,
-    "ox": -23.1,
-    "oy": -105.0
+    "cw": 342,
+    "ch": 585,
+    "ox": -34.6,
+    "oy": -140.0
    },
    "happy": {
     "frames": 1,
-    "cw": 345,
-    "ch": 524,
-    "ox": -32.3,
-    "oy": -79.0
+    "cw": 361,
+    "ch": 548,
+    "ox": -40.3,
+    "oy": -103.0
    }
   }
  },
@@ -80,9 +80,9 @@ window.POSE_MANIFEST = {
   "states": {
    "move": {
     "frames": 4,
-    "cw": 451,
-    "ch": 543,
-    "ox": -91.3,
+    "cw": 508,
+    "ch": 613,
+    "ox": -119.8,
     "oy": 0.0,
     "groups": {
      "hang": [
@@ -98,23 +98,23 @@ window.POSE_MANIFEST = {
    "working": {
     "frames": 4,
     "cw": 299,
-    "ch": 476,
+    "ch": 475,
     "ox": -13.1,
-    "oy": 21.0
+    "oy": 22.0
    },
    "listening": {
     "frames": 1,
-    "cw": 258,
-    "ch": 452,
-    "ox": -4.7,
-    "oy": 45.0
+    "cw": 267,
+    "ch": 467,
+    "ox": -9.6,
+    "oy": 30.0
    },
    "happy": {
     "frames": 1,
-    "cw": 316,
-    "ch": 464,
-    "ox": 7.2,
-    "oy": 33.0
+    "cw": 314,
+    "ch": 460,
+    "ox": 8.8,
+    "oy": 37.0
    }
   }
  }

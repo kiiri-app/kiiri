@@ -1,14 +1,44 @@
-# Kiri
+<p align="center">
+  <a href="https://kiiri.app"><img src="assets/brand/lockup.svg" alt="Kiiri" height="84"></a>
+</p>
 
-![Kiri](assets/screenshot.png)
+<h3 align="center">A little cat that lives on your desktop.</h3>
 
-An animated character that lives on your desktop and doubles as a spatial AI
-assistant — drop the character onto anything on screen and it understands the
-region underneath, then summarizes, solves, explains, translates, or runs a
-task you defined. It can see your screen, talk back out loud, hold a real
-conversation, generate documents and spreadsheets, run things on a schedule, and
-remember what it taught you. Pick a Ghibli-resembling character or design your
-own.
+<p align="center">
+  Keeps you company, watches your coding agents, and when you ask,<br>
+  looks at your screen and points at the answer.
+</p>
+
+<p align="center">
+  <a href="https://kiiri.app"><b>kiiri.app</b></a> ·
+  <a href="https://github.com/kiiri-app/kiiri/releases/latest">Download</a> ·
+  <a href="#quick-start">Build from source</a> ·
+  <a href="CONTRIBUTING.md">Contribute</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/kiiri-app/kiiri/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/kiiri-app/kiiri?color=E2673F&label=release"></a>
+  <a href="License.md"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-7E9C77"></a>
+  <img alt="Platforms" src="https://img.shields.io/badge/macOS%20·%20Windows%20·%20Linux-2A2522">
+  <a href="https://github.com/kiiri-app/kiiri/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/kiiri-app/kiiri/actions/workflows/ci.yml/badge.svg"></a>
+</p>
+
+![Kiiri](assets/screenshot.png)
+
+Kiiri is an animated character that lives on your desktop and doubles as a
+spatial AI assistant. It reacts to Claude Code, Cursor, Codex and Antigravity
+while they work, and any MCP client can make it talk, point or look at your
+screen. Drop it onto anything on screen and it understands the region
+underneath, then summarizes, solves, explains, translates, or runs a task you
+defined. It can talk back out loud, hold a real conversation, generate
+documents and spreadsheets, run things on a schedule, and remember what it did.
+
+**Free and open source.** Bring your own key (Anthropic, OpenAI, Gemini or any
+OpenAI-compatible API), or run fully local with Ollama.
+
+> **Kiri → Kiiri.** The project is being renamed. Some menus, folders and the
+> MCP tool names (`kiri_say`, `~/Documents/Kiri/`) still use the old name and
+> will keep working.
 
 ## Features
 
@@ -164,6 +194,15 @@ then all go through it, and the app only stores a proxy token.
 - [`AI-ROADMAP.md`](AI-ROADMAP.md) — design notes and roadmap.
 - [`RELEASING.md`](RELEASING.md) — tests, packaging, signing and auto-update.
 
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. Start with
+[`CONTRIBUTING.md`](CONTRIBUTING.md). Security issues: see [`SECURITY.md`](SECURITY.md).
+
 ## License
 
-MIT — see [`License.md`](./License.md). © 2026 Ahmet Vural.
+Code: MIT, see [`License.md`](./License.md). © 2026 Ahmet Vural.
+
+The **Kiiri** name, logo and mascot (`assets/brand/`) are not covered by the MIT
+license. You're welcome to use them to refer to the project, but not as the
+branding of a fork or a different product.

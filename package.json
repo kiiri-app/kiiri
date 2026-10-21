@@ -5,6 +5,14 @@
   "description": "A companion cat on your desktop — pomodoro + health-aware pet for coders",
   "author": "Ahmet Vural",
   "license": "MIT",
+  "homepage": "https://kiiri.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kiiri-app/kiiri.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kiiri-app/kiiri/issues"
+  },
   "type": "commonjs",
   "main": "main.js",
   "scripts": {
@@ -39,8 +47,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "ahmetvural79",
-        "repo": "kiri"
+        "owner": "kiiri-app",
+        "repo": "kiiri"
       }
     ],
     "files": [

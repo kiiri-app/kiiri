@@ -1,0 +1,33 @@
+name: Bug report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead? Screenshots or a short recording help a lot.
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Kiiri version
+      placeholder: "0.1.38 (right-click the cat → About)"
+    validations: { required: true }
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options: [macOS (Apple Silicon), macOS (Intel), Windows, Linux]
+    validations: { required: true }
+  - type: dropdown
+    id: provider
+    attributes:
+      label: AI provider (if relevant)
+      options: [Not AI-related, Anthropic, OpenAI, Gemini, Ollama, Other OpenAI-compatible]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Anything from the console. Please remove API keys and personal paths.
+      render: text

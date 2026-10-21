@@ -1,0 +1,14 @@
+name: Idea
+description: Suggest a feature or improvement
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the situation, not just the feature.
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?

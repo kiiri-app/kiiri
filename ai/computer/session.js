@@ -99,15 +99,19 @@ function createComputerSession(deps) {
     }
   }
 
+  // The first capture right after launch can come back empty on macOS while the
+  // capture service warms up (seen in the live test), so retry briefly before
+  // blaming the Screen Recording permission.
   async function grabDisplay(geom) {
-    const sources = await withOwnWindowsHidden(() =>
-      desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: geom.physWidth, height: geom.physHeight } })
-    );
-    const src = sources.find((s) => String(s.display_id) === String(geom.displayId)) || sources[0];
-    if (!src || !src.thumbnail || src.thumbnail.isEmpty()) {
-      throw new Error("screen capture returned no image (check the Screen Recording permission)");
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt) await delay(300 * attempt);
+      const sources = await withOwnWindowsHidden(() =>
+        desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: geom.physWidth, height: geom.physHeight } })
+      );
+      const src = sources.find((s) => String(s.display_id) === String(geom.displayId)) || sources[0];
+      if (src && src.thumbnail && !src.thumbnail.isEmpty()) return src.thumbnail;
     }
-    return src.thumbnail;
+    throw new Error("screen capture returned no image (check the Screen Recording permission)");
   }
 
   async function screenshot(geom) {

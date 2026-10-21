@@ -249,7 +249,7 @@ test("loop: screenshot → left_click → type → done, toolset_name echoed on 
   const out = await runComputerTask(baseOpts(t, e));
   assert.equal(out.status, "done");
   assert.equal(out.text, "It will be sunny tomorrow.");
-  assert.equal(out.steps, 3);
+  assert.equal(out.steps, 2); // the screenshot is a look, not an action
   assert.deepEqual(out.log.map((l) => [l.name, l.ok]), [["screenshot", true], ["left_click", true], ["type", true]]);
 
   // request shape: toolset entry with no name / display size, plus our confirm tool
@@ -293,6 +293,23 @@ test("loop: step cap stops the run", async () => {
   const out = await runComputerTask(baseOpts(t, env(), { limits: { maxSteps: 3 } }));
   assert.equal(out.status, "step_limit");
   assert.equal(out.steps, 3);
+});
+
+test("loop: screenshots and waits don't use up the action limit", async () => {
+  const look = { stop_reason: "tool_use", content: [tu("s", "screenshot", {}), tu("w", "wait", { duration: 0 })] };
+  const act = { stop_reason: "tool_use", content: [tu("c", "left_click", { coordinate: [10, 10] })] };
+  const t = scriptedTransport([look, act, look, act, { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] }]);
+  const out = await runComputerTask(baseOpts(t, env(), { limits: { maxSteps: 2 } }));
+  assert.equal(out.status, "done");
+  assert.equal(out.steps, 2);
+});
+
+test("loop: a look-only loop still ends at the overall cap", async () => {
+  const look = { stop_reason: "tool_use", content: [tu("s", "screenshot", {})] };
+  const t = scriptedTransport(Array(20).fill(look));
+  const out = await runComputerTask(baseOpts(t, env(), { limits: { maxSteps: 2 } }));
+  assert.equal(out.status, "step_limit");
+  assert.equal(out.steps, 0);
 });
 
 test("loop: 3 consecutive errors stop the run; a failed batch reports the rest as not executed", async () => {

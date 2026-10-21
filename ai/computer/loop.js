@@ -31,6 +31,10 @@ const CONFIRM_TOOL = {
 };
 
 const DEFAULT_LIMITS = Object.freeze({ maxSteps: 30, maxMs: 8 * 60 * 1000, maxErrors: 3 });
+// Looking doesn't count toward the action limit (the live test spent 7 of 15
+// steps on waits and screenshots); an overall cap still stops a look-only loop.
+const OBSERVE_ACTIONS = new Set(["screenshot", "zoom", "cursor_position", "wait"]);
+const OBSERVE_FACTOR = 4;
 const MAX_PAUSE_TURNS = 4;
 const NOT_EXECUTED = "Not executed: an earlier computer action in this turn failed.";
 const LANG_NAMES = { tr: "Turkish", en: "English", ko: "Korean", ja: "Japanese" };
@@ -137,7 +141,8 @@ async function runComputerTask(opts) {
   const now = opts.now || Date.now;
   const limits = { ...DEFAULT_LIMITS, ...(opts.limits || {}) };
   const log = [];
-  let steps = 0;
+  let steps = 0;   // actions that change something — what maxSteps limits
+  let callsSeen = 0;   // every computer call, looks included
   let consecutiveErrors = 0;
   let grant = false; // one approved confirm_with_user covers the next intent-matched action
 
@@ -254,10 +259,12 @@ async function runComputerTask(opts) {
         }
 
         // ── one computer action ──
-        if (steps >= limits.maxSteps) return finish("step_limit", lastText);
+        const observing = OBSERVE_ACTIONS.has(call.name);
+        if ((!observing && steps >= limits.maxSteps) || callsSeen >= limits.maxSteps * OBSERVE_FACTOR) return finish("step_limit", lastText);
         await waitIfPaused();
         if (signal.aborted) return finish(stoppedStatus(), lastText);
-        steps++;
+        callsSeen++;
+        if (!observing) steps++;
         const action = { name: call.name, input };
         const passive = PASSIVE_ACTIONS.has(call.name);
         const ctx = passive ? {} : await env.context();

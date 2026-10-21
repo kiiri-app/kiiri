@@ -21,8 +21,20 @@ function supportsAdaptiveThinking(model) {
   return !/haiku/i.test(model || "");
 }
 
+// Kiiri Cloud error type: from the Anthropic SDK's parsed body, or from the
+// openai-compat provider's "provider <status>: <body>" message.
+function cloudErrorType(err) {
+  const t = err && err.error && err.error.error && err.error.error.type;
+  if (t) return t;
+  const m = /"type"\s*:\s*"(quota_exceeded|plan_required)"/.exec((err && err.message) || "");
+  return m ? m[1] : "";
+}
+
 function classifyError(err) {
   const status = err && (err.status || err.statusCode);
+  const cloudType = cloudErrorType(err);
+  if (cloudType === "quota_exceeded") return { code: "quota", message: "Bu ayki ücretsiz soruların bitti. Ayın başında yenilenir ya da Kiiri Plus'a geçebilirsin." };
+  if (cloudType === "plan_required") return { code: "plan", message: "Bu özellik Kiiri Plus'ta var." };
   if (status === 401) return { code: "auth", message: "API anahtarı geçersiz veya eksik." };
   if (status === 403) return { code: "permission", message: "API anahtarının bu modele erişimi yok." };
   if (status === 404) return { code: "model", message: "Model bulunamadı. Modeli ayarlardan değiştir." };
@@ -160,9 +172,20 @@ function collectSources(blocks) {
 
 const MAX_CONTINUATIONS = 4;
 
-async function callWithTools({ apiKey, model, system, userText, tools, imageBase64, mediaType, maxTokens, think, webSearch, signal }) {
+// Kiiri Cloud speaks the Anthropic Messages API too (POST /v1/messages), with the
+// device token as a bearer instead of an API key. taskId makes a multi-call turn
+// (pause_turn resumes) count as ONE ask on the server.
+function clientFor(SDK, { apiKey, baseURL, authToken, taskId }) {
+  if (!baseURL) return new SDK({ apiKey, maxRetries: 1 });
+  return new SDK({
+    apiKey: null, authToken, baseURL, maxRetries: 1,
+    defaultHeaders: taskId ? { "X-Kiiri-Task": String(taskId).slice(0, 64) } : undefined,
+  });
+}
+
+async function callWithTools({ apiKey, baseURL, authToken, taskId, model, system, userText, tools, imageBase64, mediaType, maxTokens, think, webSearch, signal }) {
   const SDK = loadSDK();
-  const client = new SDK({ apiKey, maxRetries: 1 });
+  const client = clientFor(SDK, { apiKey, baseURL, authToken, taskId });
   const content = [];
   if (imageBase64) {
     content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/png", data: imageBase64 } });
@@ -196,4 +219,4 @@ async function callWithTools({ apiKey, model, system, userText, tools, imageBase
   return { text, toolUses, sources: collectSources(blocks), stopReason: message.stop_reason, model: message.model };
 }
 
-module.exports = { callVision, callVisionStream, callChatStream, callWithTools, classifyError, supportsAdaptiveThinking, webSearchTool, collectSources };
+module.exports = { callVision, callVisionStream, callChatStream, callWithTools, classifyError, supportsAdaptiveThinking, webSearchTool, collectSources, clientFor };

@@ -51,7 +51,16 @@
       <h1 data-i18n="s3Title">Give me a brain (optional)</h1>
       <p class="lead" data-i18n="s3Lead">With an AI model I can look at your screen, answer questions and make files. You can always set this up later.</p>
       <div class="choices">
-        <label class="choice"><input type="radio" name="ai" value="later" checked />
+        <label class="choice"><input type="radio" name="ai" value="cloud" checked />
+          <span><b data-i18n="aiCloud">Kiiri Cloud — free</b><small data-i18n="aiCloudBody">Just your email. 25 asks a month, no key, nothing to install.</small></span></label>
+        <div class="cloud-signin" id="cloud-signin">
+          <div class="cloud-form" id="cloud-form">
+            <input type="email" id="cloud-email" placeholder="you@example.com" autocomplete="email" spellcheck="false" />
+            <button type="button" id="cloud-send" class="ghost" data-i18n="cloudSend">Send link</button>
+          </div>
+          <p class="cloud-status" id="cloud-status" role="status"></p>
+        </div>
+        <label class="choice"><input type="radio" name="ai" value="later" />
           <span><b data-i18n="aiLater">Later</b><small data-i18n="aiLaterBody">Just be my desk buddy for now.</small></span></label>
         <label class="choice"><input type="radio" name="ai" value="local" />
           <span><b data-i18n="aiLocal">Local &amp; private (Ollama)</b><small data-i18n="aiLocalBody">Free, runs on this computer. Needs Ollama installed.</small></span></label>

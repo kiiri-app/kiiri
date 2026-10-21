@@ -37,8 +37,12 @@ const PROFILE_IDS = PROFILES.map((p) => p.id);
 // Multi-provider: Claude (Anthropic), OpenAI, Gemini, Ollama (local/offline), and
 // "proxy" — the user's own kiiri-proxy (or any OpenAI-compatible endpoint), where
 // provider keys live on their server and the app only holds a proxy token.
+// "cloud" — Kiiri Cloud: our hosted endpoint, no key needed, sign in with email
+// (a device token is kept encrypted; free plan = 25 asks/month).
 // Everything except Anthropic speaks the OpenAI Chat Completions format.
-const SUPPORTED_PROVIDERS = ["anthropic", "openai", "gemini", "ollama", "proxy"];
+const SUPPORTED_PROVIDERS = ["cloud", "anthropic", "openai", "gemini", "ollama", "proxy"];
+const DEFAULT_CLOUD_BASE_URL = "https://cloud.kiiri.app";
+const DEFAULT_CLOUD_MODEL = "kiiri-smart";
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 const DEFAULT_OLLAMA_MODEL = "llama3.2-vision";
@@ -55,6 +59,16 @@ const DEFAULTS = Object.freeze({
   ollamaBaseUrl: DEFAULT_OLLAMA_BASE_URL,
   proxyBaseUrl: "",
   proxyModel: DEFAULT_PROXY_MODEL,
+  cloudBaseUrl: DEFAULT_CLOUD_BASE_URL,
+  // Last known Kiiri Cloud account (display only; the server is the authority).
+  cloudEmail: "",
+  cloudPlan: "",
+  // Speech-to-text route: "auto" = OpenAI key / own proxy / Kiiri Cloud (whichever
+  // the provider setup gives), "custom" = any OpenAI-compatible transcription
+  // server, e.g. a local Whisper server for fully offline voice.
+  sttMode: "auto",
+  sttBaseUrl: "",
+  sttModel: "whisper-1",
   responseLanguage: "tr",
   // When false, only an Option/Alt-held drop triggers analysis. When true,
   // every drop of the cat runs an analysis.
@@ -165,6 +179,12 @@ function sanitizeConfig(raw) {
     ollamaBaseUrl: cleanStr(data.ollamaBaseUrl, DEFAULT_OLLAMA_BASE_URL, 200),
     proxyBaseUrl: sanitizeProxyUrl(data.proxyBaseUrl),
     proxyModel: cleanStr(data.proxyModel, DEFAULT_PROXY_MODEL),
+    cloudBaseUrl: sanitizeProxyUrl(data.cloudBaseUrl) || DEFAULT_CLOUD_BASE_URL,
+    cloudEmail: cleanStr(data.cloudEmail, "", 254),
+    cloudPlan: ["free", "plus", "pro"].includes(data.cloudPlan) ? data.cloudPlan : "",
+    sttMode: data.sttMode === "custom" ? "custom" : "auto",
+    sttBaseUrl: sanitizeProxyUrl(data.sttBaseUrl),
+    sttModel: cleanStr(data.sttModel, "whisper-1", 80),
     responseLanguage: SUPPORTED_RESPONSE_LANGUAGES.includes(data.responseLanguage)
       ? data.responseLanguage
       : DEFAULTS.responseLanguage,
@@ -206,8 +226,12 @@ function loadConfig() {
   try {
     const text = fs.readFileSync(configPath(), "utf8");
     cached = sanitizeConfig(JSON.parse(text));
-  } catch {
-    cached = sanitizeConfig({});
+  } catch (err) {
+    // A brand-new install (no config file, no saved key) starts on Kiiri Cloud, so
+    // sign-in with an email is all it needs. Anything older keeps the Anthropic
+    // fallback: flipping someone who already has a key would lose their setup.
+    const fresh = err && err.code === "ENOENT" && !hasApiKey() && !hasOpenAiKey() && !hasGeminiKey() && !hasProxyToken();
+    cached = sanitizeConfig(fresh ? { provider: "cloud" } : {});
   }
   return cached;
 }
@@ -235,6 +259,8 @@ const ANTHROPIC_KEY_FILE = "ai-key.bin";
 const OPENAI_KEY_FILE = "openai-key.bin";
 const GEMINI_KEY_FILE = "gemini-key.bin";
 const PROXY_TOKEN_FILE = "proxy-token.bin";
+const CLOUD_TOKEN_FILE = "cloud-token.bin";
+const STT_KEY_FILE = "stt-key.bin";
 
 function writeSecret(file, rawKey) {
   const key = String(rawKey || "").trim();
@@ -308,6 +334,21 @@ const getProxyToken = () => readSecret(PROXY_TOKEN_FILE);
 const hasProxyToken = () => hasSecret(PROXY_TOKEN_FILE);
 const clearProxyToken = () => clearSecret(PROXY_TOKEN_FILE);
 
+// Kiiri Cloud device token (from email sign-in, see ai/cloud.js)
+const setCloudToken = (k) => writeSecret(CLOUD_TOKEN_FILE, k);
+const getCloudToken = () => readSecret(CLOUD_TOKEN_FILE);
+const hasCloudToken = () => hasSecret(CLOUD_TOKEN_FILE);
+const clearCloudToken = () => clearSecret(CLOUD_TOKEN_FILE);
+// Optional key for a custom transcription server (most local servers need none)
+const setSttKey = (k) => writeSecret(STT_KEY_FILE, k);
+const getSttKey = () => readSecret(STT_KEY_FILE);
+const hasSttKey = () => hasSecret(STT_KEY_FILE);
+const clearSttKey = () => clearSecret(STT_KEY_FILE);
+
+function cloudReady() {
+  return hasCloudToken();
+}
+
 function proxyReady() {
   return !!(loadConfig().proxyBaseUrl && hasProxyToken());
 }
@@ -326,6 +367,9 @@ function resolveProvider() {
       return { id: "ollama", model: c.ollamaModel, apiKey: null, baseUrl: `${String(c.ollamaBaseUrl || "http://localhost:11434").replace(/\/+$/, "")}/v1` };
     case "proxy":
       return { id: "proxy", model: c.proxyModel, apiKey: getProxyToken(), baseUrl: `${c.proxyBaseUrl}/v1` };
+    case "cloud":
+      // The server picks the real model per plan; the alias is just a hint.
+      return { id: "cloud", model: DEFAULT_CLOUD_MODEL, apiKey: getCloudToken(), baseUrl: `${c.cloudBaseUrl}/v1`, rootUrl: c.cloudBaseUrl };
     case "anthropic":
     default:
       return { id: "anthropic", model: c.model, apiKey: getApiKey(), baseUrl: null };
@@ -339,13 +383,19 @@ function providerReady() {
   if (c.provider === "gemini") return hasGeminiKey();
   if (c.provider === "ollama") return true; // local; reachability checked at call time
   if (c.provider === "proxy") return proxyReady();
+  if (c.provider === "cloud") return cloudReady();
   return hasApiKey();
 }
 
 // Web search runs as Anthropic's server tool, so it only exists on that provider.
+// On Kiiri Cloud it depends on the plan (free has no web search).
 function webSearchUsable() {
   const c = loadConfig();
-  return !!c.webSearchEnabled && resolveProvider().id === "anthropic" && hasApiKey();
+  if (!c.webSearchEnabled) return false;
+  const p = resolveProvider().id;
+  if (p === "anthropic") return hasApiKey();
+  if (p === "cloud") return cloudReady() && (c.cloudPlan === "plus" || c.cloudPlan === "pro");
+  return false;
 }
 
 // Renderer-safe view of config (no secret key material).
@@ -357,6 +407,9 @@ function redactedConfig() {
     hasOpenAiKey: hasOpenAiKey(),
     hasGeminiKey: hasGeminiKey(),
     hasProxyToken: hasProxyToken(),
+    hasCloudToken: hasCloudToken(),
+    hasSttKey: hasSttKey(),
+    sttUsable: !!sttRoute(),
     audioVia: audioVia(),
     providerReady: providerReady(),
     encryptionAvailable: !!(safeStorage && safeStorage.isEncryptionAvailable()),
@@ -380,6 +433,7 @@ function redactedConfig() {
 function audioVia() {
   const c = loadConfig();
   if (c.provider === "proxy" && proxyReady()) return "proxy";
+  if (c.provider === "cloud" && cloudReady()) return "cloud";
   if (hasOpenAiKey()) return "openai";
   return null;
 }
@@ -388,8 +442,19 @@ function audioVia() {
 function audioRoute() {
   const via = audioVia();
   if (via === "proxy") return { via, baseUrl: `${loadConfig().proxyBaseUrl}/v1`, apiKey: getProxyToken() };
+  if (via === "cloud") return { via, baseUrl: `${loadConfig().cloudBaseUrl}/v1`, apiKey: getCloudToken() };
   if (via === "openai") return { via, baseUrl: "https://api.openai.com/v1", apiKey: getOpenAiKey() };
   return null;
+}
+
+// Where speech-to-text goes: a custom (e.g. local Whisper) server when chosen,
+// otherwise the shared audio route. { via, baseUrl, apiKey, model? } or null.
+function sttRoute() {
+  const c = loadConfig();
+  if (c.sttMode === "custom") {
+    return c.sttBaseUrl ? { via: "custom", baseUrl: `${c.sttBaseUrl}/v1`, apiKey: getSttKey() || "", model: c.sttModel || "whisper-1" } : null;
+  }
+  return audioRoute();
 }
 
 // Spoken answers usable: toggle on + either cloud TTS (OpenAI key or proxy) or
@@ -402,14 +467,14 @@ function ttsUsable() {
 // True only when voice is usable (toggle on + a speech-to-text route).
 function voiceUsable() {
   const c = loadConfig();
-  return !!(c.voiceEnabled && audioVia());
+  return !!(c.voiceEnabled && sttRoute());
 }
 
 // Push-to-talk usable: its own toggle + STT + a ready vision provider to answer
 // the screen question.
 function pttUsable() {
   const c = loadConfig();
-  return !!(c.pttEnabled && audioVia() && providerReady());
+  return !!(c.pttEnabled && sttRoute() && providerReady());
 }
 
 module.exports = {
@@ -437,6 +502,17 @@ module.exports = {
   hasProxyToken,
   clearProxyToken,
   sanitizeProxyUrl,
+  setCloudToken,
+  getCloudToken,
+  hasCloudToken,
+  clearCloudToken,
+  cloudReady,
+  setSttKey,
+  getSttKey,
+  hasSttKey,
+  clearSttKey,
+  sttRoute,
+  DEFAULT_CLOUD_BASE_URL,
   resolveProvider,
   providerReady,
   webSearchUsable,

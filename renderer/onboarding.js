@@ -21,6 +21,11 @@ const I18N = {
     agentsBody: "I'll show when Claude Code, Cursor, Codex… are working and ping you when they need approval. This adds a small hook to their settings; turn it off anytime from the menu-bar icon.",
     s3Title: "Give me a brain (optional)",
     s3Lead: "With an AI model I can look at your screen, answer questions and make files. You can always set this up later.",
+    aiCloud: "Kiiri Cloud — free",
+    aiCloudBody: "Just your email. 25 asks a month, no key, nothing to install.",
+    cloudSend: "Send link",
+    cloudWaiting: (e) => `Check ${e} and click the link — I'll wait here.`,
+    cloudDone: (e) => `Signed in as ${e}. I'm ready!`,
     aiLater: "Later",
     aiLaterBody: "Just be my desk buddy for now.",
     aiLocal: "Local & private (Ollama)",
@@ -57,6 +62,11 @@ const I18N = {
     agentsBody: "Claude Code, Cursor, Codex… çalışırken bunu gösteririm, onay beklediklerinde haber veririm. Bunun için ayarlarına küçük bir hook eklerim; menü çubuğu simgesinden istediğin an kapatabilirsin.",
     s3Title: "Bana bir beyin ver (isteğe bağlı)",
     s3Lead: "Bir yapay zekâ modeliyle ekranına bakıp soruları yanıtlayabilir, dosya hazırlayabilirim. Bunu sonra da kurabilirsin.",
+    aiCloud: "Kiiri Cloud — ücretsiz",
+    aiCloudBody: "Sadece e-postan. Ayda 25 soru, anahtar yok, kurulum yok.",
+    cloudSend: "Bağlantı gönder",
+    cloudWaiting: (e) => `${e} adresine gelen bağlantıya tıkla, ben burada bekliyorum.`,
+    cloudDone: (e) => `${e} ile giriş yapıldı. Hazırım!`,
     aiLater: "Sonra",
     aiLaterBody: "Şimdilik sadece masa arkadaşın olayım.",
     aiLocal: "Yerel ve gizli (Ollama)",
@@ -93,6 +103,11 @@ const I18N = {
     agentsBody: "Claude Code, Cursor, Codex… 가 작업 중이면 보여 주고, 승인이 필요하면 알려 줘요. 이를 위해 해당 설정에 작은 훅을 추가하며, 메뉴 막대 아이콘에서 언제든 끌 수 있어요.",
     s3Title: "두뇌 연결하기 (선택)",
     s3Lead: "AI 모델이 있으면 화면을 보고 질문에 답하고 파일도 만들 수 있어요. 나중에 설정해도 돼요.",
+    aiCloud: "Kiiri Cloud — 무료",
+    aiCloudBody: "이메일만 있으면 돼요. 한 달 25회 질문, 키도 설치도 필요 없어요.",
+    cloudSend: "링크 보내기",
+    cloudWaiting: (e) => `${e}에서 링크를 눌러 주세요. 여기서 기다릴게요.`,
+    cloudDone: (e) => `${e}(으)로 로그인했어요. 준비 완료!`,
     aiLater: "나중에",
     aiLaterBody: "지금은 책상 친구로만 지낼게요.",
     aiLocal: "로컬 & 비공개 (Ollama)",
@@ -129,6 +144,11 @@ const I18N = {
     agentsBody: "Claude Code、Cursor、Codex… の作業中を表示し、承認が必要なときに知らせます。そのため各設定に小さなフックを追加します。メニューバーのアイコンからいつでもオフにできます。",
     s3Title: "頭脳をつなぐ（任意）",
     s3Lead: "AI モデルがあれば画面を見て質問に答えたり、ファイルを作ったりできます。あとで設定してもOK。",
+    aiCloud: "Kiiri Cloud — 無料",
+    aiCloudBody: "メールアドレスだけ。月 25 回まで質問でき、キーもインストールも不要。",
+    cloudSend: "リンクを送る",
+    cloudWaiting: (e) => `${e} に届いたリンクをクリックしてね。ここで待ってるよ。`,
+    cloudDone: (e) => `${e} でサインインしたよ。準備OK！`,
     aiLater: "あとで",
     aiLaterBody: "今はデスクの相棒でいるね。",
     aiLocal: "ローカル＆プライベート（Ollama）",
@@ -161,7 +181,10 @@ let step = 0;
 let pickedSet = "kiri";
 let nameTouched = false;
 
-const L = (key) => (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+const L = (key, ...args) => {
+  const v = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+  return typeof v === "function" ? v(...args) : v;
+};
 
 function applyI18n() {
   document.documentElement.lang = lang;
@@ -195,6 +218,40 @@ function choices() {
   };
 }
 
+// Kiiri Cloud: the email field only shows while that choice is picked. Sign-in
+// is polled in the main process, so finishing before the link is clicked is fine.
+let cloudEmailSent = "";
+function syncCloudChoice() {
+  const ai = document.querySelector('input[name="ai"]:checked');
+  $("cloud-signin").hidden = !ai || ai.value !== "cloud";
+}
+function showCloud(state) {
+  const status = $("cloud-status");
+  status.classList.remove("err", "ok");
+  if (state && state.signedIn) {
+    $("cloud-form").hidden = true;
+    status.textContent = L("cloudDone", state.email || cloudEmailSent);
+    status.classList.add("ok");
+  } else if (state && state.signingIn) {
+    $("cloud-form").hidden = true;
+    status.textContent = L("cloudWaiting", cloudEmailSent || state.email || "");
+  } else {
+    $("cloud-form").hidden = false;
+    if (state && state.result && !state.result.ok) { status.textContent = state.result.message || ""; status.classList.add("err"); }
+    else status.textContent = "";
+  }
+}
+for (const r of document.querySelectorAll('input[name="ai"]')) r.addEventListener("change", syncCloudChoice);
+$("cloud-send").addEventListener("click", async () => {
+  const email = $("cloud-email").value.trim();
+  const r = await api.cloudSignIn(email).catch(() => null);
+  if (!r || !r.ok) { showCloud({ result: r || { ok: false, message: "" } }); return; }
+  cloudEmailSent = r.email || email;
+  showCloud({ signingIn: true });
+});
+$("cloud-email").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); $("cloud-send").click(); } });
+api.onCloudAuth((state) => showCloud(state));
+
 for (const b of document.querySelectorAll(".pet")) b.addEventListener("click", () => pick(b.dataset.set));
 $("pet-name").addEventListener("input", () => { nameTouched = true; });
 $("lang").addEventListener("change", async () => {
@@ -221,6 +278,8 @@ document.addEventListener("keydown", (e) => {
   if (state.userName) $("user-name").value = state.userName;
   $("agents").checked = state.agentMonitoring !== false;
   pick(state.set);
+  syncCloudChoice();
+  try { showCloud(await api.cloudStatus()); } catch {}
   if (state.petName && state.petName !== "Kiri" && state.petName !== "Tori") {
     $("pet-name").value = state.petName;
     nameTouched = true;

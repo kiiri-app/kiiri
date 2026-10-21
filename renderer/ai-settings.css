@@ -140,3 +140,9 @@ textarea { resize: vertical; }
 .style-preset:hover, .style-tag:hover { border-color: var(--accent); }
 .style-tag.on { background: #fbe9d7; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .style-tag.on::before { content: "✓ "; color: var(--accent-press); }
+
+/* Kiiri Cloud quota */
+.quota { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.quota-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--panel-soft, #f3e7cf); overflow: hidden; }
+.quota-bar span { display: block; height: 100%; width: 0; background: var(--accent, #e0795c); transition: width .3s; }
+.status.err { color: var(--danger, #cf5b46); }

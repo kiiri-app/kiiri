@@ -56,6 +56,26 @@
         <input type="text" id="provider-model" list="model-suggestions" autocomplete="off" spellcheck="false" />
         <datalist id="model-suggestions"></datalist>
       </label>
+      <div id="cloud-row" hidden>
+        <div id="cloud-out">
+          <div class="key-row">
+            <input type="email" id="cloud-email" placeholder="you@example.com" autocomplete="email" spellcheck="false" />
+            <button id="cloud-send" type="button" class="primary-btn" data-i18n="cloudSend">Send sign-in link</button>
+          </div>
+        </div>
+        <div id="cloud-wait" class="key-meta" hidden>
+          <span id="cloud-wait-text" class="status" role="status"></span>
+          <button id="cloud-cancel" type="button" class="link-btn" data-i18n="cancel">Cancel</button>
+        </div>
+        <div id="cloud-in" hidden>
+          <div class="key-meta">
+            <span id="cloud-account" class="status ok"></span>
+            <button id="cloud-signout" type="button" class="link-btn" data-i18n="cloudSignOut">Sign out</button>
+          </div>
+          <div class="quota" id="cloud-quota" hidden><div class="quota-bar"><span id="cloud-quota-fill"></span></div><span id="cloud-quota-text" class="status"></span></div>
+        </div>
+        <span id="cloud-msg" class="status" role="status"></span>
+      </div>
       <label class="field" id="ollama-base-row" hidden>
         <span data-i18n="ollamaAddress">Ollama address</span>
         <input type="text" id="ollama-base" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434" />
@@ -142,6 +162,31 @@
         <select id="transcribe-model"></select>
       </label>
       <p class="hint" id="audio-via-proxy" data-i18n="audioViaProxy" hidden>Voice goes through your proxy — no OpenAI key needed here.</p>
+      <p class="hint" id="audio-via-cloud" data-i18n="audioViaCloud" hidden>Voice goes through Kiiri Cloud — no OpenAI key needed.</p>
+      <label class="field">
+        <span data-i18n="sttMode">Speech-to-text</span>
+        <select id="stt-mode"></select>
+      </label>
+      <div id="stt-custom-row" hidden>
+        <label class="field">
+          <span data-i18n="sttUrl">Server address</span>
+          <input type="url" id="stt-base" autocomplete="off" spellcheck="false" placeholder="http://localhost:8000" />
+        </label>
+        <div class="two-col">
+          <label class="field">
+            <span data-i18n="sttModelLabel">Model</span>
+            <input type="text" id="stt-model" autocomplete="off" spellcheck="false" placeholder="whisper-1" />
+          </label>
+          <div class="field">
+            <span data-i18n="sttKeyLabel">Key (optional)</span>
+            <div class="key-row">
+              <input type="password" id="stt-key" autocomplete="off" spellcheck="false" />
+              <button id="save-stt-key" type="button" class="primary-btn" data-i18n="save">Save</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint" data-i18n="sttCustomHint">Any OpenAI-compatible transcription server. Run one on this computer (for example faster-whisper-server or Speaches) for fully offline voice.</p>
+      </div>
       <p class="hint" data-i18n="voiceHint">When on, a 🎤 button appears next to the cat. Click → speak → the command runs (it stops automatically when you stop talking).</p>
       <label class="row toggle-row">
         <span data-i18n="pttEnable">Push-to-talk: ask about my screen</span>

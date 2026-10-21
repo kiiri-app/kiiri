@@ -18,6 +18,7 @@ const aiAgent = require("./ai/agent");
 const aiVoice = require("./ai/voice");
 const aiTts = require("./ai/tts");
 const { checkProxy } = require("./ai/providers/proxy-check");
+const aiCloud = require("./ai/cloud");
 const aiAutomations = require("./ai/automations");
 const aiAppContext = require("./ai/appcontext");
 const aiChat = require("./ai/chat");
@@ -2750,6 +2751,34 @@ ipcMain.handle("ai-proxy-test", () => {
   return checkProxy(c.proxyBaseUrl, aiConfig.getProxyToken());
 });
 
+// Kiiri Cloud: email sign-in. The poll runs here; every window hears the result
+// ("cloud-auth-changed") because sign-in can start in onboarding and finish
+// while settings is open, or the other way round.
+function broadcastCloudAuth(extra) {
+  const payload = { ...aiCloud.status(), ...(extra || {}) };
+  for (const w of [aiSettingsWin, onboardingWin, aiCommandWin]) {
+    if (w && !w.isDestroyed()) w.webContents.send("cloud-auth-changed", payload);
+  }
+  broadcastVoiceConfig(); // voice can route through Kiiri Cloud
+}
+ipcMain.handle("cloud-sign-in-start", async (_evt, email) => {
+  const r = await aiCloud.startSignIn(email, (result) => {
+    if (result.ok && aiConfig.loadConfig().provider === "cloud" && !aiConfig.loadConfig().enabled) {
+      aiConfig.saveConfig({ enabled: true });
+    }
+    if (result.ok) aiCloud.fetchMe().catch(() => {}).finally(() => broadcastCloudAuth({ result }));
+    else broadcastCloudAuth({ result });
+  });
+  broadcastCloudAuth();
+  return r;
+});
+ipcMain.handle("cloud-sign-in-cancel", () => { const r = aiCloud.cancelSignIn(); broadcastCloudAuth(); return r; });
+ipcMain.handle("cloud-status", () => aiCloud.status());
+ipcMain.handle("ai-set-stt-key", (_evt, key) => { const r = aiConfig.setSttKey(key); broadcastVoiceConfig(); return r; });
+ipcMain.handle("ai-clear-stt-key", () => { const r = aiConfig.clearSttKey(); broadcastVoiceConfig(); return r; });
+ipcMain.handle("cloud-refresh", async () => { await aiCloud.fetchMe().catch(() => {}); return aiCloud.status(); });
+ipcMain.handle("cloud-sign-out", async () => { await aiCloud.signOut(); broadcastCloudAuth(); return { ok: true }; });
+
 function broadcastCharacterArt(c) {
   const win = petWins.get(c.id);
   if (win && !win.isDestroyed()) {
@@ -3178,6 +3207,12 @@ function finishOnboarding(choices = {}) {
   saveSettings();
   startAgentIntegrations();
   refreshTray();
+  if (choices.ai === "cloud") {
+    // Sign-in may still be pending (polled in ai/cloud.js); AI turns on now and
+    // starts working the moment the token lands.
+    aiConfig.saveConfig({ provider: "cloud", enabled: true });
+    broadcastVoiceConfig();
+  }
   if (choices.ai === "local") {
     aiConfig.applyProfile("local");
     aiConfig.saveConfig({ enabled: true });
@@ -3925,6 +3960,8 @@ app.whenReady().then(async () => {
     // First run: seed starter skills in the user's language so the command
     // window ships with something useful.
     try { aiAgent.seedSkills(currentLanguage); } catch (err) { logError("[Kiri] skill seed failed:", err); }
+    // Keep the cached Kiiri Cloud plan current (feature checks read it); offline is fine.
+    if (aiConfig.hasCloudToken()) aiCloud.fetchMe().catch(() => {});
     setupAutoUpdater(); // before the menus, which enable "Check for Updates" from it
     buildAppMenu();
     registerGlobalShortcuts();

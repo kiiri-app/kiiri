@@ -65,6 +65,25 @@ const I18N = {
     proxyUrlInvalid: "Use an https:// address (http:// only for localhost).",
     hintProxy: "Your API keys stay on your own server (kiiri-proxy on Cloudflare, or any OpenAI-compatible endpoint). Kiiri only keeps the token. Models: kiiri-smart, kiiri-fast.",
     audioViaProxy: "Voice goes through your proxy — no OpenAI key needed here.",
+    providerCloud: "Kiiri Cloud (free, no key)",
+    hintCloud: "Sign in with your email — no API key. Free plan: 25 asks a month.",
+    cloudSend: "Send sign-in link",
+    cloudWaiting: (e) => `Check your inbox at ${e} and click the link. You'll be signed in here automatically.`,
+    cloudSignedIn: (e, p) => `Signed in as ${e} · ${p}`,
+    cloudSignOut: "Sign out",
+    cloudQuota: (u, l, d) => `${u} of ${l} asks used this month · resets ${d}`,
+    planFree: "Free",
+    planPlus: "Plus",
+    planPro: "Pro",
+    cloudDone: "You're signed in. Kiiri is ready.",
+    audioViaCloud: "Voice goes through Kiiri Cloud — no OpenAI key needed.",
+    sttMode: "Speech-to-text",
+    sttAuto: "Automatic (Kiiri Cloud / OpenAI / your proxy)",
+    sttCustom: "My own speech server",
+    sttUrl: "Server address",
+    sttModelLabel: "Model",
+    sttKeyLabel: "Key (optional)",
+    sttCustomHint: "Any OpenAI-compatible transcription server. Run one on this computer (for example faster-whisper-server or Speaches) for fully offline voice.",
     hintOllama: "Local/offline — no key needed. Ollama must be running with a vision model pulled (e.g. `ollama pull llama3.2-vision`).",
     autoDetect: "Detect content and suggest tasks",
     alwaysDrop: "Analyze on every drop",
@@ -158,6 +177,25 @@ const I18N = {
     proxyUrlInvalid: "https:// ile başlayan bir adres kullan (http:// yalnızca localhost için).",
     hintProxy: "API anahtarların kendi sunucunda kalır (Cloudflare'de kiiri-proxy ya da OpenAI-uyumlu herhangi bir uç). Kiiri yalnızca token'ı saklar. Modeller: kiiri-smart, kiiri-fast.",
     audioViaProxy: "Ses de proxy'n üzerinden gider; burada OpenAI anahtarı gerekmez.",
+    providerCloud: "Kiiri Cloud (ücretsiz, anahtarsız)",
+    hintCloud: "E-postanla giriş yap, API anahtarı gerekmez. Ücretsiz plan: ayda 25 soru.",
+    cloudSend: "Giriş bağlantısı gönder",
+    cloudWaiting: (e) => `${e} adresine gelen e-postadaki bağlantıya tıkla. Burada kendiliğinden giriş yapılacak.`,
+    cloudSignedIn: (e, p) => `${e} ile giriş yapıldı · ${p}`,
+    cloudSignOut: "Çıkış yap",
+    cloudQuota: (u, l, d) => `Bu ay ${l} sorunun ${u} tanesi kullanıldı · ${d} tarihinde yenilenir`,
+    planFree: "Ücretsiz",
+    planPlus: "Plus",
+    planPro: "Pro",
+    cloudDone: "Giriş yapıldı. Kiiri hazır.",
+    audioViaCloud: "Ses Kiiri Cloud üzerinden gider; OpenAI anahtarı gerekmez.",
+    sttMode: "Konuşmayı yazıya çevirme",
+    sttAuto: "Otomatik (Kiiri Cloud / OpenAI / proxy'n)",
+    sttCustom: "Kendi ses sunucum",
+    sttUrl: "Sunucu adresi",
+    sttModelLabel: "Model",
+    sttKeyLabel: "Anahtar (isteğe bağlı)",
+    sttCustomHint: "OpenAI uyumlu herhangi bir yazıya çevirme sunucusu. Tamamen çevrimdışı ses için bu bilgisayarda bir tane çalıştırabilirsin (ör. faster-whisper-server ya da Speaches).",
     hintOllama: "Yerel/offline — anahtar gerekmez. Ollama çalışıyor olmalı ve bir vision modeli indirilmeli (ör. `ollama pull llama3.2-vision`).",
     autoDetect: "İçeriği algıla ve görev öner",
     alwaysDrop: "Her bırakışta analiz et",
@@ -251,6 +289,25 @@ const I18N = {
     proxyUrlInvalid: "https:// 주소를 사용하세요 (http://는 localhost만).",
     hintProxy: "API 키는 내 서버에 남아요 (Cloudflare의 kiiri-proxy 또는 OpenAI 호환 엔드포인트). Kiiri는 토큰만 보관해요. 모델: kiiri-smart, kiiri-fast.",
     audioViaProxy: "음성도 프록시를 거쳐요. 여기에는 OpenAI 키가 필요 없어요.",
+    providerCloud: "Kiiri Cloud (무료, 키 불필요)",
+    hintCloud: "이메일로 로그인하면 API 키가 필요 없어요. 무료 플랜: 한 달 25회 질문.",
+    cloudSend: "로그인 링크 보내기",
+    cloudWaiting: (e) => `${e} 받은편지함에서 링크를 눌러 주세요. 여기서 자동으로 로그인돼요.`,
+    cloudSignedIn: (e, p) => `${e}(으)로 로그인됨 · ${p}`,
+    cloudSignOut: "로그아웃",
+    cloudQuota: (u, l, d) => `이번 달 ${l}회 중 ${u}회 사용 · ${d}에 초기화`,
+    planFree: "무료",
+    planPlus: "Plus",
+    planPro: "Pro",
+    cloudDone: "로그인했어요. Kiiri가 준비됐어요.",
+    audioViaCloud: "음성은 Kiiri Cloud를 거쳐요. OpenAI 키가 필요 없어요.",
+    sttMode: "음성 받아쓰기",
+    sttAuto: "자동 (Kiiri Cloud / OpenAI / 내 프록시)",
+    sttCustom: "내 음성 서버",
+    sttUrl: "서버 주소",
+    sttModelLabel: "모델",
+    sttKeyLabel: "키 (선택)",
+    sttCustomHint: "OpenAI 호환 받아쓰기 서버라면 무엇이든 돼요. 완전 오프라인 음성을 원하면 이 컴퓨터에서 실행하세요 (예: faster-whisper-server, Speaches).",
     hintOllama: "로컬/오프라인 — 키가 필요 없어요. Ollama가 실행 중이고 vision 모델이 설치되어 있어야 해요 (예: `ollama pull llama3.2-vision`).",
     autoDetect: "내용을 인식해 작업 추천",
     alwaysDrop: "떨어뜨릴 때마다 분석",
@@ -344,6 +401,25 @@ const I18N = {
     proxyUrlInvalid: "https:// のアドレスを使ってください（http:// は localhost のみ）。",
     hintProxy: "API キーは自分のサーバーに残ります（Cloudflare の kiiri-proxy、または OpenAI 互換のエンドポイント）。Kiiri はトークンだけを保存します。モデル: kiiri-smart、kiiri-fast。",
     audioViaProxy: "音声もプロキシ経由です。ここで OpenAI キーは不要です。",
+    providerCloud: "Kiiri Cloud（無料・キー不要）",
+    hintCloud: "メールでサインインするだけ。API キーは不要です。無料プラン: 月 25 回まで質問できます。",
+    cloudSend: "サインインリンクを送る",
+    cloudWaiting: (e) => `${e} に届いたメールのリンクをクリックしてください。ここで自動的にサインインします。`,
+    cloudSignedIn: (e, p) => `${e} でサインイン中 · ${p}`,
+    cloudSignOut: "サインアウト",
+    cloudQuota: (u, l, d) => `今月 ${l} 回中 ${u} 回使用 · ${d} にリセット`,
+    planFree: "無料",
+    planPlus: "Plus",
+    planPro: "Pro",
+    cloudDone: "サインインしました。Kiiri の準備ができました。",
+    audioViaCloud: "音声は Kiiri Cloud 経由です。OpenAI キーは不要です。",
+    sttMode: "音声の文字起こし",
+    sttAuto: "自動（Kiiri Cloud / OpenAI / 自分のプロキシ）",
+    sttCustom: "自分の音声サーバー",
+    sttUrl: "サーバーアドレス",
+    sttModelLabel: "モデル",
+    sttKeyLabel: "キー（任意）",
+    sttCustomHint: "OpenAI 互換の文字起こしサーバーなら何でも使えます。完全オフラインにしたい場合はこのパソコンで動かしてください（例: faster-whisper-server、Speaches）。",
     hintOllama: "ローカル/オフライン — キー不要。Ollama が起動していて vision モデルが必要です（例: `ollama pull llama3.2-vision`）。",
     autoDetect: "内容を検出してタスクを提案",
     alwaysDrop: "ドロップのたびに分析",
@@ -376,9 +452,10 @@ const I18N = {
 };
 
 let lang = "en";
-function L(key) {
+function L(key, ...args) {
   const table = I18N[lang] || I18N.en;
-  return table[key] || I18N.en[key] || key;
+  const v = table[key] || I18N.en[key] || key;
+  return typeof v === "function" ? v(...args) : v;
 }
 function applyI18n() {
   document.documentElement.lang = lang;
@@ -391,6 +468,7 @@ function applyI18n() {
 
 function providerLabels() {
   return {
+    cloud: L("providerCloud"),
     anthropic: "Claude (Anthropic)",
     openai: "OpenAI (GPT-4o)",
     gemini: "Google Gemini",
@@ -418,6 +496,7 @@ const PROVIDER_HINT_KEY = {
   gemini: "hintGemini",
   ollama: "hintOllama",
   proxy: "hintProxy",
+  cloud: "hintCloud",
 };
 const LANG_LABELS = { tr: "Türkçe", en: "English", ko: "한국어", ja: "日本語" };
 function transcribeLabels() {
@@ -463,6 +542,25 @@ const proxyTokenStatus = el("proxy-token-status");
 const testProxyBtn = el("test-proxy");
 const proxyTestStatus = el("proxy-test-status");
 const audioViaProxyEl = el("audio-via-proxy");
+const audioViaCloudEl = el("audio-via-cloud");
+const cloudRow = el("cloud-row");
+const cloudOut = el("cloud-out");
+const cloudWait = el("cloud-wait");
+const cloudWaitText = el("cloud-wait-text");
+const cloudIn = el("cloud-in");
+const cloudAccount = el("cloud-account");
+const cloudQuota = el("cloud-quota");
+const cloudQuotaFill = el("cloud-quota-fill");
+const cloudQuotaText = el("cloud-quota-text");
+const cloudMsg = el("cloud-msg");
+const cloudEmail = el("cloud-email");
+const sttModeEl = el("stt-mode");
+const sttCustomRow = el("stt-custom-row");
+const sttBaseEl = el("stt-base");
+const sttModelEl = el("stt-model");
+const sttKeyEl = el("stt-key");
+let cloud = { signedIn: false, signingIn: false };
+let cloudWaitingFor = "";
 // Models the last successful proxy test reported (feeds the model datalist).
 let proxyModels = null;
 const langSel = el("response-language");
@@ -599,6 +697,7 @@ function renderProxyStatus() {
     clearProxyToken.hidden = true;
   }
   if (audioViaProxyEl) audioViaProxyEl.hidden = config.audioVia !== "proxy";
+  if (audioViaCloudEl) audioViaCloudEl.hidden = config.audioVia !== "cloud";
 }
 
 function applyProviderUI() {
@@ -612,6 +711,9 @@ function applyProviderUI() {
   ollamaBase.value = config.ollamaBaseUrl || "";
   geminiKeyRow.hidden = p !== "gemini";
   proxyRow.hidden = p !== "proxy";
+  cloudRow.hidden = p !== "cloud";
+  providerModel.closest("label").hidden = p === "cloud"; // the server picks the model per plan
+  renderCloud();
   if (document.activeElement !== proxyBase) proxyBase.value = config.proxyBaseUrl || "";
   renderProxyStatus();
   providerHint.textContent = PROVIDER_HINT_KEY[p] ? L(PROVIDER_HINT_KEY[p]) : "";
@@ -685,6 +787,36 @@ function renderWritingStyle() {
   if (document.activeElement !== styleNoteEl) styleNoteEl.value = style.note;
 }
 
+function planLabel(plan) {
+  return L({ plus: "planPlus", pro: "planPro" }[plan] || "planFree");
+}
+
+function renderCloud() {
+  cloudOut.hidden = cloud.signedIn || cloud.signingIn;
+  cloudWait.hidden = !cloud.signingIn;
+  cloudIn.hidden = !cloud.signedIn;
+  if (cloud.signingIn) cloudWaitText.textContent = L("cloudWaiting", cloudWaitingFor || cloud.email || "");
+  if (cloud.signedIn) {
+    cloudAccount.textContent = L("cloudSignedIn", cloud.email || "", planLabel(cloud.plan));
+    const q = cloud.quota;
+    cloudQuota.hidden = !q || !q.limit;
+    if (q && q.limit) {
+      const d = q.resets_at ? new Date(q.resets_at).toLocaleDateString(lang, { day: "numeric", month: "long" }) : "";
+      cloudQuotaText.textContent = L("cloudQuota", q.used || 0, q.limit, d);
+      cloudQuotaFill.style.width = `${Math.min(100, Math.round(((q.used || 0) / q.limit) * 100))}%`;
+    }
+  }
+}
+
+function renderStt() {
+  if (!sttModeEl) return;
+  fillSelect(sttModeEl, ["auto", "custom"], { auto: L("sttAuto"), custom: L("sttCustom") }, config.sttMode || "auto");
+  sttCustomRow.hidden = config.sttMode !== "custom";
+  if (document.activeElement !== sttBaseEl) sttBaseEl.value = config.sttBaseUrl || "";
+  if (document.activeElement !== sttModelEl) sttModelEl.value = config.sttModel || "whisper-1";
+  sttKeyEl.placeholder = config.hasSttKey ? "••••••••" : "";
+}
+
 function render() {
   renderProfiles();
   renderWritingStyle();
@@ -704,7 +836,54 @@ function render() {
   if (ttsVoiceEl) fillSelect(ttsVoiceEl, config.supportedTtsVoices || [], TTS_VOICE_LABELS, config.ttsVoice);
   renderKeyStatus();
   renderOpenAiStatus();
+  renderStt();
   renderCustomTasks();
+}
+
+// ── Kiiri Cloud sign-in ──
+el("cloud-send").addEventListener("click", async () => {
+  cloudMsg.textContent = "";
+  cloudMsg.className = "status";
+  const email = cloudEmail.value.trim();
+  const r = await window.aiAPI.cloudSignIn(email);
+  if (!r || !r.ok) {
+    cloudMsg.textContent = (r && r.message) || "";
+    cloudMsg.className = "status err";
+    return;
+  }
+  cloudWaitingFor = r.email || email;
+  cloud = { ...cloud, signingIn: true };
+  renderCloud();
+});
+cloudEmail.addEventListener("keydown", (e) => { if (e.key === "Enter") el("cloud-send").click(); });
+el("cloud-cancel").addEventListener("click", async () => { await window.aiAPI.cloudCancel(); });
+el("cloud-signout").addEventListener("click", async () => {
+  await window.aiAPI.cloudSignOut();
+  config = await window.aiAPI.configGet();
+  render();
+});
+window.aiAPI.onCloudAuth(async (data) => {
+  cloud = data || cloud;
+  if (data && data.result) {
+    cloudMsg.textContent = data.result.ok ? L("cloudDone") : (data.result.message || "");
+    cloudMsg.className = data.result.ok ? "status ok" : "status err";
+  }
+  config = await window.aiAPI.configGet();
+  render();
+});
+
+// ── Speech-to-text route ──
+if (sttModeEl) {
+  sttModeEl.addEventListener("change", async () => { await patch({ sttMode: sttModeEl.value }); renderStt(); renderOpenAiStatus(); });
+  sttBaseEl.addEventListener("change", async () => { await patch({ sttBaseUrl: sttBaseEl.value.trim() }); renderStt(); });
+  sttModelEl.addEventListener("change", async () => { await patch({ sttModel: sttModelEl.value.trim() }); renderStt(); });
+  el("save-stt-key").addEventListener("click", async () => {
+    const v = sttKeyEl.value.trim();
+    await (v ? window.aiAPI.setSttKey(v) : window.aiAPI.clearSttKey());
+    sttKeyEl.value = "";
+    config = await window.aiAPI.configGet();
+    renderStt();
+  });
 }
 
 async function patch(p) {
@@ -874,5 +1053,10 @@ if (window.aiAPI.onLanguageChanged) {
   } catch {}
   applyI18n();
   config = await window.aiAPI.configGet();
+  try { cloud = await window.aiAPI.cloudStatus(); } catch {}
   render();
+  // Fresh plan + quota in the background (shows "12 of 25 asks" once it lands).
+  if (cloud.signedIn) {
+    try { cloud = await window.aiAPI.cloudRefresh(); config = await window.aiAPI.configGet(); render(); } catch {}
+  }
 })();

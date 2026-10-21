@@ -38,6 +38,11 @@ function callWithTools(opts) {
   if (p.id === "anthropic") {
     return anthropic.callWithTools({ ...opts, apiKey: p.apiKey, model: p.model });
   }
+  // Kiiri Cloud: tool-use goes through its Anthropic-native endpoint so plan
+  // features (web search on Plus) work; the server picks the model per plan.
+  if (p.id === "cloud") {
+    return anthropic.callWithTools({ ...opts, baseURL: p.rootUrl, authToken: p.apiKey, model: "claude-opus-5" });
+  }
   return openaiCompat.callWithTools({ ...opts, baseUrl: p.baseUrl, apiKey: p.apiKey, model: p.model });
 }
 

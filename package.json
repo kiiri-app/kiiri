@@ -48,7 +48,8 @@
       {
         "provider": "github",
         "owner": "kiiri-app",
-        "repo": "kiiri"
+        "repo": "kiiri-releases",
+        "releaseType": "release"
       }
     ],
     "files": [
@@ -75,13 +76,26 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
       "icon": "build/icon.icns",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "category": "public.app-category.productivity",
       "hardenedRuntime": true,
@@ -89,14 +103,16 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
-        "NSMicrophoneUsageDescription": "Kiri uses the microphone only while you hold push-to-talk or tap the mic button.",
-        "NSAppleEventsUsageDescription": "Kiri checks which app is in front so its answers fit what you're doing."
-      }
+        "NSMicrophoneUsageDescription": "Kiiri uses the microphone only while you hold push-to-talk or tap the mic button.",
+        "NSAppleEventsUsageDescription": "Kiiri checks which app is in front so its answers fit what you're doing."
+      },
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "linux": {
       "icon": "build/icon.png",
       "target": "AppImage",
-      "category": "Utility"
+      "category": "Utility",
+      "artifactName": "${productName}-${version}.${ext}"
     }
   }
 }

@@ -31,13 +31,21 @@ macOS smoke boot.
 speech bubble, downloads with progress, then restarts into the new version.
 Dev runs (`npm start`) never check.
 
-- **The release repo must be public** (or point `build.publish` at a public,
-  releases-only repo such as `ahmetvural79/kiri-releases`) — clients cannot
-  read a private repo's releases.
+- Builds and the update feed live in the **public** repo
+  [kiiri-app/kiiri-releases](https://github.com/kiiri-app/kiiri-releases), so the
+  source repo can stay private and clients can still read the feed.
 - **macOS only installs updates into a signed app** (Squirrel.Mac). Unsigned
   builds will download but refuse to install.
 
-## Signing secrets (GitHub → Settings → Secrets → Actions)
+## Secrets (GitHub → kiiri-app/kiiri → Settings → Secrets → Actions)
+
+### Publishing
+
+| Secret | Value |
+| --- | --- |
+| `RELEASES_TOKEN` | fine-grained PAT, resource owner `kiiri-app`, only `kiiri-releases`, permission *Contents: Read and write* |
+
+The built-in `GITHUB_TOKEN` cannot write to another repository.
 
 ### macOS — Developer ID + notarization ($99/yr Apple Developer Program)
 
@@ -45,27 +53,28 @@ Dev runs (`npm start`) never check.
 | --- | --- |
 | `MAC_CSC_LINK` | base64 of the *Developer ID Application* `.p12` (`base64 -i cert.p12`) |
 | `MAC_CSC_KEY_PASSWORD` | the `.p12` password |
-| `APPLE_ID` | Apple ID e-mail |
-| `APPLE_APP_SPECIFIC_PASSWORD` | app-specific password from appleid.apple.com |
-| `APPLE_TEAM_ID` | 10-char team ID |
+| `APPLE_API_KEY_P8` | contents of the App Store Connect API key `.p8` (Users and Access → Integrations → Team Keys, role *Developer*) |
+| `APPLE_API_KEY_ID` | that key's ID |
+| `APPLE_API_ISSUER` | the Issuer ID shown above the keys list |
 
-electron-builder notarizes automatically when the three `APPLE_*` values are
-present. Hardened runtime + `build/entitlements.mac.plist` are already set up.
+The API key is the preferred way to notarize (no 2FA). Fallback: `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`. Hardened runtime +
+`build/entitlements.mac.plist` are already set up. Builds are separate arm64 and
+x64 `.dmg` files. Check a build with `spctl -a -vv /Applications/Kiiri.app`
+("source=Notarized Developer ID").
 
-### Windows — Azure Trusted Signing (~$10/month)
+### Windows — code-signing certificate
 
-Add the secrets `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`
-(an app registration with the *Trusted Signing Certificate Profile Signer*
-role), then add your account details to `build.win` in `package.json`:
+Azure Artifact Signing is **not available to us**: Public Trust certificates go
+to individuals in the US/Canada and organizations in a fixed country list that
+excludes Türkiye. Use a standard OV code-signing certificate instead (Certum,
+SSL.com, Sectigo resellers) and set:
 
-```json
-"azureSignOptions": {
-  "publisherName": "Ahmet Vural",
-  "endpoint": "https://weu.codesigning.azure.net",
-  "codeSigningAccountName": "<account>",
-  "certificateProfileName": "<profile>"
-}
-```
+| Secret | Value |
+| --- | --- |
+| `WIN_CSC_LINK` | base64 of the `.pfx` |
+| `WIN_CSC_KEY_PASSWORD` | its password |
 
-Leave it out until the account exists — with the block present but no
-credentials, the Windows build fails.
+Cloud/HSM-only certificates (SSL.com eSigner, Certum SimplySign) need their
+vendor's signing step instead of `WIN_CSC_LINK`; add it when the certificate
+is chosen. Until then Windows builds are unsigned and SmartScreen warns.

@@ -30,9 +30,16 @@ function resolveUserDataDir(appDataDir, existsSync = fs.existsSync) {
   return current;
 }
 
+// Also keeps saved secrets readable. safeStorage encrypts with a Keychain entry
+// named after the app ("Kiri Safe Storage"), captured from the name set before
+// "ready": an install that still lives in the legacy folder must start under
+// the legacy name, or every saved API key / token fails to decrypt. main.js sets
+// the display name to "Kiiri" after ready, which leaves the key entry alone.
 function applyUserDataPath(app) {
   try {
-    app.setPath("userData", resolveUserDataDir(app.getPath("appData")));
+    const dir = resolveUserDataDir(app.getPath("appData"));
+    if (path.basename(dir) === LEGACY_DIR_NAME) app.setName(LEGACY_DIR_NAME);
+    app.setPath("userData", dir);
   } catch {
     // Fall back to Electron's default rather than refusing to start.
   }

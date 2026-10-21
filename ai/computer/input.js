@@ -78,6 +78,10 @@ function paste(s) {
   var pb = $.NSPasteboard.generalPasteboard;
   var prev = pb.stringForType($.NSPasteboardTypeString);
   pb.clearContents; pb.setStringForType($(s), $.NSPasteboardTypeString);
+  // nspasteboard.org markers: clipboard managers skip concealed/transient items,
+  // so typed text (possibly a password the user approved) never lands in history.
+  pb.setStringForType($(''), $('org.nspasteboard.ConcealedType'));
+  pb.setStringForType($(''), $('org.nspasteboard.TransientType'));
   key(9, true, 1048576); key(9, false, 1048576); delay(0.25);
   pb.clearContents; if (prev && prev.js !== undefined) pb.setStringForType(prev, $.NSPasteboardTypeString);
 }
@@ -117,6 +121,20 @@ function run(argv) {
       break;
     case 'hold': key(c.code, true, flags); delay(c.seconds); key(c.code, false, flags); break;
     case 'type':
+      // Multi-character text goes through the pasteboard (restored right after):
+      // synthetic per-key Unicode events get eaten by input methods (TR/KO/JA
+      // sources) and by text-completion popups — the second live test typed
+      // "merhaba" four times and TextEdit kept only "merha". Newlines still go
+      // as real Return presses so forms behave the same.
+      if (c.text.length > 1) {
+        var parts = c.text.replace(String.fromCharCode(13), '').split(String.fromCharCode(10));
+        for (var q = 0; q < parts.length; q++) {
+          if (q) { key(36, true, 0); key(36, false, 0); delay(0.05); }
+          if (parts[q]) paste(parts[q]);
+        }
+        delay(0.15);
+        break;
+      }
       var str = c.text, astral = '';
       for (var j = 0; j < str.length; j++) {
         var ch = str.charCodeAt(j);

@@ -1,6 +1,6 @@
 {
   "name": "kiri",
-  "productName": "Kiri",
+  "productName": "Kiiri",
   "version": "0.1.38",
   "description": "A companion cat on your desktop — pomodoro + health-aware pet for coders",
   "author": "Ahmet Vural",
@@ -42,7 +42,7 @@
   },
   "build": {
     "appId": "dev.kiri.app",
-    "productName": "Kiri",
+    "productName": "Kiiri",
     "copyright": "Copyright © 2026 Ahmet Vural",
     "publish": [
       {
@@ -55,6 +55,7 @@
       "main.js",
       "preload.js",
       "characters.js",
+      "userdata-path.js",
       "ai/**",
       "renderer/**",
       "editor/**",

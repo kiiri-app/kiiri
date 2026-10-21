@@ -20,8 +20,8 @@ const TOOLS = [
   {
     name: "kiri_status",
     description:
-      "Check whether the Kiri desktop pet is running and what it can do right now. " +
-      "Call this first if a later Kiri tool fails.",
+      "Check whether the Kiiri desktop pet is running and what it can do right now. " +
+      "Call this first if a later Kiiri tool fails.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -119,10 +119,10 @@ function textResult(text, isError) {
 // A failed bridge call almost always means "the app is not running" — say that
 // instead of surfacing a raw ECONNREFUSED to the model.
 function bridgeFailureText(res) {
-  if (res && res.status === 403) return "Kiri rejected the request: the local bridge token did not match. Restart Kiri and try again.";
-  if (res && res.status === 404) return "This Kiri build does not support that bridge route yet — update Kiri.";
-  if (res && res.status) return `Kiri returned HTTP ${res.status}.`;
-  return "Kiri does not seem to be running (no local bridge on 127.0.0.1:23456). Ask the user to start the Kiri app.";
+  if (res && res.status === 403) return "Kiiri rejected the request: the local bridge token did not match. Restart Kiiri and try again.";
+  if (res && res.status === 404) return "This Kiiri build does not support that bridge route yet — update Kiiri.";
+  if (res && res.status) return `Kiiri returned HTTP ${res.status}.`;
+  return "Kiiri does not seem to be running (no local bridge on 127.0.0.1:23456). Ask the user to start the Kiiri app.";
 }
 
 async function callTool(name, args) {
@@ -133,7 +133,7 @@ async function callTool(name, args) {
       if (!res.ok) return textResult(bridgeFailureText(res), true);
       const info = res.json || {};
       const bits = [
-        `Kiri is running (v${info.version || "?"}).`,
+        `Kiiri is running (v${info.version || "?"}).`,
         info.character ? `Active character: ${info.character}.` : null,
         info.voice ? "Voice replies are on." : "Voice replies are off.",
         `Screen size: ${info.display ? `${info.display.width}x${info.display.height}` : "unknown"}.`,
@@ -168,7 +168,7 @@ async function callTool(name, args) {
       const res = await callBridge("/ask-screen", { question: String(a.question || "") }, { timeout: 120000 });
       if (!res.ok) {
         const why = res.json && res.json.error;
-        if (why === "no-provider") return textResult("Kiri has no AI provider configured, so it cannot look at the screen. Ask the user to set one up in Kiri's settings.", true);
+        if (why === "no-provider") return textResult("Kiiri has no AI provider configured, so it cannot look at the screen. Ask the user to set one up in Kiiri's settings.", true);
         if (why === "busy") return textResult("Kiri is already answering a screen question — try again in a moment.", true);
         if (why === "denied") return textResult("The user declined to let Kiri look at the screen. Don't retry right away; ask the user directly if you need what's on screen.", true);
         return textResult(bridgeFailureText(res), true);

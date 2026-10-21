@@ -38,7 +38,7 @@ function cwdFromPayload(payload) {
 }
 
 function hookResponse(event) {
-  if (event === "PreToolUse") return { decision: "ask", reason: "Kiri does not approve Antigravity tool calls automatically." };
+  if (event === "PreToolUse") return { decision: "ask", reason: "Kiiri does not approve Antigravity tool calls automatically." };
   if (event === "Stop") return { decision: "allow" };
   if (event === "PostInvocation") return { injectSteps: [], terminationBehavior: "" };
   return {};

@@ -28,14 +28,14 @@ function hookResponse(event) {
   if (event === "beforeShellExecution") {
     return {
       permission: "ask",
-      user_message: "Kiri noticed a Cursor shell command needs your approval.",
+      user_message: "Kiiri noticed a Cursor shell command needs your approval.",
       agent_message: "Wait for the user to approve or deny this shell command.",
     };
   }
   if (event === "beforeMCPExecution") {
     return {
       permission: "ask",
-      user_message: "Kiri noticed a Cursor MCP tool needs your approval.",
+      user_message: "Kiiri noticed a Cursor MCP tool needs your approval.",
       agent_message: "Wait for the user to approve or deny this MCP tool call.",
     };
   }

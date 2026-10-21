@@ -1,6 +1,9 @@
 "use strict";
 
 const { app, BrowserWindow, Tray, screen, ipcMain, Menu, dialog, nativeImage, globalShortcut, shell, systemPreferences } = require("electron");
+// Before any getPath("userData") (log path, single-instance lock, stores): keeps
+// pre-rename installs on their legacy "Kiri" folder. See userdata-path.js.
+require("./userdata-path").applyUserDataPath(app);
 // electron-updater (GitHub Releases, see package.json build.publish). Loaded in
 // setupAutoUpdater() for packaged builds only; null in dev → updates disabled.
 let autoUpdater = null;
@@ -161,11 +164,11 @@ let currentLanguage = "en";
 
 const I18N = {
   en: {
-    appMenuAbout: "About Kiri",
+    appMenuAbout: "About Kiiri",
     appMenuQuit: "Quit",
     checkForUpdates: "Check for Updates",
     editMenu: "Edit",
-    contextTitle: "Kiri",
+    contextTitle: "Kiiri",
     size: "Size",
     smaller: "Smaller (-20)",
     larger: "Larger (+20)",
@@ -233,16 +236,16 @@ const I18N = {
     japanese: "Japanese",
     turkish: "Turkish",
     accessibilityPermissionTitle: "Accessibility permission needed",
-    accessibilityPermissionMessage: "Allow Kiri to react to typing",
-    accessibilityPermissionDetail: "Turn on Kiri in Accessibility, then restart Kiri if typing reactions do not start.",
+    accessibilityPermissionMessage: "Allow Kiiri to react to typing",
+    accessibilityPermissionDetail: "Turn on Kiiri in Accessibility, then restart Kiiri if typing reactions do not start.",
     inputPermissionTitle: "Input Monitoring may be needed",
-    inputPermissionMessage: "Kiri still cannot detect typing",
-    inputPermissionDetail: "Some macOS environments also require Input Monitoring. Add Kiri in Input Monitoring, then restart Kiri if typing reactions do not start.",
+    inputPermissionMessage: "Kiiri still cannot detect typing",
+    inputPermissionDetail: "Some macOS environments also require Input Monitoring. Add Kiiri in Input Monitoring, then restart Kiiri if typing reactions do not start.",
     openInputMonitoring: "Open Input Monitoring",
     openAccessibility: "Open Accessibility",
     globalInputPermissionTitle: "Input monitoring unavailable",
-    globalInputPermissionMessage: "Kiri cannot detect keyboard or wheel input",
-    globalInputPermissionDetail: "Restart Kiri and check whether Windows security software or system policy is blocking global input hooks.",
+    globalInputPermissionMessage: "Kiiri cannot detect keyboard or wheel input",
+    globalInputPermissionDetail: "Restart Kiiri and check whether Windows security software or system policy is blocking global input hooks.",
     reset: "Reset",
     clear: "Clear",
     delete: "Delete",
@@ -259,27 +262,27 @@ const I18N = {
     confirmYes: "Yes",
     confirmCancel: "Cancel",
     confirmQuestion: "Are you sure?",
-    bridgeScreenAskTitle: "An AI agent wants Kiri to look at your screen.",
-    bridgeScreenAskDetail: "Kiri will take a screenshot and send it to your AI provider. Only allow this if you started the agent yourself.",
-    bridgeScreenAskDetailQ: (q) => `Question: “${q}”\n\nKiri will take a screenshot and send it to your AI provider. Only allow this if you started the agent yourself.`,
+    bridgeScreenAskTitle: "An AI agent wants Kiiri to look at your screen.",
+    bridgeScreenAskDetail: "Kiiri will take a screenshot and send it to your AI provider. Only allow this if you started the agent yourself.",
+    bridgeScreenAskDetailQ: (q) => `Question: “${q}”\n\nKiiri will take a screenshot and send it to your AI provider. Only allow this if you started the agent yourself.`,
     bridgeScreenAllowOnce: "Allow once",
-    bridgeScreenAllowSession: "Allow until Kiri restarts",
+    bridgeScreenAllowSession: "Allow until Kiiri restarts",
     bridgeScreenDeny: "Deny",
   },
   ko: {
-    appMenuAbout: "Kiri에 관하여",
+    appMenuAbout: "Kiiri에 관하여",
     appMenuQuit: "종료",
     checkForUpdates: "업데이트 확인",
     editMenu: "편집",
-    contextTitle: "Kiri",
+    contextTitle: "Kiiri",
     size: "크기",
     smaller: "조금 작게 (-20)",
     larger: "조금 크게 (+20)",
     resetSize: "크기 초기화 (100 × 100)",
     petSizePixels: (size) => `${size} × ${size}`,
     setUserName: "내 이름 알려주기",
-    setCatName: "캣짱 이름 지정",
-    showCatName: "캣짱 이름 표시",
+    setCatName: "Kiri 이름 지정",
+    showCatName: "Kiri 이름 표시",
     aiAssistant: "🐾 AI 어시스턴트…",
     askScreen: "🔍 내 화면에 대해 묻기…",
     askRegion: "⬚ 영역에 대해 묻기…",
@@ -294,7 +297,7 @@ const I18N = {
     aiChat: "🗨 Kiri와 대화하기…",
     chatTitle: "대화",
     chatMemoryTitle: "대화",
-    aiCommand: "💬 캣짱에게 명령하기…",
+    aiCommand: "💬 Kiri에게 명령하기…",
     aiJournal: "📚 지식 노트…",
     setCatPersona: "이 고양이의 성격 설정…",
     pixelEditor: "🖌️ 픽셀 편집…",
@@ -339,16 +342,16 @@ const I18N = {
     japanese: "일본어",
     turkish: "터키어",
     accessibilityPermissionTitle: "손쉬운 사용 권한이 필요해요",
-    accessibilityPermissionMessage: "캣짱이 타이핑에 반응하도록 허용해 주세요",
-    accessibilityPermissionDetail: "손쉬운 사용에서 Kiri을 켜 주세요. 타이핑 반응이 바로 시작되지 않으면 캣짱을 다시 실행해 주세요.",
+    accessibilityPermissionMessage: "Kiiri가 타이핑에 반응하도록 허용해 주세요",
+    accessibilityPermissionDetail: "손쉬운 사용에서 Kiiri를 켜 주세요. 타이핑 반응이 바로 시작되지 않으면 Kiiri를 다시 실행해 주세요.",
     inputPermissionTitle: "입력 모니터링이 필요할 수 있어요",
-    inputPermissionMessage: "캣짱이 아직 키보드 입력을 감지하지 못하고 있어요",
-    inputPermissionDetail: "일부 macOS 환경에서는 입력 모니터링도 필요해요. 입력 모니터링에 Kiri을 추가한 뒤, 타이핑 반응이 시작되지 않으면 캣짱을 다시 실행해 주세요.",
+    inputPermissionMessage: "Kiiri가 아직 키보드 입력을 감지하지 못하고 있어요",
+    inputPermissionDetail: "일부 macOS 환경에서는 입력 모니터링도 필요해요. 입력 모니터링에 Kiiri를 추가한 뒤, 타이핑 반응이 시작되지 않으면 Kiiri를 다시 실행해 주세요.",
     openInputMonitoring: "입력 모니터링 열기",
     openAccessibility: "손쉬운 사용 열기",
     globalInputPermissionTitle: "입력 감지를 사용할 수 없어요",
-    globalInputPermissionMessage: "Kiri이 키보드 또는 휠 입력을 감지하지 못하고 있어요",
-    globalInputPermissionDetail: "Kiri을 다시 실행해 보세요. 계속 실패하면 Windows 보안 프로그램이나 시스템 정책이 전역 입력 후킹을 막고 있는지 확인해 주세요.",
+    globalInputPermissionMessage: "Kiiri가 키보드 또는 휠 입력을 감지하지 못하고 있어요",
+    globalInputPermissionDetail: "Kiiri를 다시 실행해 보세요. 계속 실패하면 Windows 보안 프로그램이나 시스템 정책이 전역 입력 후킹을 막고 있는지 확인해 주세요.",
     reset: "초기화",
     clear: "지우기",
     delete: "삭제",
@@ -365,19 +368,19 @@ const I18N = {
     confirmYes: "네",
     confirmCancel: "취소",
     confirmQuestion: "진행할까요?",
-    bridgeScreenAskTitle: "AI 에이전트가 Kiri에게 화면을 보라고 요청했어요.",
-    bridgeScreenAskDetail: "Kiri가 스크린샷을 찍어 AI 제공자에게 보냅니다. 직접 실행한 에이전트일 때만 허용하세요.",
-    bridgeScreenAskDetailQ: (q) => `질문: “${q}”\n\nKiri가 스크린샷을 찍어 AI 제공자에게 보냅니다. 직접 실행한 에이전트일 때만 허용하세요.`,
+    bridgeScreenAskTitle: "AI 에이전트가 Kiiri에게 화면을 보라고 요청했어요.",
+    bridgeScreenAskDetail: "Kiiri가 스크린샷을 찍어 AI 제공자에게 보냅니다. 직접 실행한 에이전트일 때만 허용하세요.",
+    bridgeScreenAskDetailQ: (q) => `질문: “${q}”\n\nKiiri가 스크린샷을 찍어 AI 제공자에게 보냅니다. 직접 실행한 에이전트일 때만 허용하세요.`,
     bridgeScreenAllowOnce: "이번만 허용",
-    bridgeScreenAllowSession: "Kiri를 다시 시작할 때까지 허용",
+    bridgeScreenAllowSession: "Kiiri를 다시 시작할 때까지 허용",
     bridgeScreenDeny: "거부",
   },
   ja: {
-    appMenuAbout: "Kiri について",
+    appMenuAbout: "Kiiri について",
     appMenuQuit: "終了",
     checkForUpdates: "アップデートを確認",
     editMenu: "編集",
-    contextTitle: "Kiri",
+    contextTitle: "Kiiri",
     size: "サイズ",
     smaller: "少し小さく (-20)",
     larger: "少し大きく (+20)",
@@ -445,16 +448,16 @@ const I18N = {
     japanese: "日本語",
     turkish: "トルコ語",
     accessibilityPermissionTitle: "アクセシビリティ権限が必要です",
-    accessibilityPermissionMessage: "Kiri がタイピングに反応できるよう許可してください",
-    accessibilityPermissionDetail: "アクセシビリティで Kiri をオンにしてください。タイピング反応が始まらない場合は Kiri を再起動してください。",
+    accessibilityPermissionMessage: "Kiiri がタイピングに反応できるよう許可してください",
+    accessibilityPermissionDetail: "アクセシビリティで Kiiri をオンにしてください。タイピング反応が始まらない場合は Kiiri を再起動してください。",
     inputPermissionTitle: "入力監視が必要な場合があります",
-    inputPermissionMessage: "Kiri がまだキーボード入力を検出できません",
-    inputPermissionDetail: "一部の macOS 環境では入力監視も必要です。入力監視に Kiri を追加し、タイピング反応が始まらない場合は Kiri を再起動してください。",
+    inputPermissionMessage: "Kiiri がまだキーボード入力を検出できません",
+    inputPermissionDetail: "一部の macOS 環境では入力監視も必要です。入力監視に Kiiri を追加し、タイピング反応が始まらない場合は Kiiri を再起動してください。",
     openInputMonitoring: "入力監視を開く",
     openAccessibility: "アクセシビリティを開く",
     globalInputPermissionTitle: "入力検出を使用できません",
-    globalInputPermissionMessage: "Kiri がキーボードまたはホイール入力を検出できません",
-    globalInputPermissionDetail: "Kiri を再起動してください。解決しない場合は、Windows のセキュリティソフトまたはシステムポリシーがグローバル入力フックをブロックしていないか確認してください。",
+    globalInputPermissionMessage: "Kiiri がキーボードまたはホイール入力を検出できません",
+    globalInputPermissionDetail: "Kiiri を再起動してください。解決しない場合は、Windows のセキュリティソフトまたはシステムポリシーがグローバル入力フックをブロックしていないか確認してください。",
     reset: "リセット",
     clear: "クリア",
     delete: "削除",
@@ -471,19 +474,19 @@ const I18N = {
     confirmYes: "はい",
     confirmCancel: "キャンセル",
     confirmQuestion: "よろしいですか？",
-    bridgeScreenAskTitle: "AI エージェントが Kiri に画面を見るよう求めています。",
-    bridgeScreenAskDetail: "Kiri がスクリーンショットを撮り、AI プロバイダーに送信します。自分で起動したエージェントの場合のみ許可してください。",
-    bridgeScreenAskDetailQ: (q) => `質問:「${q}」\n\nKiri がスクリーンショットを撮り、AI プロバイダーに送信します。自分で起動したエージェントの場合のみ許可してください。`,
+    bridgeScreenAskTitle: "AI エージェントが Kiiri に画面を見るよう求めています。",
+    bridgeScreenAskDetail: "Kiiri がスクリーンショットを撮り、AI プロバイダーに送信します。自分で起動したエージェントの場合のみ許可してください。",
+    bridgeScreenAskDetailQ: (q) => `質問:「${q}」\n\nKiiri がスクリーンショットを撮り、AI プロバイダーに送信します。自分で起動したエージェントの場合のみ許可してください。`,
     bridgeScreenAllowOnce: "今回のみ許可",
-    bridgeScreenAllowSession: "Kiri の再起動まで許可",
+    bridgeScreenAllowSession: "Kiiri の再起動まで許可",
     bridgeScreenDeny: "拒否",
   },
   tr: {
-    appMenuAbout: "Kiri Hakkında",
+    appMenuAbout: "Kiiri Hakkında",
     appMenuQuit: "Çıkış",
     checkForUpdates: "Güncellemeleri Denetle",
     editMenu: "Düzen",
-    contextTitle: "Kiri",
+    contextTitle: "Kiiri",
     size: "Boyut",
     smaller: "Biraz küçült (-20)",
     larger: "Biraz büyüt (+20)",
@@ -551,16 +554,16 @@ const I18N = {
     japanese: "Japonca",
     turkish: "Türkçe",
     accessibilityPermissionTitle: "Erişilebilirlik izni gerekiyor",
-    accessibilityPermissionMessage: "Kiri'nin yazmana tepki verebilmesi için izin ver",
-    accessibilityPermissionDetail: "Erişilebilirlik'te Kiri'yi aç; yazma tepkileri başlamazsa Kiri'yi yeniden başlat.",
+    accessibilityPermissionMessage: "Kiiri'nin yazmana tepki verebilmesi için izin ver",
+    accessibilityPermissionDetail: "Erişilebilirlik'te Kiiri'yi aç; yazma tepkileri başlamazsa Kiiri'yi yeniden başlat.",
     inputPermissionTitle: "Giriş İzleme de gerekebilir",
-    inputPermissionMessage: "Kiri hâlâ yazdığını algılayamıyor",
-    inputPermissionDetail: "Bazı macOS ortamlarında Giriş İzleme izni de gerekir. Kiri'yi Giriş İzleme'ye ekle; yazma tepkileri yine başlamazsa Kiri'yi yeniden başlat.",
+    inputPermissionMessage: "Kiiri hâlâ yazdığını algılayamıyor",
+    inputPermissionDetail: "Bazı macOS ortamlarında Giriş İzleme izni de gerekir. Kiiri'yi Giriş İzleme'ye ekle; yazma tepkileri yine başlamazsa Kiiri'yi yeniden başlat.",
     openInputMonitoring: "Giriş İzleme'yi aç",
     openAccessibility: "Erişilebilirlik'i aç",
     globalInputPermissionTitle: "Giriş algılama kullanılamıyor",
-    globalInputPermissionMessage: "Kiri klavye veya tekerlek girişini algılayamıyor",
-    globalInputPermissionDetail: "Kiri'yi yeniden başlat; sorun sürerse Windows güvenlik yazılımının veya sistem politikasının genel giriş kancalarını engelleyip engellemediğini kontrol et.",
+    globalInputPermissionMessage: "Kiiri klavye veya tekerlek girişini algılayamıyor",
+    globalInputPermissionDetail: "Kiiri'yi yeniden başlat; sorun sürerse Windows güvenlik yazılımının veya sistem politikasının genel giriş kancalarını engelleyip engellemediğini kontrol et.",
     reset: "Sıfırla",
     clear: "Temizle",
     delete: "Sil",
@@ -577,11 +580,11 @@ const I18N = {
     confirmYes: "Evet",
     confirmCancel: "Vazgeç",
     confirmQuestion: "Onaylıyor musun?",
-    bridgeScreenAskTitle: "Bir yapay zekâ ajanı Kiri'nin ekranına bakmasını istiyor.",
-    bridgeScreenAskDetail: "Kiri bir ekran görüntüsü alıp yapay zekâ sağlayıcına gönderecek. Ajanı sen başlattıysan izin ver.",
-    bridgeScreenAskDetailQ: (q) => `Soru: “${q}”\n\nKiri bir ekran görüntüsü alıp yapay zekâ sağlayıcına gönderecek. Ajanı sen başlattıysan izin ver.`,
+    bridgeScreenAskTitle: "Bir yapay zekâ ajanı Kiiri'nin ekranına bakmasını istiyor.",
+    bridgeScreenAskDetail: "Kiiri bir ekran görüntüsü alıp yapay zekâ sağlayıcına gönderecek. Ajanı sen başlattıysan izin ver.",
+    bridgeScreenAskDetailQ: (q) => `Soru: “${q}”\n\nKiiri bir ekran görüntüsü alıp yapay zekâ sağlayıcına gönderecek. Ajanı sen başlattıysan izin ver.`,
     bridgeScreenAllowOnce: "Bu seferlik izin ver",
-    bridgeScreenAllowSession: "Kiri yeniden başlayana kadar izin ver",
+    bridgeScreenAllowSession: "Kiiri yeniden başlayana kadar izin ver",
     bridgeScreenDeny: "Reddet",
   },
 };
@@ -2097,7 +2100,7 @@ function buildTrayMenu() {
     : [{ label: `   ${t("noActiveAgents")}`, enabled: false }];
 
   return Menu.buildFromTemplate([
-    { label: `Kiri v${app.getVersion()}`, enabled: false },
+    { label: `Kiiri v${app.getVersion()}`, enabled: false },
     { type: "separator" },
     { label: t("aiAgents"), enabled: false },
     ...sessionItems,
@@ -2132,7 +2135,7 @@ function refreshTray() {
   try {
     tray.setContextMenu(buildTrayMenu());
     const n = activeAgentList().length;
-    tray.setToolTip(n ? `Kiri — ${n} agent ${t("agentWorking")}` : "Kiri");
+    tray.setToolTip(n ? `Kiiri — ${n} agent ${t("agentWorking")}` : "Kiiri");
   } catch {}
 }
 
@@ -2142,7 +2145,7 @@ function createTray() {
     let img = nativeImage.createFromPath(APP_ICON_PATH);
     if (!img.isEmpty()) img = img.resize({ width: 18, height: 18 });
     tray = new Tray(img.isEmpty() ? nativeImage.createEmpty() : img);
-    tray.setToolTip("Kiri");
+    tray.setToolTip("Kiiri");
     refreshTray();
     tray.on("click", () => refreshTray());
     tray.on("right-click", () => refreshTray());
@@ -2488,7 +2491,7 @@ function openAiSettings() {
     height: 660,
     minWidth: 420,
     minHeight: 520,
-    title: "Kiri AI",
+    title: "Kiiri AI",
     frame: false,
     transparent: false,
     backgroundColor: "#fbf4e4",
@@ -2586,7 +2589,7 @@ function openAiCommand() {
     height: 360,
     minWidth: 360,
     minHeight: 240,
-    title: "Kiri AI",
+    title: "Kiiri AI",
     frame: false,
     transparent: false,
     backgroundColor: "#fbf4e4",
@@ -3140,7 +3143,7 @@ function openOnboarding() {
     width: 460,
     height: 560,
     resizable: false,
-    title: "Kiri",
+    title: "Kiiri",
     frame: false,
     backgroundColor: "#fbf4e4",
     alwaysOnTop: true,
@@ -3913,7 +3916,7 @@ app.whenReady().then(async () => {
       app.quit();
       return;
     }
-    app.setName("Kiri");
+    app.setName("Kiiri");
     if (app.dock && fs.existsSync(APP_ICON_PATH)) {
       app.dock.setIcon(nativeImage.createFromPath(APP_ICON_PATH));
     }
@@ -3934,7 +3937,7 @@ app.whenReady().then(async () => {
   } catch (error) {
     logError("[Kiri] startup failed:", error);
     try {
-      dialog.showErrorBox("Kiri failed to start", error && error.message ? error.message : String(error || "Unknown error"));
+      dialog.showErrorBox("Kiiri failed to start", error && error.message ? error.message : String(error || "Unknown error"));
     } catch {}
   }
 });

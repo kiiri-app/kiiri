@@ -9,7 +9,7 @@ const $ = (id) => document.getElementById(id);
 
 const I18N = {
   en: {
-    title: "Welcome to Kiri",
+    title: "Welcome to Kiiri",
     s1Title: "Hi! Who will keep you company?",
     petName: "Its name",
     yourName: "Your name (optional)",
@@ -45,7 +45,7 @@ const I18N = {
     try3: "Right-click ▸ Give Kiri a command ▸ “Turn these meeting notes into minutes”",
   },
   tr: {
-    title: "Kiri'ye hoş geldin",
+    title: "Kiiri'ye hoş geldin",
     s1Title: "Merhaba! Sana kim eşlik etsin?",
     petName: "Adı",
     yourName: "Senin adın (isteğe bağlı)",
@@ -81,7 +81,7 @@ const I18N = {
     try3: "Sağ tık ▸ Kiri'ye komut ver ▸ “Bu toplantı notlarını tutanağa çevir”",
   },
   ko: {
-    title: "Kiri에 오신 걸 환영해요",
+    title: "Kiiri에 오신 걸 환영해요",
     s1Title: "안녕! 누가 함께할까요?",
     petName: "이름",
     yourName: "내 이름 (선택)",
@@ -117,7 +117,7 @@ const I18N = {
     try3: "오른쪽 클릭 ▸ 명령하기 ▸ “이 회의 메모를 회의록으로 정리해 줘”",
   },
   ja: {
-    title: "Kiri へようこそ",
+    title: "Kiiri へようこそ",
     s1Title: "こんにちは！だれと一緒に過ごす？",
     petName: "名前",
     yourName: "あなたの名前（任意）",

@@ -12,7 +12,7 @@ async function renderPptx(payload) {
   const Pptx = pptxgen.default || pptxgen;
   const pptx = new Pptx();
   pptx.layout = "LAYOUT_WIDE";
-  pptx.author = "Kiri";
+  pptx.author = "Kiiri";
 
   const title = String((payload && payload.title) || "Sunum");
   const slides = Array.isArray(payload && payload.slides) ? payload.slides : [];
@@ -24,7 +24,7 @@ async function renderPptx(payload) {
     x: 0.6, y: 2.6, w: "88%", h: 1.6,
     fontSize: 40, bold: true, color: "FFFFFF", align: "center",
   });
-  cover.addText("🐾 Kiri", {
+  cover.addText("🐾 Kiiri", {
     x: 0.6, y: 4.3, w: "88%", h: 0.5,
     fontSize: 16, color: "FFB454", align: "center",
   });

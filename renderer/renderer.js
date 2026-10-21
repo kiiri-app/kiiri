@@ -207,7 +207,7 @@ const I18N = {
     updateNone: "최신 버전이다냥",
     updateDownloading: (percent) => percent === null ? "업데이트 중..." : `업데이트 중 ${percent}%`,
     updateRestarting: "재시작 중...",
-    userNameGuide: "이름을 알려주면 캣짱이 알림을 주거나 다양한 상황에서 사용자를 불러줄거예요.",
+    userNameGuide: "이름을 알려주면 Kiri가 알림을 주거나 다양한 상황에서 사용자를 불러줄거예요.",
     userNamePlaceholder: "사용자 이름을 입력해주세요",
     userGreeting: (name) => `안녕, ${name}!`,
     pomodoroPause: "일시정지",

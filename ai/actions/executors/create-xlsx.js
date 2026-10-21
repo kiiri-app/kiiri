@@ -11,7 +11,7 @@ const { Executor } = require("../executor");
 async function renderXlsx(payload) {
   const ExcelJS = require("exceljs");
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Kiri";
+  wb.creator = "Kiiri";
   const sheetName = String((payload && payload.sheetName) || "Sayfa1").slice(0, 31) || "Sayfa1";
   const ws = wb.addWorksheet(sheetName);
 

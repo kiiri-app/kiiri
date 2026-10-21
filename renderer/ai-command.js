@@ -67,8 +67,8 @@ const I18N = {
     skillCreateFailed: "Skill oluşturulamadı.",
   },
   ko: {
-    windowTitle: "캣짱에게 명령하기",
-    titlebar: "🐾 캣짱에게 명령하기",
+    windowTitle: "Kiri에게 명령하기",
+    titlebar: "🐾 Kiri에게 명령하기",
     close: "닫기",
     tabCommand: "명령",
     tabSkills: "스킬",

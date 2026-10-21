@@ -2,7 +2,7 @@
 
 const I18N = {
   en: {
-    windowTitle: "Kiri AI Assistant Settings",
+    windowTitle: "Kiiri AI Assistant Settings",
     titlebar: "🐾 AI Assistant",
     close: "Close",
     enableAssistant: "Turn on AI Assistant",
@@ -93,7 +93,7 @@ const I18N = {
     errorWord: "error",
   },
   tr: {
-    windowTitle: "Kiri AI Asistan Ayarları",
+    windowTitle: "Kiiri AI Asistan Ayarları",
     titlebar: "🐾 AI Asistan",
     close: "Kapat",
     enableAssistant: "AI Asistanı aç",
@@ -184,7 +184,7 @@ const I18N = {
     errorWord: "hata",
   },
   ko: {
-    windowTitle: "Kiri AI 어시스턴트 설정",
+    windowTitle: "Kiiri AI 어시스턴트 설정",
     titlebar: "🐾 AI 어시스턴트",
     close: "닫기",
     enableAssistant: "AI 어시스턴트 켜기",
@@ -275,7 +275,7 @@ const I18N = {
     errorWord: "오류",
   },
   ja: {
-    windowTitle: "Kiri AI アシスタント設定",
+    windowTitle: "Kiiri AI アシスタント設定",
     titlebar: "🐾 AI アシスタント",
     close: "閉じる",
     enableAssistant: "AI アシスタントをオン",

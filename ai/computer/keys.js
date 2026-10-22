@@ -62,8 +62,11 @@ function normalizeKey(p) {
   return lower;
 }
 
-// macOS virtual key codes (ANSI positions; combos like cmd+c use the physical
-// key, which is what the shortcut means on every Latin layout).
+// macOS virtual key codes at ANSI (US) positions. Named keys (Return, arrows,
+// F-keys…) are the same on every layout; for characters this table is only the
+// fallback — macLayoutKeyCode() first asks the user's current keyboard layout
+// which key types that character (Turkish Q puts "i" on the US "'" key, Dvorak
+// puts "x" on the US "b" key, AZERTY swaps a/q and z/w).
 const MAC_KEYCODES = {
   a: 0, s: 1, d: 2, f: 3, h: 4, g: 5, z: 6, x: 7, c: 8, v: 9, b: 11, q: 12, w: 13, e: 14, r: 15,
   y: 16, t: 17, 1: 18, 2: 19, 3: 20, 4: 21, 6: 22, 5: 23, "=": 24, 9: 25, 7: 26, "-": 27, 8: 28,
@@ -90,6 +93,54 @@ for (let i = 0; i < 10; i++) WIN_VK[String(i)] = 0x30 + i;
 for (let i = 1; i <= 24; i++) WIN_VK[`f${i}`] = 0x6f + i;
 const WIN_EXTENDED = new Set([0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2d, 0x2e, 0x5b]);
 
+// Own-property lookup: "constructor" must not resolve to Object.prototype.
+function own(table, key) {
+  return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined;
+}
+
+// A key that is a single typed character ("c", "ş", "-") rather than a named
+// key ("return", "f5") — the ones whose position depends on the layout.
+function isCharKey(key) {
+  return typeof key === "string" && [...key].length === 1 && key !== " ";
+}
+
+// layout: { plain: { char: keyCode }, cmd: { char: keyCode } } from the macOS
+// JXA "layout" op (UCKeyTranslate over the current keyboard layout, without and
+// with ⌘ held — "Dvorak – QWERTY ⌘" layouts change under ⌘). Falls back to the
+// ANSI code when the layout doesn't type the character (Russian, Greek… — macOS
+// itself then matches ⌘-shortcuts by US position) or no table could be built.
+function macLayoutKeyCode(key, mods, layout) {
+  if (layout && isCharKey(key)) {
+    const tables = (mods || []).includes("cmd") ? [layout.cmd, layout.plain] : [layout.plain, layout.cmd];
+    for (const t of tables) {
+      const code = t ? own(t, key) : undefined;
+      if (Number.isInteger(code) && code >= 0 && code < 128) return code;
+    }
+  }
+  return own(MAC_KEYCODES, key);
+}
+
+// VkKeyScanEx() result → virtual-key code, or null. Low byte = VK (0xFF/-1 = the
+// layout can't type it), high byte = shift state needed (1 shift, 2 ctrl, 4 alt).
+// Shift is ignored (ctrl+"+" means ctrl + the "+" key); characters that need
+// ctrl/alt (AltGr) are rejected — pressing that VK would type something else.
+function winVkFromScan(scan) {
+  const n = Number(scan);
+  if (!Number.isInteger(n) || n < 0 || n > 0xffff) return null;
+  const vk = n & 0xff;
+  const state = (n >> 8) & 0xff;
+  if (vk === 0xff || vk === 0 || state & 6) return null;
+  return vk;
+}
+
+// { vk, ext } for a named / ANSI key on Windows. Numpad Enter is VK_RETURN with
+// the extended flag (that is how Windows tells it from the main Enter).
+function winKey(name) {
+  const vk = own(WIN_VK, name);
+  if (vk === undefined) return null;
+  return { vk, ext: name === "kp_enter" || WIN_EXTENDED.has(vk) };
+}
+
 // xdotool keysyms for Linux.
 const X11_KEYSYM = {
   return: "Return", kp_enter: "KP_Enter", escape: "Escape", backspace: "BackSpace", delete: "Delete",
@@ -98,11 +149,28 @@ const X11_KEYSYM = {
   cmd: "super", ctrl: "ctrl", alt: "alt", shift: "shift",
   "-": "minus", "=": "equal", ",": "comma", ".": "period", "/": "slash", ";": "semicolon", "'": "apostrophe",
   "[": "bracketleft", "]": "bracketright", "\\": "backslash", "`": "grave",
+  // xdotool splits combos on "+", so "ctrl++" must name the key; the other
+  // shifted ASCII symbols aren't valid keysym names as bare characters either.
+  "+": "plus", "!": "exclam", "@": "at", "#": "numbersign", $: "dollar", "%": "percent",
+  "^": "asciicircum", "&": "ampersand", "*": "asterisk", "(": "parenleft", ")": "parenright",
+  _: "underscore", "{": "braceleft", "}": "braceright", "|": "bar", ":": "colon", "\"": "quotedbl",
+  "<": "less", ">": "greater", "?": "question", "~": "asciitilde",
 };
 
-function x11Combo(combo) {
-  const key = X11_KEYSYM[combo.key] || (/^f\d+$/.test(combo.key) ? combo.key.toUpperCase() : combo.key);
-  return [...combo.mods.map((m) => X11_KEYSYM[m]), key].join("+");
+function x11Key(key) {
+  if (own(X11_KEYSYM, key)) return X11_KEYSYM[key];
+  if (/^f\d+$/.test(key)) return key.toUpperCase();
+  // Non-ASCII characters ("ş", "é") as Unicode keysyms ("U015F"), which
+  // xdotool resolves through XStringToKeysym.
+  if (isCharKey(key) && key.codePointAt(0) > 0x7e) return "U" + key.codePointAt(0).toString(16).toUpperCase().padStart(4, "0");
+  return key;
 }
 
-module.exports = { parseCombo, MAC_KEYCODES, WIN_VK, WIN_EXTENDED, x11Combo, MOD_ORDER };
+function x11Combo(combo) {
+  return [...combo.mods.map((m) => X11_KEYSYM[m]), x11Key(combo.key)].join("+");
+}
+
+module.exports = {
+  parseCombo, MAC_KEYCODES, WIN_VK, WIN_EXTENDED, x11Combo, x11Key, MOD_ORDER,
+  isCharKey, macLayoutKeyCode, winVkFromScan, winKey,
+};

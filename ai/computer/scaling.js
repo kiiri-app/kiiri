@@ -11,8 +11,8 @@
 // origin isn't (0, 0) (a second monitor to the left/right/above).
 //
 // Electron reports display bounds in DIP ("points" on macOS), which is also
-// what CGEvent wants on macOS; Windows/Linux drivers convert DIP → physical
-// pixels themselves (input.js).
+// what CGEvent wants on macOS; on Windows/Linux the drivers get physical
+// pixels through nativePoint() below.
 
 // Conservative limits that every toolset-capable model accepts (docs: newer
 // models take up to 2576 px / ~3.75 MP; 1568 px / 1.15 MP is the safe floor and
@@ -103,7 +103,23 @@ function zoomCrop(geom, region) {
   return { crop, outWidth: Math.max(1, Math.floor(crop.width * s)), outHeight: Math.max(1, Math.floor(crop.height * s)) };
 }
 
+// DIP point → the coordinates the platform's input API takes.
+//   macOS   — CGEvent works in points = DIP: unchanged.
+//   Windows — screen.dipToScreenPoint (per-monitor DPI aware; the input helper
+//             is per-monitor aware too).
+//   Linux   — Electron 31 has no dipToScreenPoint here (win32-only API). On
+//             X11 Chromium derives each display's DIP bounds as its pixel bounds
+//             ÷ scaleFactor, so pixels = DIP × that display's scaleFactor.
+function nativePoint(p, { platform = process.platform, screen } = {}) {
+  if (platform === "darwin" || !screen) return p;
+  if (platform === "win32") return typeof screen.dipToScreenPoint === "function" ? screen.dipToScreenPoint(p) : p;
+  if (typeof screen.getDisplayNearestPoint !== "function") return p;
+  const d = screen.getDisplayNearestPoint({ x: Math.round(p.x), y: Math.round(p.y) });
+  const sf = (d && d.scaleFactor) || 1;
+  return { x: p.x * sf, y: p.y * sf };
+}
+
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 function round2(v) { return Math.round(v * 100) / 100; }
 
-module.exports = { MAX_LONG_EDGE, MAX_PIXELS, fitScale, createGeometry, shotToScreen, screenToShot, zoomCrop };
+module.exports = { MAX_LONG_EDGE, MAX_PIXELS, fitScale, createGeometry, shotToScreen, screenToShot, zoomCrop, nativePoint };

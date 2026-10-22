@@ -25,7 +25,8 @@
 // Nothing new to package, and uiohook-napi (push-to-talk) is untouched.
 
 const { execFile, spawn } = require("child_process");
-const { parseCombo, MAC_KEYCODES, WIN_VK, WIN_EXTENDED, x11Combo } = require("./keys");
+const { StringDecoder } = require("string_decoder");
+const { parseCombo, x11Combo, isCharKey, macLayoutKeyCode, winVkFromScan, winKey } = require("./keys");
 
 const MAX_TYPE_CHARS = 4000;
 const SCROLL_LINES_PER_NOTCH = 3;
@@ -74,19 +75,98 @@ function uni(code) {
     post(e);
   });
 }
-function paste(s) {
-  var pb = $.NSPasteboard.generalPasteboard;
-  var prev = pb.stringForType($.NSPasteboardTypeString);
+// The user's clipboard, saved before the first paste of a 'type' op and put
+// back after the last one: every item with every type it carries (images, file
+// URLs, rich text…), not just its plain-text flavour.
+function pbSnapshot(pb) {
+  var snap = [], items = pb.pasteboardItems;
+  if (!items || items.isNil()) return snap;
+  for (var i = 0; i < items.count; i++) {
+    var item = items.objectAtIndex(i), types = item.types, entry = [];
+    for (var j = 0; j < types.count; j++) {
+      var ty = types.objectAtIndex(j);
+      try { var d = item.dataForType(ty); if (d && !d.isNil()) entry.push([ty, d]); } catch (e) {}
+    }
+    if (entry.length) snap.push(entry);
+  }
+  return snap;
+}
+function pbRestore(pb, snap) {
+  pb.clearContents;
+  if (!snap.length) return true;
+  var objs = $.NSMutableArray.array;
+  snap.forEach(function (entry) {
+    var item = $.NSPasteboardItem.alloc.init;
+    entry.forEach(function (p) { item.setDataForType(p[1], p[0]); });
+    objs.addObject(item);
+  });
+  return !!pb.writeObjects(objs);
+}
+function pbPutText(pb, s) {
   pb.clearContents; pb.setStringForType($(s), $.NSPasteboardTypeString);
   // nspasteboard.org markers: clipboard managers skip concealed/transient items,
   // so typed text (possibly a password the user approved) never lands in history.
   pb.setStringForType($(''), $('org.nspasteboard.ConcealedType'));
   pb.setStringForType($(''), $('org.nspasteboard.TransientType'));
-  key(9, true, 1048576); key(9, false, 1048576); delay(0.25);
-  pb.clearContents; if (prev && prev.js !== undefined) pb.setStringForType(prev, $.NSPasteboardTypeString);
+  return pb.changeCount;
+}
+var CLIP = null; // { pb, snap, count } while a 'type' op is pasting
+function paste(s, vCode) {
+  if (!CLIP) { var pb = $.NSPasteboard.generalPasteboard; CLIP = { pb: pb, snap: pbSnapshot(pb), count: -1 }; }
+  CLIP.count = pbPutText(CLIP.pb, s);
+  key(vCode, true, 1048576); key(vCode, false, 1048576); delay(0.25);
+}
+function restoreClipboard() {
+  if (!CLIP) return;
+  var c = CLIP; CLIP = null;
+  // Something else wrote the clipboard since our paste (the user copied): leave it.
+  if (c.pb.changeCount !== c.count) return;
+  var ok = false;
+  try { ok = pbRestore(c.pb, c.snap); } catch (e) {}
+  if (ok) return;
+  // Fallback: never leave the pasted text behind; keep at least the old plain text.
+  try {
+    c.pb.clearContents;
+    for (var i = 0; i < c.snap.length; i++) for (var j = 0; j < c.snap[i].length; j++) {
+      if (c.snap[i][j][0].js === 'public.utf8-plain-text') {
+        var s = $.NSString.alloc.initWithDataEncoding(c.snap[i][j][1], $.NSUTF8StringEncoding);
+        if (s && !s.isNil()) { c.pb.setStringForType(s, $.NSPasteboardTypeString); return; }
+      }
+    }
+  } catch (e) {}
+}
+// char → key code for the current keyboard layout, without and with ⌘ (see
+// keys.macLayoutKeyCode). Main-block keys only (codes < 65): the keypad also
+// types digits and must not win over the number row.
+function layoutTable() {
+  ObjC.bindFunction('UCKeyTranslate', ['int', ['void *', 'unsigned short', 'unsigned short', 'unsigned int', 'unsigned int', 'unsigned int', 'void *', 'unsigned long', 'void *', 'void *']]);
+  var out = { id: '', plain: {}, cmd: {} };
+  var src = $.TISCopyCurrentKeyboardLayoutInputSource(), data = null;
+  try { data = ObjC.castRefToObject($.TISGetInputSourceProperty(src, $.kTISPropertyUnicodeKeyLayoutData)); } catch (e) {}
+  if (!data || data.isNil()) {
+    src = $.TISCopyCurrentASCIICapableKeyboardLayoutInputSource();
+    try { data = ObjC.castRefToObject($.TISGetInputSourceProperty(src, $.kTISPropertyUnicodeKeyLayoutData)); } catch (e) { data = null; }
+  }
+  if (!data || data.isNil()) return out;
+  try { out.id = ObjC.castRefToObject($.TISGetInputSourceProperty(src, $.kTISPropertyInputSourceID)).js || ''; } catch (e) {}
+  var bytes = data.bytes, kbd = $.LMGetKbdType();
+  [0, 1].forEach(function (mod) { // modifierKeyState: (cmdKey >> 8) & 0xFF = 1
+    var t = mod ? out.cmd : out.plain;
+    for (var code = 0; code < 65; code++) {
+      var dead = Ref('I'), len = Ref('L'), ch = Ref('S');
+      dead[0] = 0;
+      // kUCKeyActionDown = 0, kUCKeyTranslateNoDeadKeysMask = 1
+      if ($.UCKeyTranslate(bytes, code, 0, mod, kbd, 1, dead, 1, len, ch) !== 0 || len[0] !== 1) continue;
+      if (ch[0] < 0x21 || ch[0] === 0x7f) continue;
+      var s = String.fromCharCode(ch[0]).toLowerCase();
+      if (!(s in t)) t[s] = code;
+    }
+  });
+  return out;
 }
 function run(argv) {
   var c = JSON.parse(argv[0]);
+  if (c.op === 'layout') return JSON.stringify(layoutTable());
   if (c.op === 'context') {
     var app = $.NSWorkspace.sharedWorkspace.frontmostApplication;
     return JSON.stringify({ app: app ? app.localizedName.js : '', secureInput: !!$.IsSecureEventInputEnabled() });
@@ -126,26 +206,32 @@ function run(argv) {
       // sources) and by text-completion popups — the second live test typed
       // "merhaba" four times and TextEdit kept only "merha". Newlines still go
       // as real Return presses so forms behave the same.
-      if (c.text.length > 1) {
-        var parts = c.text.replace(String.fromCharCode(13), '').split(String.fromCharCode(10));
-        for (var q = 0; q < parts.length; q++) {
-          if (q) { key(36, true, 0); key(36, false, 0); delay(0.05); }
-          if (parts[q]) paste(parts[q]);
+      // c.v: the ⌘V key code for the current layout (keys.macLayoutKeyCode).
+      var vCode = (c.v === undefined) ? 9 : c.v;
+      try {
+        if (c.text.length > 1) {
+          var parts = c.text.split(String.fromCharCode(13)).join('').split(String.fromCharCode(10));
+          for (var q = 0; q < parts.length; q++) {
+            if (q) { key(36, true, 0); key(36, false, 0); delay(0.05); }
+            if (parts[q]) paste(parts[q], vCode);
+          }
+          delay(0.15);
+          break;
         }
-        delay(0.15);
-        break;
+        var str = c.text, astral = '';
+        for (var j = 0; j < str.length; j++) {
+          var ch = str.charCodeAt(j);
+          if (ch >= 0xD800 && ch <= 0xDBFF) { astral += str[j] + (str[j + 1] || ''); j++; continue; }
+          if (astral) { paste(astral, vCode); astral = ''; }
+          if (ch === 10 || ch === 13) { key(36, true, 0); key(36, false, 0); }
+          else if (ch === 9) { key(48, true, 0); key(48, false, 0); }
+          else uni(ch);
+          delay(0.008);
+        }
+        if (astral) paste(astral, vCode);
+      } finally {
+        restoreClipboard();
       }
-      var str = c.text, astral = '';
-      for (var j = 0; j < str.length; j++) {
-        var ch = str.charCodeAt(j);
-        if (ch >= 0xD800 && ch <= 0xDBFF) { astral += str[j] + (str[j + 1] || ''); j++; continue; }
-        if (astral) { paste(astral); astral = ''; }
-        if (ch === 10 || ch === 13) { key(36, true, 0); key(36, false, 0); }
-        else if (ch === 9) { key(48, true, 0); key(48, false, 0); }
-        else uni(ch);
-        delay(0.008);
-      }
-      if (astral) paste(astral);
       break;
     default: throw new Error('unknown op ' + c.op);
   }
@@ -171,8 +257,20 @@ function createMacDriver({ exec = execFile, getCursor } = {}) {
     });
   }
   const pt = (p) => (p ? { x: p.x, y: p.y } : {});
-  function keyCode(c) {
-    const code = MAC_KEYCODES[c.key];
+  // The current keyboard layout's char → key-code table, read once per driver
+  // (one computer-use run). null if it can't be read: ANSI codes then.
+  let layoutP = null;
+  function layout() {
+    if (!layoutP) {
+      layoutP = call({ op: "layout" }, 8000).then((out) => {
+        const t = JSON.parse(out);
+        return t && (t.plain || t.cmd) ? t : null;
+      }).catch(() => null);
+    }
+    return layoutP;
+  }
+  async function keyCode(c) {
+    const code = macLayoutKeyCode(c.key, c.mods, isCharKey(c.key) ? await layout() : null);
     if (code === undefined) throw new Error(`key not supported on macOS: ${c.key}`);
     return code;
   }
@@ -189,15 +287,18 @@ function createMacDriver({ exec = execFile, getCursor } = {}) {
       const dx = direction === "left" ? SCROLL_LINES_PER_NOTCH : direction === "right" ? -SCROLL_LINES_PER_NOTCH : 0;
       return call({ op: "scroll", ...pt(p), notches: n, dy, dx, flags: macFlags(mods) });
     },
-    type: (text) => call({ op: "type", text: String(text).slice(0, MAX_TYPE_CHARS) }, 60000),
-    key: (combo, { repeat = 1 } = {}) => {
-      const c = comboOrThrow(combo);
-      return call({ op: "key", code: keyCode(c), flags: macFlags(c.mods), repeat: Math.max(1, Math.min(100, repeat | 0 || 1)) });
+    type: async (text) => {
+      const v = macLayoutKeyCode("v", ["cmd"], await layout());
+      return call({ op: "type", text: String(text).slice(0, MAX_TYPE_CHARS), v }, 60000);
     },
-    holdKey: (combo, seconds) => {
+    key: async (combo, { repeat = 1 } = {}) => {
+      const c = comboOrThrow(combo);
+      return call({ op: "key", code: await keyCode(c), flags: macFlags(c.mods), repeat: Math.max(1, Math.min(100, repeat | 0 || 1)) });
+    },
+    holdKey: async (combo, seconds) => {
       const c = comboOrThrow(combo);
       const s = Math.max(0, Math.min(10, Number(seconds) || 0));
-      return call({ op: "hold", code: keyCode(c), flags: macFlags(c.mods), seconds: s }, (s + 10) * 1000);
+      return call({ op: "hold", code: await keyCode(c), flags: macFlags(c.mods), seconds: s }, (s + 10) * 1000);
     },
     cursorPosition: async () => (getCursor ? getCursor() : JSON.parse(await call({ op: "cursor" }))),
     context: async () => {
@@ -227,12 +328,25 @@ public static class KiiriInput {
   [DllImport("user32.dll", SetLastError = true)] static extern uint SendInput(uint n, INPUT[] inputs, int size);
   [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
-  [DllImport("user32.dll")] static extern IntPtr SetProcessDpiAwarenessContext(IntPtr v);
+  [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr v);
+  [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr v);
   [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
   [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
-  public static void Dpi() { try { if (SetProcessDpiAwarenessContext(new IntPtr(-4)) == IntPtr.Zero) SetProcessDPIAware(); } catch { try { SetProcessDPIAware(); } catch {} } }
+  [DllImport("user32.dll")] static extern IntPtr GetKeyboardLayout(uint thread);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern short VkKeyScanEx(char ch, IntPtr hkl);
+  [DllImport("user32.dll")] static extern uint MapVirtualKeyEx(uint code, uint mapType, IntPtr hkl);
+  // Per-monitor v2 (-4) so SetCursorPos takes real pixels on every monitor. If the
+  // process already has an awareness (manifest), raise this thread instead.
+  public static void Dpi() {
+    try { if (SetProcessDpiAwarenessContext(new IntPtr(-4))) return; } catch {}
+    try { if (SetThreadDpiAwarenessContext(new IntPtr(-4)) != IntPtr.Zero) return; } catch {}
+    try { SetProcessDPIAware(); } catch {}
+  }
+  // Keyboard layout of the app that will receive the keys (not this console's).
+  static IntPtr Hkl() { uint pid; return GetKeyboardLayout(GetWindowThreadProcessId(GetForegroundWindow(), out pid)); }
+  public static int VkFor(string s) { if (s == null || s.Length != 1) return -1; return VkKeyScanEx(s[0], Hkl()); }
   static void Send(INPUT[] a) {
     uint r = SendInput((uint)a.Length, a, Marshal.SizeOf(typeof(INPUT)));
     if (r != a.Length) throw new Exception("SendInput was blocked (error " + Marshal.GetLastWin32Error() + ")");
@@ -245,7 +359,8 @@ public static class KiiriInput {
     Send(new[] { M(f, 0) });
   }
   public static void Wheel(int notches, bool horizontal) { Send(new[] { M(horizontal ? 0x1000u : 0x800u, unchecked((uint)(notches * 120))) }); }
-  public static void Vk(ushort vk, bool down, bool ext) { Send(new[] { K(vk, 0, (down ? 0u : 0x2u) | (ext ? 0x1u : 0u)) }); }
+  // wScan filled in too: some apps (games, remote desktops) read the scan code.
+  public static void Vk(ushort vk, bool down, bool ext) { Send(new[] { K(vk, (ushort)MapVirtualKeyEx(vk, 0, Hkl()), (down ? 0u : 0x2u) | (ext ? 0x1u : 0u)) }); }
   public static void Unicode(string s) { foreach (char ch in s) { Send(new[] { K(0, ch, 0x4u), K(0, ch, 0x6u) }); Thread.Sleep(3); } }
   public static string Foreground() {
     IntPtr h = GetForegroundWindow(); var sb = new StringBuilder(512); GetWindowText(h, sb, 512);
@@ -254,9 +369,15 @@ public static class KiiriInput {
 }
 '@
 [KiiriInput]::Dpi()
-[Console]::Out.WriteLine('{"ready":true}'); [Console]::Out.Flush()
+# UTF-8 both ways: [Console]::In/Out use the OEM code page (857 on Turkish
+# Windows), which would mangle typed text and window titles.
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$stdin = [System.IO.StreamReader]::new([Console]::OpenStandardInput(), $utf8)
+$stdout = [System.IO.StreamWriter]::new([Console]::OpenStandardOutput(), $utf8)
+$stdout.AutoFlush = $true
+$stdout.WriteLine('{"ready":true}')
 while ($true) {
-  $line = [Console]::In.ReadLine()
+  $line = $stdin.ReadLine()
   if ($line -eq $null) { break }
   $res = @{ id = 0; ok = $true; result = 'OK' }
   try {
@@ -268,6 +389,7 @@ while ($true) {
       'wheel' { [KiiriInput]::Wheel([int]$c.notches, [bool]$c.horizontal) }
       'vk' { [KiiriInput]::Vk([uint16]$c.vk, [bool]$c.down, [bool]$c.ext) }
       'unicode' { [KiiriInput]::Unicode([string]$c.text) }
+      'vkscan' { $res.result = [KiiriInput]::VkFor([string]$c.ch) }
       'sleep' { Start-Sleep -Milliseconds ([int]$c.ms) }
       'cursor' { $p = New-Object KiiriInput+POINT; [void][KiiriInput]::GetCursorPos([ref]$p); $res.result = @{ x = $p.X; y = $p.Y } }
       'context' {
@@ -279,9 +401,20 @@ while ($true) {
       default { throw ('unknown op ' + $c.op) }
     }
   } catch { $res.ok = $false; $res.error = $_.Exception.Message }
-  [Console]::Out.WriteLine(($res | ConvertTo-Json -Compress -Depth 4)); [Console]::Out.Flush()
+  $stdout.WriteLine(($res | ConvertTo-Json -Compress -Depth 4))
 }
 `;
+
+// One request line for the Windows helper. Non-ASCII is \u-escaped so the line
+// survives any console code page even if the UTF-8 reader isn't in effect.
+function winRequestLine(msg) {
+  return JSON.stringify(msg).replace(/[\u007f-￿]/g, (ch) => "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0")) + "\n";
+}
+
+// powershell.exe -EncodedCommand: the whole command line is capped at 32767 chars.
+function winEncodedCommand(script = WIN_PS) {
+  return Buffer.from(script, "utf16le").toString("base64");
+}
 
 function createWindowsDriver({ spawnFn = spawn, toNative = (p) => p, getCursor } = {}) {
   let child = null;
@@ -292,12 +425,22 @@ function createWindowsDriver({ spawnFn = spawn, toNative = (p) => p, getCursor }
 
   function start() {
     if (ready) return ready;
-    const encoded = Buffer.from(WIN_PS, "utf16le").toString("base64");
-    child = spawnFn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded], { windowsHide: true });
+    buf = "";
+    const proc = spawnFn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", winEncodedCommand()], { windowsHide: true });
+    child = proc;
+    // A multi-byte character can straddle two chunks: decode as a stream.
+    const decoder = new StringDecoder("utf8");
     ready = new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("input helper did not start")), 20000);
-      child.stdout.on("data", (chunk) => {
-        buf += chunk.toString("utf8");
+      const gone = (err) => {
+        clearTimeout(timer);
+        for (const w of waiting.values()) w.reject(err);
+        waiting.clear();
+        if (child === proc) { child = null; ready = null; } // next op starts a fresh helper
+        reject(err);
+      };
+      proc.stdout.on("data", (chunk) => {
+        buf += typeof chunk === "string" ? chunk : decoder.write(chunk);
         let nl;
         while ((nl = buf.indexOf("\n")) >= 0) {
           const line = buf.slice(0, nl).trim();
@@ -312,36 +455,48 @@ function createWindowsDriver({ spawnFn = spawn, toNative = (p) => p, getCursor }
           if (msg.ok) w.resolve(msg.result); else w.reject(new Error(msg.error || "input failed"));
         }
       });
-      child.on("exit", () => {
-        clearTimeout(timer);
-        for (const w of waiting.values()) w.reject(new Error("input helper exited"));
-        waiting.clear();
-        child = null; ready = null;
-        reject(new Error("input helper exited"));
-      });
-      child.on("error", (err) => { clearTimeout(timer); reject(err); });
+      proc.on("exit", () => gone(new Error("input helper exited")));
+      proc.on("error", (err) => gone(err)); // e.g. powershell.exe not found
     });
     return ready;
   }
 
   async function op(cmd, timeout = 20000) {
     await start();
+    const proc = child;
+    if (!proc) throw new Error("input helper exited");
     const id = ++seq;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => { waiting.delete(id); reject(new Error("input helper timed out")); }, timeout);
       waiting.set(id, { resolve: (v) => { clearTimeout(timer); resolve(v); }, reject: (e) => { clearTimeout(timer); reject(e); } });
-      child.stdin.write(JSON.stringify({ id, ...cmd }) + "\n");
+      proc.stdin.write(winRequestLine({ id, ...cmd }));
     });
   }
   const moveTo = (p) => { const n = toNative(p); return op({ op: "move", x: Math.round(n.x), y: Math.round(n.y) }); };
-  const vk = (name, down) => {
-    const code = WIN_VK[name];
-    if (code === undefined) throw new Error(`key not supported on Windows: ${name}`);
-    return op({ op: "vk", vk: code, down, ext: WIN_EXTENDED.has(code) });
-  };
+  // A character key goes to the VK that types it on the foreground app's layout
+  // (VkKeyScanEx); named keys, and characters that layout can't type, use the
+  // fixed table.
+  async function resolveKey(name) {
+    if (isCharKey(name)) {
+      let vk = null;
+      try { vk = winVkFromScan(await op({ op: "vkscan", ch: name })); } catch {}
+      if (vk) return { vk, ext: false };
+    }
+    const k = winKey(name);
+    if (!k) throw new Error(`key not supported on Windows: ${name}`);
+    return k;
+  }
+  const press = (k, down) => op({ op: "vk", vk: k.vk, down, ext: k.ext });
+  const vk = async (name, down) => press(await resolveKey(name), down);
   async function withMods(mods, fn) {
-    for (const m of mods) await vk(m, true);
-    try { return await fn(); } finally { for (const m of [...mods].reverse()) await vk(m, false); }
+    const held = [];
+    try {
+      for (const m of mods) { await vk(m, true); held.push(m); }
+      return await fn();
+    } finally {
+      // Release only what went down — and all of it, even if one release fails.
+      for (const m of held.reverse()) { try { await vk(m, false); } catch {} }
+    }
   }
 
   return {
@@ -387,14 +542,19 @@ function createWindowsDriver({ spawnFn = spawn, toNative = (p) => p, getCursor }
     key: async (combo, { repeat = 1 } = {}) => {
       const c = comboOrThrow(combo);
       const times = Math.max(1, Math.min(100, repeat | 0 || 1));
+      const k = await resolveKey(c.key); // once, before the modifiers go down
       await withMods(c.mods, async () => {
-        for (let i = 0; i < times; i++) { await vk(c.key, true); await vk(c.key, false); }
+        for (let i = 0; i < times; i++) { await press(k, true); await press(k, false); }
       });
     },
     holdKey: async (combo, seconds) => {
       const c = comboOrThrow(combo);
       const ms = Math.max(0, Math.min(10, Number(seconds) || 0)) * 1000;
-      await withMods(c.mods, async () => { await vk(c.key, true); await op({ op: "sleep", ms }, ms + 10000); await vk(c.key, false); });
+      const k = await resolveKey(c.key);
+      await withMods(c.mods, async () => {
+        await press(k, true);
+        try { await op({ op: "sleep", ms }, ms + 10000); } finally { await press(k, false); }
+      });
     },
     cursorPosition: async () => (getCursor ? getCursor() : op({ op: "cursor" })),
     context: async () => {
@@ -434,7 +594,13 @@ function createLinuxDriver({ exec = execFile, toNative = (p) => p, getCursor } =
     mouseDown: async (p, button = "left") => { if (p) await x(at(p)); await x(["mousedown", BTN[button] || "1"]); },
     mouseUp: async (p, button = "left") => { if (p) await x(at(p)); await x(["mouseup", BTN[button] || "1"]); },
     drag: (from, to, { mods = [] } = {}) => withMods(mods, async () => {
-      await x(at(from)); await x(["mousedown", "1"]); await sleep(60); await x(at(to)); await sleep(60); await x(["mouseup", "1"]);
+      // Intermediate motion like the other drivers: many apps ignore a drag that
+      // jumps straight from press to release position.
+      await x(at(from)); await x(["mousedown", "1"]); await sleep(60);
+      try {
+        for (let s = 1; s <= 6; s++) await x(at({ x: from.x + ((to.x - from.x) * s) / 6, y: from.y + ((to.y - from.y) * s) / 6 }));
+        await sleep(60);
+      } finally { await x(["mouseup", "1"]); }
     }),
     scroll: async (p, { direction = "down", amount = 3, mods = [] } = {}) => {
       if (p) await x(at(p));
@@ -446,7 +612,8 @@ function createLinuxDriver({ exec = execFile, toNative = (p) => p, getCursor } =
     key: (combo, { repeat = 1 } = {}) => x(["key", "--repeat", String(Math.max(1, Math.min(100, repeat | 0 || 1))), "--", x11Combo(comboOrThrow(combo))]),
     holdKey: async (combo, seconds) => {
       const k = x11Combo(comboOrThrow(combo));
-      await x(["keydown", k]); await sleep(Math.max(0, Math.min(10, Number(seconds) || 0)) * 1000); await x(["keyup", k]);
+      await x(["keydown", "--", k]);
+      try { await sleep(Math.max(0, Math.min(10, Number(seconds) || 0)) * 1000); } finally { await x(["keyup", "--", k]); }
     },
     cursorPosition: async () => {
       if (getCursor) return getCursor();
@@ -477,4 +644,4 @@ function createInput(opts = {}) {
   throw new Error(`computer use is not supported on ${platform}`);
 }
 
-module.exports = { createInput, modsFrom, macFlags, MAC_JXA, WIN_PS };
+module.exports = { createInput, modsFrom, macFlags, MAC_JXA, WIN_PS, winRequestLine, winEncodedCommand };

@@ -15,7 +15,7 @@ const config = require("../config");
 const { classifyError } = require("../claude");
 const { createInput } = require("./input");
 const { createTransport } = require("./transport");
-const { createGeometry, zoomCrop } = require("./scaling");
+const { createGeometry, zoomCrop, nativePoint } = require("./scaling");
 const { performAction, POINTER_ACTIONS } = require("./actions");
 const { planTask, runComputerTask, computerModel } = require("./loop");
 const { assessRisk } = require("./risk");
@@ -345,7 +345,7 @@ function createComputerSession(deps) {
       driver = createInput({
         platform: process.platform,
         getCursor: () => screen.getCursorScreenPoint(),
-        toNative: (p) => (typeof screen.dipToScreenPoint === "function" && process.platform !== "darwin" ? screen.dipToScreenPoint(p) : p),
+        toNative: (p) => nativePoint(p, { platform: process.platform, screen }),
       });
     } catch (err) {
       return { error: "platform", message: err && err.message };

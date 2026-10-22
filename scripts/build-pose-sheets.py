@@ -17,6 +17,7 @@ canvas bottom (the renderer lets them overflow). The source sheets were drawn
 at different scales, so each sheet is normalised by a body feature that keeps
 its size across poses (kiri: the bow, tori: the red nose).
 """
+import base64
 import json
 import os
 
@@ -162,6 +163,26 @@ def head_width(im, frac=0.42):
     return float(np.percentile(big[top:int(top + (bot - top) * frac)].sum(1), 95))
 
 
+MASK_GRID = 4      # idle-canvas px per mask cell
+MASK_DILATE = 2    # cells of slack around the silhouette (whiskers, AA edges)
+
+
+def hit_mask(im):
+    """Coarse occupancy mask of the drawn art for the pet window's click test:
+    only clicks on (or right next to) the cat are taken, everything else passes
+    through to the app underneath. Row-major bits, MSB first, base64."""
+    al = np.array(im)[..., 3] > 40
+    h, w = al.shape
+    rows, cols = -(-h // MASK_GRID), -(-w // MASK_GRID)
+    pad = np.zeros((rows * MASK_GRID, cols * MASK_GRID), bool)
+    pad[:h, :w] = al
+    cells = pad.reshape(rows, MASK_GRID, cols, MASK_GRID).any(axis=(1, 3))
+    if MASK_DILATE:
+        cells = ndimage.binary_dilation(cells, iterations=MASK_DILATE)
+    bits = np.packbits(cells.astype(np.uint8).ravel())
+    return {"g": MASK_GRID, "w": int(cols), "h": int(rows), "b": base64.b64encode(bits.tobytes()).decode("ascii")}
+
+
 def row_centroid_x(im, from_bottom, frac=0.05):
     """x centroid of the opaque pixels in the top/bottom `frac` of the art —
     the feet (standing) or the grab point (hanging)."""
@@ -241,7 +262,8 @@ def build_set(name, cfg):
     canvas.paste(idle_s, (PAD, PAD))
     canvas.save(os.path.join(OUT_IMG, f"{name}_noeye.png"), optimize=True)
 
-    manifest = {"rev": ART_REV, "w": W, "h": H, "eyes": pupils(idle, load(cfg["eyes"]), box, idle_scale, (W, H)), "states": {}}
+    manifest = {"rev": ART_REV, "w": W, "h": H, "eyes": pupils(idle, load(cfg["eyes"]), box, idle_scale, (W, H)), "states": {},
+                "mask": hit_mask(canvas)}
 
     # Every state is scaled so its head is as wide as the idle head (on screen).
     # The bow/nose ratio above is only a sheet-level first guess: the artist drew
@@ -284,7 +306,8 @@ def build_set(name, cfg):
         for i, (fr, (px, py)) in enumerate(zip(frames, places)):
             strip.alpha_composite(fr, (i * cw + px, py))
         strip.save(os.path.join(OUT_IMG, f"{name}_{state}.png"), optimize=True)
-        entry = {"frames": len(frames), "cw": cw, "ch": ch, "ox": round(ox, 1), "oy": round(oy, 1)}
+        entry = {"frames": len(frames), "cw": cw, "ch": ch, "ox": round(ox, 1), "oy": round(oy, 1),
+                 "masks": [hit_mask(strip.crop((i * cw, 0, (i + 1) * cw, ch))) for i in range(len(frames))]}
         if "groups" in st:
             entry["groups"] = group_idx
         manifest["states"][state] = entry

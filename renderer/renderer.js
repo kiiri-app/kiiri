@@ -349,6 +349,16 @@ function tr(key, ...args) {
 }
 
 window.electronAPI.onCursorPos(({ dx, dy }) => {
+  // Click-through safety net. Capture turns on from mousemove when the cursor
+  // is over the cat and off on mouseleave — but macOS doesn't reliably send
+  // mouseleave to an unfocused transparent window, and a missed one left the
+  // whole pet window eating clicks meant for the app behind it. This 16 ms poll
+  // only ever turns capture OFF (outside the window, or not over the cat).
+  if (!dragging && mouseEventsEnabled) {
+    const cx = innerWidth / 2 + dx, cy = innerHeight / 2 + dy;
+    const inside = cx >= 0 && cy >= 0 && cx < innerWidth && cy < innerHeight;
+    if (!inside || !shouldReceiveMouseAt(cx, cy)) setPetMouseEventsEnabled(false);
+  }
   // While a gaze override is active (cat is "looking at" a pointed element),
   // ignore cursor tracking so it holds the look-at direction.
   if (performance.now() < gazeOverrideUntil) {
@@ -1942,7 +1952,62 @@ function currentPoseElement() {
   return posesetEl;
 }
 
+// Pixel-level hit test from the build-time masks in pose-manifest.js (4 px
+// cells, 8 px of slack). The old box test took ~70% of the pose box, so a
+// ~340 px invisible zone around the cat swallowed clicks meant for the app
+// underneath (seen on the landing page: FAQ toggles and sound buttons near
+// the cat stopped responding). null = no mask (petdex, old manifest) → box test.
+const poseMaskBits = new Map();
+function maskHit(mask, px, py) {
+  if (!mask || !mask.b) return null;
+  let bits = poseMaskBits.get(mask.b);
+  if (!bits) {
+    bits = Uint8Array.from(atob(mask.b), (c) => c.charCodeAt(0));
+    poseMaskBits.set(mask.b, bits);
+  }
+  const cx = Math.floor(px / mask.g), cy = Math.floor(py / mask.g);
+  if (cx < 0 || cy < 0 || cx >= mask.w || cy >= mask.h) return false;
+  const i = cy * mask.w + cx;
+  return (bits[i >> 3] & (0x80 >> (i & 7))) !== 0;
+}
+
+// Layout (pre-transform) position of an element in the window.
+function layoutOrigin(el) {
+  let x = 0, y = 0;
+  for (let e = el; e; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
+  return { x, y };
+}
+
+// Window point → the element's own untransformed box. #poseset is centred with
+// translateX(-50%) and tilts toward the cursor (rotate about its bottom
+// centre), so undo its computed transform around its transform-origin.
+function clientToBox(el, x, y) {
+  const o = layoutOrigin(el);
+  const cs = getComputedStyle(el);
+  if (!cs.transform || cs.transform === "none") return { x: x - o.x, y: y - o.y };
+  const [tx, ty] = cs.transformOrigin.split(" ").map(parseFloat);
+  const p = new DOMMatrix(cs.transform).inverse().transformPoint(new DOMPoint(x - o.x - tx, y - o.y - ty));
+  return { x: p.x + tx, y: p.y + ty };
+}
+
+function poseMaskHit(x, y) {
+  if (!poseMode || petdexMode || !posesetEl) return null;
+  const m = poseManifest();
+  const r = poseIdleRect();
+  if (!m || !r || !m.mask) return null;
+  const { x: lx, y: ly } = clientToBox(posesetEl, x, y);
+  const c = poseAnimState ? m.states[poseAnimState] : null;
+  if (c) {
+    if (!c.masks) return null;
+    const mask = c.masks[Math.max(0, poseAnimFrameShown)] || c.masks[0];
+    return maskHit(mask, (lx - (r.x + c.ox * r.s)) / r.s, (ly - (r.y + c.oy * r.s)) / r.s);
+  }
+  return maskHit(m.mask, (lx - r.x) / r.s, (ly - r.y) / r.s);
+}
+
 function isCatHitPoint(x, y) {
+  const exact = poseMaskHit(x, y);
+  if (exact !== null) return exact;
   const pose = currentPoseElement();
   if (!pose) return false;
   const rect = pose.getBoundingClientRect();

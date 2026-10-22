@@ -4,6 +4,7 @@
 // library (pure JS).
 
 const { Executor } = require("../executor");
+const { t } = require("../../i18n");
 
 // Pure renderer. payload: { title, sections: [{ heading, paragraphs: [string] }] }
 async function renderDocx(payload) {
@@ -65,9 +66,9 @@ class CreateDocxExecutor extends Executor {
     };
   }
 
-  async preview(payload) {
+  async preview(payload, lang) {
     const n = Array.isArray(payload && payload.sections) ? payload.sections.length : 0;
-    return { summary: `📄 Word — "${(payload && payload.title) || ""}" (${n} bölüm) → Kiri/belgeler/` };
+    return { summary: t("plan.docx", lang, (payload && payload.title) || "", n, this.outputLabel) };
   }
 
   async execute(payload) {

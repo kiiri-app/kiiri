@@ -10,6 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const { app } = require("electron");
 const config = require("./config");
+const { msg } = require("./i18n");
 const llm = require("./llm");
 const { classifyError } = llm;
 const { chatSystem } = require("./prompts");
@@ -94,9 +95,9 @@ function pushTurn(charId, role, text) {
 // memory, appContext }.
 async function send(userText, opts = {}, onDelta) {
   const cfg = config.loadConfig();
-  if (!cfg.enabled) return { error: "disabled", message: "AI kapalı." };
+  if (!cfg.enabled) return { error: "disabled", message: msg("ai.disabled") };
   if (!config.providerReady()) {
-    return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+    return { error: "no_key", message: msg("ai.noKey") };
   }
   const text = String(userText || "").trim();
   if (!text) return { error: "empty" };

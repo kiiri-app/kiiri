@@ -4,6 +4,7 @@
 // produces the whole content.
 
 const { Executor } = require("../executor");
+const { t } = require("../../i18n");
 
 const ALLOWED_EXT = ["md", "txt", "html"];
 
@@ -27,9 +28,9 @@ class WriteFileExecutor extends Executor {
     };
   }
 
-  async preview(payload) {
+  async preview(payload, lang) {
     const ext = ALLOWED_EXT.includes(payload && payload.ext) ? payload.ext : "txt";
-    return { summary: `📝 ${ext.toUpperCase()} dosyası — "${(payload && payload.filename) || ""}" → Kiri/dosyalar/` };
+    return { summary: t("plan.file", lang, ext.toUpperCase(), (payload && payload.filename) || "", this.outputLabel) };
   }
 
   async execute(payload) {

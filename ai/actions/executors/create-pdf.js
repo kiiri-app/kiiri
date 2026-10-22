@@ -5,6 +5,7 @@
 // script-free window: no PDF library needed.
 
 const { Executor } = require("../executor");
+const { t } = require("../../i18n");
 
 const esc = (s) => String(s == null ? "" : s)
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -115,10 +116,10 @@ class CreatePdfExecutor extends Executor {
     };
   }
 
-  async preview(payload) {
+  async preview(payload, lang) {
     const n = Array.isArray(payload && payload.sections) ? payload.sections.length : 0;
     const s = Array.isArray(payload && payload.sources) ? payload.sources.length : 0;
-    return { summary: `📕 PDF — "${(payload && payload.title) || ""}" (${n} bölüm${s ? `, ${s} kaynak` : ""}) → Kiri/raporlar/` };
+    return { summary: t("plan.pdf", lang, (payload && payload.title) || "", n, s, this.outputLabel) };
   }
 
   async execute(payload) {

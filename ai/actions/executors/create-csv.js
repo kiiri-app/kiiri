@@ -4,6 +4,7 @@
 // RFC-4180 quoting; UTF-8 BOM so Excel opens Turkish characters correctly.
 
 const { Executor } = require("../executor");
+const { t } = require("../../i18n");
 
 // One CSV field: quote when it contains a comma, quote, or newline; double inner
 // quotes.
@@ -49,10 +50,10 @@ class CreateCsvExecutor extends Executor {
     };
   }
 
-  async preview(payload) {
+  async preview(payload, lang) {
     const cols = Array.isArray(payload && payload.columns) ? payload.columns.length : 0;
     const rows = Array.isArray(payload && payload.rows) ? payload.rows.length : 0;
-    return { summary: `🗂 CSV — ${cols} sütun × ${rows} satır → Kiri/tablolar/` };
+    return { summary: t("plan.csv", lang, cols, rows, this.outputLabel) };
   }
 
   async execute(payload) {

@@ -4,6 +4,7 @@
 // a real editable .pptx with pptxgenjs (pure JS, no native deps).
 
 const { Executor } = require("../executor");
+const { t } = require("../../i18n");
 
 // Pure renderer (testable without Electron). payload:
 //   { title, slides: [{ heading, bullets: [string], notes? }] }
@@ -78,9 +79,9 @@ class CreatePptxExecutor extends Executor {
     };
   }
 
-  async preview(payload) {
+  async preview(payload, lang) {
     const n = Array.isArray(payload && payload.slides) ? payload.slides.length : 0;
-    return { summary: `📊 PowerPoint — "${(payload && payload.title) || ""}" (${n} slayt) → Kiri/sunumlar/` };
+    return { summary: t("plan.pptx", lang, (payload && payload.title) || "", n, this.outputLabel) };
   }
 
   async execute(payload) {

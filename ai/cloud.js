@@ -7,6 +7,7 @@
 
 const os = require("os");
 const config = require("./config");
+const { msg } = require("./i18n");
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
 
@@ -37,16 +38,16 @@ function deviceName() {
 async function startSignIn(email, onDone, { fetchImpl = fetch, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
   cancelSignIn({ clearTimer });
   const addr = String(email || "").trim().toLowerCase();
-  if (!EMAIL.test(addr)) return { ok: false, error: "email", message: "Geçerli bir e-posta adresi yaz." };
+  if (!EMAIL.test(addr)) return { ok: false, error: "email", message: msg("cloud.badEmail") };
   let r;
   try {
     r = await postJson("/auth/start", { email: addr, device_name: deviceName() }, { fetchImpl });
   } catch {
-    return { ok: false, error: "network", message: "Kiiri Cloud'a bağlanılamadı. İnternet bağlantını kontrol et." };
+    return { ok: false, error: "network", message: msg("cloud.network") };
   }
-  if (r.status === 429) return { ok: false, error: "rate_limit", message: "Çok fazla deneme oldu. Birkaç dakika sonra tekrar dene." };
+  if (r.status === 429) return { ok: false, error: "rate_limit", message: msg("cloud.rateLimit") };
   if (r.status !== 200 || !r.data.request_id) {
-    return { ok: false, error: "server", message: (r.data.error && r.data.error.message) || `Kiiri Cloud hata verdi (${r.status}).` };
+    return { ok: false, error: "server", message: (r.data.error && r.data.error.message) || msg("cloud.server", r.status) };
   }
 
   const job = { requestId: r.data.request_id, timer: null, cancelled: false };
@@ -60,7 +61,7 @@ async function startSignIn(email, onDone, { fetchImpl = fetch, setTimer = setTim
   };
   const tick = async () => {
     if (job.cancelled) return;
-    if (Date.now() > deadline) return finish({ ok: false, error: "expired", message: "Bağlantının süresi doldu. Tekrar dene." });
+    if (Date.now() > deadline) return finish({ ok: false, error: "expired", message: msg("cloud.expired") });
     let p;
     try {
       p = await postJson("/auth/poll", { request_id: job.requestId }, { fetchImpl });
@@ -74,7 +75,7 @@ async function startSignIn(email, onDone, { fetchImpl = fetch, setTimer = setTim
       config.saveConfig({ cloudEmail: user.email || addr, cloudPlan: user.plan || "free" });
       return finish({ ok: true, email: user.email || addr, plan: user.plan || "free" });
     }
-    if (p.status === 410) return finish({ ok: false, error: "expired", message: "Bağlantının süresi doldu. Tekrar dene." });
+    if (p.status === 410) return finish({ ok: false, error: "expired", message: msg("cloud.expired") });
     job.timer = setTimer(tick, interval);
   };
   job.timer = setTimer(tick, interval);

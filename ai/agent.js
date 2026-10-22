@@ -12,6 +12,7 @@ const registry = require("./actions/registry");
 const planner = require("./actions/planner");
 const ledger = require("./actions/ledger");
 const { classifyError } = require("./llm");
+const { msg } = require("./i18n");
 const skillStore = require("./skills/store");
 const skillRouter = require("./skills/router");
 const skillAuthor = require("./skills/author");
@@ -56,10 +57,10 @@ function deleteSkill(id) {
 // ---- Command → plan ----
 async function runCommand({ commandText, catName, persona, memory } = {}) {
   const cfg = config.loadConfig();
-  if (!cfg.enabled) return { error: "disabled", message: "AI Asistan kapalı." };
-  if (!config.providerReady()) return { error: "no_key", message: "Önce sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+  if (!cfg.enabled) return { error: "disabled", message: msg("ai.disabled") };
+  if (!config.providerReady()) return { error: "no_key", message: msg("ai.noKey") };
   const text = String(commandText || "").trim();
-  if (!text) return { error: "empty", message: "Bir komut yaz." };
+  if (!text) return { error: "empty", message: msg("agent.emptyCommand") };
 
   const matched = skillRouter.matchSkill(text, skillStore.list());
   const instruction = matched
@@ -90,7 +91,7 @@ async function runCommand({ commandText, catName, persona, memory } = {}) {
   }
 
   if (!result.actions.length) {
-    return { type: "text", text: result.text || "(yapacak bir aksiyon bulamadım)" };
+    return { type: "text", text: result.text || msg("agent.noAction") };
   }
 
   const planId = `plan-${Date.now()}-${planSeq++}`;
@@ -108,7 +109,7 @@ async function runCommand({ commandText, catName, persona, memory } = {}) {
 // ---- Approve → execute ----
 async function approve(planId) {
   const plan = pendingPlans.get(planId);
-  if (!plan) return { error: "expired", message: "Plan süresi doldu, komutu tekrar ver." };
+  if (!plan) return { error: "expired", message: msg("agent.planExpired") };
   pendingPlans.delete(planId);
 
   const results = [];
@@ -120,7 +121,7 @@ async function approve(planId) {
       const entry = ledger.record({ type: action.type, summary: action.summary }, res);
       results.push({ ok: true, type: action.type, name: res.name, path: res.path, ledgerId: entry.id });
     } catch (err) {
-      results.push({ ok: false, type: action.type, message: (err && err.message) || "Hata" });
+      results.push({ ok: false, type: action.type, message: (err && err.message) || msg("agent.actionFailed") });
     }
   }
   return { ok: true, results };
@@ -141,14 +142,14 @@ async function undo({ ledgerId, filePath } = {}) {
   const resolved = path.resolve(String(target));
   const rel = path.relative(paths.outputRoot(), resolved);
   if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) {
-    return { ok: false, message: "Geri alma yalnızca Kiri çıktı klasöründeki dosyalar için geçerli." };
+    return { ok: false, message: msg("agent.undoOutside") };
   }
   try {
     await shell.trashItem(resolved);
     if (ledgerId) ledger.markReverted(ledgerId);
     return { ok: true };
   } catch (err) {
-    return { ok: false, message: (err && err.message) || "Geri alınamadı" };
+    return { ok: false, message: (err && err.message) || msg("agent.undoFailed") };
   }
 }
 

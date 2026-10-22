@@ -26,8 +26,14 @@ class Executor {
     throw new Error("toolSchema not implemented");
   }
 
-  // Human-facing one-liner shown on the Supervision Card before execution.
-  async preview(payload) {
+  // Where the card says the file goes (the on-disk folder name, not translated).
+  get outputLabel() {
+    return `Kiri/${this.folder}/`;
+  }
+
+  // Human-facing one-liner shown on the Supervision Card before execution, in
+  // the UI language (ai/i18n) unless `lang` is given.
+  async preview(payload, lang) {
     return { summary: `${this.type}: ${(payload && payload.filename) || ""}` };
   }
 

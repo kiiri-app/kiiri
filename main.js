@@ -13,6 +13,7 @@ const { createBridgeServer } = require("./hooks/bridge-server");
 const crypto = require("crypto");
 const { pathToFileURL } = require("url");
 const aiConfig = require("./ai/config");
+const aiI18n = require("./ai/i18n");
 const aiAssistant = require("./ai/assistant");
 const aiAgent = require("./ai/agent");
 const aiVoice = require("./ai/voice");
@@ -1014,6 +1015,7 @@ function startAutomationTimer() {
 
 function setLanguage(language) {
   currentLanguage = normalizeLanguage(language);
+  aiI18n.setLanguage(currentLanguage);
   saveSettings();
   buildAppMenu();
   broadcastAll("language-changed", currentLanguage);
@@ -4046,6 +4048,7 @@ app.whenReady().then(async () => {
     }
     currentLanguage = defaultLanguage();
     loadSettings();
+    aiI18n.setLanguage(currentLanguage); // backend messages follow the UI language
     // First run: seed starter skills in the user's language so the command
     // window ships with something useful.
     try { aiAgent.seedSkills(currentLanguage); } catch (err) { logError("[Kiri] skill seed failed:", err); }

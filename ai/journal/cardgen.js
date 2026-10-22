@@ -5,6 +5,7 @@
 // "📚 Deftere ekle" button so the user controls quality.
 
 const config = require("../config");
+const { msg } = require("../i18n");
 const llm = require("../llm");
 const { languageName } = require("../prompts");
 
@@ -17,9 +18,9 @@ function parseJson(text) {
 
 // Returns { ok, card: { question, answer } } or { error, message }.
 async function fromText(content) {
-  if (!config.providerReady()) return { error: "no_key", message: "Önce sağlayıcı anahtarını gir." };
+  if (!config.providerReady()) return { error: "no_key", message: msg("ai.noKey") };
   const text = String(content || "").trim();
-  if (!text) return { error: "empty", message: "Boş içerik." };
+  if (!text) return { error: "empty", message: msg("card.empty") };
 
   const lang = config.loadConfig().responseLanguage;
   const langName = languageName(lang);
@@ -39,7 +40,7 @@ async function fromText(content) {
     const parsed = parseJson(out);
     const question = parsed && String(parsed.question || "").trim();
     const answer = parsed && String(parsed.answer || "").trim();
-    if (!question || !answer) return { error: "parse", message: "Kart üretilemedi." };
+    if (!question || !answer) return { error: "parse", message: msg("card.parse") };
     return { ok: true, card: { question, answer } };
   } catch (err) {
     const info = llm.classifyError(err);

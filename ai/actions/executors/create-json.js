@@ -4,6 +4,7 @@
 // file (dependency-free).
 
 const { Executor } = require("../executor");
+const { t } = require("../../i18n");
 
 // Pure renderer. payload: { data: object } → Buffer (2-space pretty JSON).
 function renderJson(payload) {
@@ -30,10 +31,10 @@ class CreateJsonExecutor extends Executor {
     };
   }
 
-  async preview(payload) {
+  async preview(payload, lang) {
     const keys = payload && payload.data && typeof payload.data === "object"
       ? Object.keys(payload.data).length : 0;
-    return { summary: `🔧 JSON — ${keys} alan → Kiri/veri/` };
+    return { summary: t("plan.json", lang, keys, this.outputLabel) };
   }
 
   async execute(payload) {

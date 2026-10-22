@@ -5,6 +5,7 @@
 // different task on the same drop doesn't re-screenshot or re-classify.
 
 const config = require("./config");
+const { msg } = require("./i18n");
 const { captureRegion, captureFullScreen, captureExactRegion } = require("./capture");
 const llm = require("./llm");
 const { classifyError } = llm;
@@ -61,7 +62,7 @@ function parseClassify(text) {
 async function analyzeDrop(petWin, { catName, persona, memory } = {}) {
   const cfg = config.loadConfig();
   if (!cfg.enabled) return { error: "disabled" };
-  if (!config.providerReady()) return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+  if (!config.providerReady()) return { error: "no_key", message: msg("ai.noKey") };
 
   let capture;
   try {
@@ -70,7 +71,7 @@ async function analyzeDrop(petWin, { catName, persona, memory } = {}) {
       captureHeight: cfg.captureHeight,
     });
   } catch (err) {
-    return { error: "capture", message: (err && err.message) || "Ekran yakalanamadı." };
+    return { error: "capture", message: (err && err.message) || msg("capture.failed") };
   }
 
   prune();
@@ -127,13 +128,13 @@ async function analyzeDrop(petWin, { catName, persona, memory } = {}) {
 // Step 2: run a chosen task against the cached capture.
 async function runTask({ captureId, taskId, catName, persona, memory } = {}) {
   const cfg = config.loadConfig();
-  if (!config.providerReady()) return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+  if (!config.providerReady()) return { error: "no_key", message: msg("ai.noKey") };
 
   const capture = pendingCaptures.get(captureId);
-  if (!capture) return { error: "expired", message: "Görüntü süresi doldu, kediyi tekrar bırak." };
+  if (!capture) return { error: "expired", message: msg("capture.expired") };
 
   const task = resolveTask(taskId, cfg.customTasks);
-  if (!task) return { error: "bad_task", message: "Görev bulunamadı." };
+  if (!task) return { error: "bad_task", message: msg("task.notFound") };
 
   const controller = newController();
   try {
@@ -146,7 +147,7 @@ async function runTask({ captureId, taskId, catName, persona, memory } = {}) {
       think: task.think,
       signal: controller.signal,
     });
-    return { ok: true, text: text || "(boş yanıt)", taskId };
+    return { ok: true, text: text || msg("ai.emptyAnswer"), taskId };
   } catch (err) {
     const info = classifyError(err);
     return { error: info.code, message: info.message };
@@ -181,12 +182,12 @@ async function captureScreen(petWin) {
   const cfg = config.loadConfig();
   if (!cfg.enabled) return { error: "disabled" };
   if (!config.providerReady()) {
-    return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+    return { error: "no_key", message: msg("ai.noKey") };
   }
   try {
     return { ok: true, capture: await captureFullScreen(petWin) };
   } catch (err) {
-    return { error: "capture", message: (err && err.message) || "Ekran yakalanamadı." };
+    return { error: "capture", message: (err && err.message) || msg("capture.failed") };
   }
 }
 
@@ -203,9 +204,9 @@ function stripPointForDisplay(text) {
 async function answerScreenQuestion(capture, { question, catName, persona, memory, region, appContext } = {}, onDelta) {
   const cfg = config.loadConfig();
   if (!config.providerReady()) {
-    return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+    return { error: "no_key", message: msg("ai.noKey") };
   }
-  if (!capture || !capture.base64) return { error: "capture", message: "Ekran yakalanamadı." };
+  if (!capture || !capture.base64) return { error: "capture", message: msg("capture.failed") };
 
   const controller = newController();
   const callOpts = {
@@ -253,7 +254,7 @@ async function answerScreenQuestion(capture, { question, catName, persona, memor
         displayId: capture.display.id,
       };
     }
-    return { ok: true, text: answer || "(boş yanıt)", point: absPoint, display: capture.display };
+    return { ok: true, text: answer || msg("ai.emptyAnswer"), point: absPoint, display: capture.display };
   } catch (err) {
     const info = classifyError(err);
     return { error: info.code, message: info.message };
@@ -274,14 +275,14 @@ async function askAboutRegion(petWin, rect, opts = {}, onDelta) {
   const cfg = config.loadConfig();
   if (!cfg.enabled) return { error: "disabled" };
   if (!config.providerReady()) {
-    return { error: "no_key", message: "Önce ayarlardan sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+    return { error: "no_key", message: msg("ai.noKey") };
   }
   if (!rect || !(rect.width > 0) || !(rect.height > 0)) return { error: "empty_region" };
   let capture;
   try {
     capture = await captureExactRegion(petWin, rect);
   } catch (err) {
-    return { error: "capture", message: (err && err.message) || "Bölge yakalanamadı." };
+    return { error: "capture", message: (err && err.message) || msg("capture.regionFailed") };
   }
   return answerScreenQuestion(capture, { ...opts, region: true }, onDelta);
 }

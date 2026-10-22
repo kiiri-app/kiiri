@@ -4,6 +4,7 @@
 // returned JSON skill definition.
 
 const config = require("../config");
+const { msg } = require("../i18n");
 const llm = require("../llm"); // text-only use (no image)
 const { skillAuthorSystem, skillAuthorUser } = require("../prompts");
 const { sanitize } = require("./store");
@@ -22,9 +23,9 @@ function parseJson(text) {
 // Returns { ok, skill } (draft, not yet saved) or { error }.
 async function authorSkill(description) {
   const cfg = config.loadConfig();
-  if (!config.providerReady()) return { error: "no_key", message: "Önce sağlayıcı anahtarını gir (Ollama için gerekmez)." };
+  if (!config.providerReady()) return { error: "no_key", message: msg("ai.noKey") };
   const desc = String(description || "").trim();
-  if (!desc) return { error: "empty", message: "Önce skill'i tarif et." };
+  if (!desc) return { error: "empty", message: msg("skill.empty") };
 
   try {
     // Text-only (no screenshot) — works across all providers.
@@ -36,7 +37,7 @@ async function authorSkill(description) {
     });
     const parsed = parseJson(text);
     const skill = sanitize(parsed, 0);
-    if (!skill) return { error: "parse", message: "Skill üretilemedi, tarifi netleştir." };
+    if (!skill) return { error: "parse", message: msg("skill.parse") };
     return { ok: true, skill };
   } catch (err) {
     return { error: "claude", message: (err && err.message) || "Hata" };

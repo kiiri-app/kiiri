@@ -5,6 +5,8 @@
 // claude-opus-4-8; adaptive thinking is used for reasoning-heavy tasks and
 // skipped for models that don't support it (Haiku).
 
+const { msg } = require("./i18n");
+
 let Anthropic = null;
 function loadSDK() {
   if (Anthropic) return Anthropic;
@@ -33,23 +35,23 @@ function cloudErrorType(err) {
 function classifyError(err) {
   const status = err && (err.status || err.statusCode);
   const cloudType = cloudErrorType(err);
-  if (cloudType === "quota_exceeded") return { code: "quota", message: "Bu ayki ücretsiz soruların bitti. Ayın başında yenilenir ya da Kiiri Plus'a geçebilirsin." };
-  if (cloudType === "plan_required") return { code: "plan", message: "Bu özellik Kiiri Plus'ta var." };
-  if (status === 401) return { code: "auth", message: "API anahtarı geçersiz veya eksik." };
-  if (status === 403) return { code: "permission", message: "API anahtarının bu modele erişimi yok." };
-  if (status === 404) return { code: "model", message: "Model bulunamadı. Modeli ayarlardan değiştir." };
-  if (status === 429) return { code: "rate_limit", message: "Çok fazla istek — biraz sonra dene." };
-  if (status === 413) return { code: "too_large", message: "Görüntü çok büyük." };
-  if (status >= 500) return { code: "server", message: "Anthropic servisi şu an yanıt vermiyor." };
-  const msg = (err && err.message) || "Bilinmeyen hata";
-  if (/abort/i.test(msg)) return { code: "aborted", message: "İptal edildi." };
-  if (/Cannot find module|MODULE_NOT_FOUND/i.test(msg)) {
-    return { code: "missing_sdk", message: "@anthropic-ai/sdk kurulu değil — `npm install` çalıştır." };
+  if (cloudType === "quota_exceeded") return { code: "quota", message: msg("err.quota") };
+  if (cloudType === "plan_required") return { code: "plan", message: msg("err.plan") };
+  if (status === 401) return { code: "auth", message: msg("err.auth") };
+  if (status === 403) return { code: "permission", message: msg("err.permission") };
+  if (status === 404) return { code: "model", message: msg("err.model") };
+  if (status === 429) return { code: "rate_limit", message: msg("err.rateLimit") };
+  if (status === 413) return { code: "too_large", message: msg("err.tooLarge") };
+  if (status >= 500) return { code: "server", message: msg("err.server") };
+  const text = (err && err.message) || msg("err.unknown");
+  if (/abort/i.test(text)) return { code: "aborted", message: msg("err.aborted") };
+  if (/Cannot find module|MODULE_NOT_FOUND/i.test(text)) {
+    return { code: "missing_sdk", message: msg("err.missingSdk") };
   }
-  if (/ECONNREFUSED|fetch failed|ENOTFOUND|network|socket hang up/i.test(msg)) {
-    return { code: "network", message: "Sağlayıcıya bağlanılamadı (Ollama çalışıyor mu? Model indirildi mi?)." };
+  if (/ECONNREFUSED|fetch failed|ENOTFOUND|network|socket hang up/i.test(text)) {
+    return { code: "network", message: msg("err.network") };
   }
-  return { code: "unknown", message: msg };
+  return { code: "unknown", message: text };
 }
 
 // Sends one image + one text instruction; returns the concatenated text.

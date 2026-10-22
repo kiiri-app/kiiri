@@ -10,6 +10,7 @@
 // Uses global fetch/FormData/Blob (available in Electron's Node 18+).
 
 const config = require("./config");
+const { msg } = require("./i18n");
 
 const LANG_HINT = { tr: "tr", en: "en", ko: "ko", ja: "ja" };
 
@@ -17,12 +18,12 @@ async function transcribe(audioBytes, mimeType) {
   const cfg = config.loadConfig();
   const route = config.sttRoute();
   // A custom (local) server may run without a key; every other route needs one.
-  if (!route || (!route.apiKey && route.via !== "custom")) return { error: "no_key", message: "Ses için Kiiri Cloud'a giriş yap, OpenAI anahtarı gir ya da kendi ses sunucunu bağla." };
-  const via = { proxy: "Proxy", cloud: "Kiiri Cloud", custom: "Ses sunucusu" }[route.via] || "OpenAI";
-  if (!audioBytes) return { error: "empty", message: "Ses yakalanamadı." };
+  if (!route || (!route.apiKey && route.via !== "custom")) return { error: "no_key", message: msg("voice.noKey") };
+  const via = { proxy: "Proxy", cloud: "Kiiri Cloud", custom: msg("voice.server") }[route.via] || "OpenAI";
+  if (!audioBytes) return { error: "empty", message: msg("voice.empty") };
 
   const u8 = Buffer.isBuffer(audioBytes) ? audioBytes : Buffer.from(audioBytes);
-  if (u8.length < 1200) return { error: "too_short", message: "Çok kısa — tekrar dene." };
+  if (u8.length < 1200) return { error: "too_short", message: msg("voice.tooShort") };
 
   const form = new FormData();
   form.append("file", new Blob([u8], { type: mimeType || "audio/webm" }), "audio.webm");
@@ -39,17 +40,17 @@ async function transcribe(audioBytes, mimeType) {
     });
     if (!res.ok) {
       await res.text().catch(() => "");
-      if (res.status === 401) return { error: "auth", message: `${via} anahtarı geçersiz.` };
-      if (res.status === 429) return { error: "rate_limit", message: `${via} sınırda — sonra dene.` };
-      if (res.status === 404 && route.via === "custom") return { error: "server", message: "Ses sunucusu /v1/audio/transcriptions sunmuyor — adresi kontrol et." };
-      if (res.status === 413) return { error: "too_large", message: "Ses çok uzun." };
-      if (res.status === 501) return { error: "server", message: "Proxy'de ses için OPENAI_API_KEY tanımlı değil." };
-      return { error: "server", message: `${via} servisi hata verdi (${res.status}).` };
+      if (res.status === 401) return { error: "auth", message: msg("voice.auth", via) };
+      if (res.status === 429) return { error: "rate_limit", message: msg("voice.rateLimit", via) };
+      if (res.status === 404 && route.via === "custom") return { error: "server", message: msg("voice.noEndpoint") };
+      if (res.status === 413) return { error: "too_large", message: msg("voice.tooLarge") };
+      if (res.status === 501) return { error: "server", message: msg("voice.proxyNoKey") };
+      return { error: "server", message: msg("voice.serverError", via, res.status) };
     }
     const data = await res.json();
     return { ok: true, text: String((data && data.text) || "").trim() };
   } catch (err) {
-    return { error: "network", message: (err && err.message) || "Ağ hatası." };
+    return { error: "network", message: (err && err.message) || msg("net.error") };
   }
 }
 

@@ -5,6 +5,7 @@
 // Numbers / Google Sheets.
 
 const { Executor } = require("../executor");
+const { t } = require("../../i18n");
 
 // Pure renderer. payload:
 //   { sheetName?, columns: [string], rows: [[cell]] }  (cells: string|number)
@@ -70,10 +71,10 @@ class CreateXlsxExecutor extends Executor {
     };
   }
 
-  async preview(payload) {
+  async preview(payload, lang) {
     const cols = Array.isArray(payload && payload.columns) ? payload.columns.length : 0;
     const rows = Array.isArray(payload && payload.rows) ? payload.rows.length : 0;
-    return { summary: `📊 Excel — ${cols} sütun × ${rows} satır → Kiri/tablolar/` };
+    return { summary: t("plan.xlsx", lang, cols, rows, this.outputLabel) };
   }
 
   async execute(payload) {

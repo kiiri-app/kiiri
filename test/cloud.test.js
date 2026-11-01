@@ -7,6 +7,8 @@ const path = require("path");
 const { fakeElectron, fresh } = require("./helpers");
 
 const userData = fakeElectron();
+// Kiiri Cloud is "coming soon" in release builds; these tests cover the live path.
+process.env.KIIRI_CLOUD = "1";
 
 function load() {
   for (const f of ["ai-config.json", "cloud-token.bin", "ai-key.bin", "stt-key.bin"]) {
@@ -151,4 +153,19 @@ test("quota and plan errors from Kiiri Cloud get friendly codes", () => {
   const compat = Object.assign(new Error('provider 403: {"error":{"type":"plan_required","message":"x"}}'), { status: 403 });
   assert.equal(classifyError(compat).code, "plan");
   assert.equal(classifyError(Object.assign(new Error("x"), { status: 429 })).code, "rate_limit");
+});
+
+test("before launch, cloud is coming soon: not the fresh default, saved choice falls back", () => {
+  delete process.env.KIIRI_CLOUD;
+  try {
+    const { config } = load();
+    assert.equal(config.loadConfig().provider, "anthropic");
+    config.saveConfig({ provider: "cloud" });
+    assert.equal(config.loadConfig().provider, "anthropic");
+    config.setCloudToken("dev_x");
+    assert.equal(config.cloudReady(), false);
+    assert.equal(config.redactedConfig().cloudAvailable, false);
+  } finally {
+    process.env.KIIRI_CLOUD = "1";
+  }
 });

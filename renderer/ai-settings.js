@@ -66,6 +66,7 @@ const I18N = {
     hintProxy: "Your API keys stay on your own server (kiiri-proxy on Cloudflare, or any OpenAI-compatible endpoint). Kiiri only keeps the token. Models: kiiri-smart, kiiri-fast.",
     audioViaProxy: "Voice goes through your proxy — no OpenAI key needed here.",
     providerCloud: "Kiiri Cloud (free, no key)",
+    providerCloudSoon: "Kiiri Cloud — coming soon",
     hintCloud: "Sign in with your email — no API key. Free plan: 25 asks a month.",
     cloudSend: "Send sign-in link",
     cloudWaiting: (e) => `Check your inbox at ${e} and click the link. You'll be signed in here automatically.`,
@@ -181,6 +182,7 @@ const I18N = {
     hintProxy: "API anahtarların kendi sunucunda kalır (Cloudflare'de kiiri-proxy ya da OpenAI-uyumlu herhangi bir uç). Kiiri yalnızca token'ı saklar. Modeller: kiiri-smart, kiiri-fast.",
     audioViaProxy: "Ses de proxy'n üzerinden gider; burada OpenAI anahtarı gerekmez.",
     providerCloud: "Kiiri Cloud (ücretsiz, anahtarsız)",
+    providerCloudSoon: "Kiiri Cloud — yakında",
     hintCloud: "E-postanla giriş yap, API anahtarı gerekmez. Ücretsiz plan: ayda 25 soru.",
     cloudSend: "Giriş bağlantısı gönder",
     cloudWaiting: (e) => `${e} adresine gelen e-postadaki bağlantıya tıkla. Burada kendiliğinden giriş yapılacak.`,
@@ -296,6 +298,7 @@ const I18N = {
     hintProxy: "API 키는 내 서버에 남아요 (Cloudflare의 kiiri-proxy 또는 OpenAI 호환 엔드포인트). Kiiri는 토큰만 보관해요. 모델: kiiri-smart, kiiri-fast.",
     audioViaProxy: "음성도 프록시를 거쳐요. 여기에는 OpenAI 키가 필요 없어요.",
     providerCloud: "Kiiri Cloud (무료, 키 불필요)",
+    providerCloudSoon: "Kiiri Cloud — 곧 출시",
     hintCloud: "이메일로 로그인하면 API 키가 필요 없어요. 무료 플랜: 한 달 25회 질문.",
     cloudSend: "로그인 링크 보내기",
     cloudWaiting: (e) => `${e} 받은편지함에서 링크를 눌러 주세요. 여기서 자동으로 로그인돼요.`,
@@ -411,6 +414,7 @@ const I18N = {
     hintProxy: "API キーは自分のサーバーに残ります（Cloudflare の kiiri-proxy、または OpenAI 互換のエンドポイント）。Kiiri はトークンだけを保存します。モデル: kiiri-smart、kiiri-fast。",
     audioViaProxy: "音声もプロキシ経由です。ここで OpenAI キーは不要です。",
     providerCloud: "Kiiri Cloud（無料・キー不要）",
+    providerCloudSoon: "Kiiri Cloud — 近日公開",
     hintCloud: "メールでサインインするだけ。API キーは不要です。無料プラン: 月 25 回まで質問できます。",
     cloudSend: "サインインリンクを送る",
     cloudWaiting: (e) => `${e} に届いたメールのリンクをクリックしてください。ここで自動的にサインインします。`,
@@ -480,7 +484,7 @@ function applyI18n() {
 
 function providerLabels() {
   return {
-    cloud: L("providerCloud"),
+    cloud: config && config.cloudAvailable === false ? L("providerCloudSoon") : L("providerCloud"),
     anthropic: "Claude (Anthropic)",
     openai: "OpenAI (GPT-4o)",
     gemini: "Google Gemini",
@@ -843,6 +847,9 @@ function render() {
   if (computerStepsEl) { computerStepsEl.value = String(config.computerUseMaxSteps || 30); computerStepsVal.textContent = computerStepsEl.value; }
   alwaysDrop.checked = config.alwaysAnalyzeOnDrop;
   fillSelect(providerSel, config.supportedProviders || [], providerLabels(), config.provider);
+  // Kiiri Cloud isn't open yet: listed so people know it's coming, not pickable.
+  const cloudOpt = providerSel.querySelector('option[value="cloud"]');
+  if (cloudOpt) cloudOpt.disabled = config.cloudAvailable === false;
   fillSelect(langSel, config.supportedResponseLanguages || [], LANG_LABELS, config.responseLanguage);
   applyProviderUI();
   vEnabled.checked = config.voiceEnabled;

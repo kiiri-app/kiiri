@@ -1,7 +1,7 @@
 {
   "name": "kiri",
   "productName": "Kiiri",
-  "version": "0.1.38",
+  "version": "0.2.0",
   "description": "A companion cat on your desktop — pomodoro + health-aware pet for coders",
   "author": "Ahmet Vural",
   "license": "MIT",

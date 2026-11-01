@@ -42,6 +42,11 @@ const PROFILE_IDS = PROFILES.map((p) => p.id);
 // Everything except Anthropic speaks the OpenAI Chat Completions format.
 const SUPPORTED_PROVIDERS = ["cloud", "anthropic", "openai", "gemini", "ollama", "proxy"];
 const DEFAULT_CLOUD_BASE_URL = "https://cloud.kiiri.app";
+// Kiiri Cloud is not open yet: the provider shows as "coming soon", fresh
+// installs don't start on it and a saved "cloud" choice falls back to Anthropic.
+// Flip to true at launch (KIIRI_CLOUD=1 turns it on for tests and dev builds).
+const CLOUD_LAUNCHED = false;
+const cloudAvailable = () => CLOUD_LAUNCHED || process.env.KIIRI_CLOUD === "1";
 const DEFAULT_CLOUD_MODEL = "kiiri-smart";
 const DEFAULT_OPENAI_MODEL = "gpt-4o";
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
@@ -175,7 +180,9 @@ function sanitizeConfig(raw) {
   };
   return {
     enabled: !!data.enabled,
-    provider: SUPPORTED_PROVIDERS.includes(data.provider) ? data.provider : "anthropic",
+    provider: SUPPORTED_PROVIDERS.includes(data.provider) && (data.provider !== "cloud" || cloudAvailable())
+      ? data.provider
+      : "anthropic",
     model: SUPPORTED_MODELS.includes(data.model) ? data.model : DEFAULT_MODEL,
     openaiModel: cleanStr(data.openaiModel, DEFAULT_OPENAI_MODEL),
     geminiModel: cleanStr(data.geminiModel, DEFAULT_GEMINI_MODEL),
@@ -237,7 +244,7 @@ function loadConfig() {
     // sign-in with an email is all it needs. Anything older keeps the Anthropic
     // fallback: flipping someone who already has a key would lose their setup.
     const fresh = err && err.code === "ENOENT" && !hasApiKey() && !hasOpenAiKey() && !hasGeminiKey() && !hasProxyToken();
-    cached = sanitizeConfig(fresh ? { provider: "cloud" } : {});
+    cached = sanitizeConfig(fresh && cloudAvailable() ? { provider: "cloud" } : {});
   }
   return cached;
 }
@@ -352,7 +359,7 @@ const hasSttKey = () => hasSecret(STT_KEY_FILE);
 const clearSttKey = () => clearSecret(STT_KEY_FILE);
 
 function cloudReady() {
-  return hasCloudToken();
+  return cloudAvailable() && hasCloudToken();
 }
 
 function proxyReady() {
@@ -414,6 +421,7 @@ function redactedConfig() {
     hasGeminiKey: hasGeminiKey(),
     hasProxyToken: hasProxyToken(),
     hasCloudToken: hasCloudToken(),
+    cloudAvailable: cloudAvailable(),
     hasSttKey: hasSttKey(),
     sttUsable: !!sttRoute(),
     audioVia: audioVia(),
@@ -514,6 +522,7 @@ module.exports = {
   hasCloudToken,
   clearCloudToken,
   cloudReady,
+  cloudAvailable,
   setSttKey,
   getSttKey,
   hasSttKey,

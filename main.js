@@ -2852,6 +2852,7 @@ function broadcastCloudAuth(extra) {
   broadcastVoiceConfig(); // voice can route through Kiiri Cloud
 }
 ipcMain.handle("cloud-sign-in-start", async (_evt, email) => {
+  if (!aiConfig.cloudAvailable()) return { ok: false, error: "unavailable", message: "Kiiri Cloud is coming soon." };
   const r = await aiCloud.startSignIn(email, (result) => {
     if (result.ok && aiConfig.loadConfig().provider === "cloud" && !aiConfig.loadConfig().enabled) {
       aiConfig.saveConfig({ enabled: true });

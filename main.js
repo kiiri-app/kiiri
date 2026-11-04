@@ -156,6 +156,12 @@ let codexMonitor = null;
 let kiroMonitor = null;
 let cursorAgentMonitor = null;
 const activeAgentSessions = new Map();
+// Sessions blocked on the user (approval / input), keyed like activeAgentSessions.
+// Cleared as soon as the same session reports any other state.
+const waitingAgentSessions = new Map();
+// Claude Code fires both PermissionRequest and Notification for one prompt;
+// only ding once per session within this window.
+const AGENT_NOTIFY_DEDUPE_MS = 5000;
 let agentMonitoringEnabled = true;
 let tray = null;
 const AGENT_DISPLAY = { "claude-code": "Claude Code", cursor: "Cursor", codex: "Codex", kiro: "Kiro", antigravity: "Antigravity" };
@@ -211,6 +217,7 @@ const I18N = {
     aiAgents: "AI agents",
     noActiveAgents: "No active agents",
     agentWorking: "working…",
+    agentWaiting: "needs approval",
     personaGuide: "Give this cat a personality. It shapes how it answers in AI tasks.",
     personaPlaceholder: "e.g. cheerful and concise tutor",
     fixedMessage: "Fixed message",
@@ -321,6 +328,7 @@ const I18N = {
     aiAgents: "AI 에이전트",
     noActiveAgents: "활성 에이전트 없음",
     agentWorking: "작업 중…",
+    agentWaiting: "승인 대기 중",
     personaGuide: "이 고양이에게 성격을 부여하세요. AI 작업 응답 방식에 반영됩니다.",
     personaPlaceholder: "예: 밝고 간결한 튜터",
     fixedMessage: "고정 메시지",
@@ -429,6 +437,7 @@ const I18N = {
     aiAgents: "AIエージェント",
     noActiveAgents: "アクティブなエージェントなし",
     agentWorking: "作業中…",
+    agentWaiting: "承認待ち",
     addCharacter: "➕ キャラクター追加",
     removeCharacter: "➖ このキャラクターを削除",
     personaGuide: "この猫に性格を与えます。AIタスクでの応答の仕方に反映されます。",
@@ -541,6 +550,7 @@ const I18N = {
     aiAgents: "AI ajanları",
     noActiveAgents: "Aktif ajan yok",
     agentWorking: "çalışıyor…",
+    agentWaiting: "onay bekliyor",
     personaGuide: "Bu kediye bir kişilik ver — AI görevlerinde nasıl yanıt vereceğini etkiler.",
     personaPlaceholder: "ör. neşeli ve özlü bir hoca",
     fixedMessage: "Sabit mesaj",
@@ -2052,14 +2062,29 @@ function handleAgentStateEvent(event) {
   const sessionKey = `${agentId}:${sessionId}`;
   const now = Date.now();
   const before = activeAgentSessions.size;
+  const waitingBefore = waitingAgentSessions.size;
   for (const [key, active] of activeAgentSessions) {
     if (!active || now - active.lastActiveAt > AGENT_ACTIVE_TTL_MS) activeAgentSessions.delete(key);
+  }
+  for (const [key, waiting] of waitingAgentSessions) {
+    if (!waiting || now - waiting.since > AGENT_ACTIVE_TTL_MS) waitingAgentSessions.delete(key);
+  }
+  const cwd = event.cwd || (activeAgentSessions.get(sessionKey) || {}).cwd || "";
+  const project = cwd ? path.basename(cwd) : "";
+  let duplicateNotification = false;
+  if (state === "notification") {
+    const prev = waitingAgentSessions.get(sessionKey);
+    duplicateNotification = !!prev && now - prev.since < AGENT_NOTIFY_DEDUPE_MS;
+    waitingAgentSessions.set(sessionKey, { agentId, sessionId, cwd, since: prev && duplicateNotification ? prev.since : now });
+  } else {
+    waitingAgentSessions.delete(sessionKey);
   }
   if (state === "thinking" || state === "working") {
     activeAgentSessions.set(sessionKey, { agentId, sessionId, state, cwd: event.cwd || "", lastActiveAt: now });
   } else if (state === "complete") {
     if (!activeAgentSessions.has(sessionKey)) {
       console.warn(`[Kiri] ignored agent complete without active task: ${agentId} ${event.event || ""}`);
+      if (waitingAgentSessions.size !== waitingBefore) refreshTray();
       return;
     }
     activeAgentSessions.delete(sessionKey);
@@ -2082,16 +2107,17 @@ function handleAgentStateEvent(event) {
         event: event.event || "",
       });
     }
-  } else if (state === "notification") {
+  } else if (state === "notification" && !duplicateNotification) {
     if (petWin && !petWin.isDestroyed()) {
       petWin.webContents.send("ai-task-notification", {
         agentId,
         sessionId,
+        project,
         event: event.event || "",
       });
     }
   }
-  if (activeAgentSessions.size !== before || state === "notification") refreshTray();
+  if (activeAgentSessions.size !== before || waitingAgentSessions.size !== waitingBefore || state === "notification") refreshTray();
 }
 
 // Periodic sweep so sessions whose agent died without a terminal event still
@@ -2102,6 +2128,12 @@ function sweepAgentSessions() {
   for (const [key, active] of activeAgentSessions) {
     if (!active || now - active.lastActiveAt > AGENT_ACTIVE_TTL_MS) {
       activeAgentSessions.delete(key);
+      removed = true;
+    }
+  }
+  for (const [key, waiting] of waitingAgentSessions) {
+    if (!waiting || now - waiting.since > AGENT_ACTIVE_TTL_MS) {
+      waitingAgentSessions.delete(key);
       removed = true;
     }
   }
@@ -2123,13 +2155,24 @@ function activeAgentList() {
   return out;
 }
 
+function waitingAgentList() {
+  const now = Date.now();
+  return [...waitingAgentSessions.values()]
+    .filter((s) => s && now - s.since <= AGENT_ACTIVE_TTL_MS)
+    .sort((a, b) => a.since - b.since);
+}
+
 function buildTrayMenu() {
-  const sessions = activeAgentList();
-  const sessionItems = sessions.length
-    ? sessions.map((s) => ({
-        label: `   • ${AGENT_DISPLAY[s.agentId] || s.agentId} — ${t("agentWorking")}${s.cwd ? "  (" + path.basename(s.cwd) + ")" : ""}`,
-        enabled: false,
-      }))
+  const waiting = waitingAgentList();
+  const waitingKeys = new Set(waiting.map((s) => `${s.agentId}:${s.sessionId}`));
+  const sessions = activeAgentList().filter((s) => !waitingKeys.has(`${s.agentId}:${s.sessionId}`));
+  const sessionLabel = (s, mark, status) =>
+    `   ${mark} ${AGENT_DISPLAY[s.agentId] || s.agentId} — ${status}${s.cwd ? "  (" + path.basename(s.cwd) + ")" : ""}`;
+  const sessionItems = waiting.length || sessions.length
+    ? [
+        ...waiting.map((s) => ({ label: sessionLabel(s, "⚠︎", t("agentWaiting")), enabled: false })),
+        ...sessions.map((s) => ({ label: sessionLabel(s, "•", t("agentWorking")), enabled: false })),
+      ]
     : [{ label: `   ${t("noActiveAgents")}`, enabled: false }];
 
   return Menu.buildFromTemplate([
@@ -2167,8 +2210,9 @@ function refreshTray() {
   if (!tray || (tray.isDestroyed && tray.isDestroyed())) return;
   try {
     tray.setContextMenu(buildTrayMenu());
+    const w = waitingAgentList().length;
     const n = activeAgentList().length;
-    tray.setToolTip(n ? `Kiiri — ${n} agent ${t("agentWorking")}` : "Kiiri");
+    tray.setToolTip(w ? `Kiiri — ${w} agent ${t("agentWaiting")}` : n ? `Kiiri — ${n} agent ${t("agentWorking")}` : "Kiiri");
   } catch {}
 }
 

@@ -150,7 +150,8 @@ const I18N = {
   en: {
     agentComplete: "Task complete!",
     needsAttention: (name) => `${name || "Human"}, needs your attention!`,
-    agentApproval: (name, who) => `${who || "An agent"} needs your approval${name ? ", " + name : ""}!`,
+    agentApproval: (name, who, project) => `${who || "An agent"}${project ? ` in ${project}` : ""} needs your approval${name ? ", " + name : ""}!`,
+    moreWaiting: (n) => ` (+${n} more waiting)`,
     focusLabel: "Focus",
     restLabel: "Break",
     startBreak: (name) => `${name || "Human"}, take a break!`,
@@ -197,7 +198,8 @@ const I18N = {
   ko: {
     agentComplete: "작업 완료냥!",
     needsAttention: (name) => `${name || "집사야"}, 확인이 필요하다냥!`,
-    agentApproval: (name, who) => `${who || "에이전트"}가 승인을 기다린다냥!`,
+    agentApproval: (name, who, project) => `${who || "에이전트"}${project ? ` (${project})` : ""}가 승인을 기다린다냥!`,
+    moreWaiting: (n) => ` (+${n}개 대기 중)`,
     focusLabel: "집중냥",
     restLabel: "휴식냥",
     startBreak: (name) => `${name || "집사야"}, 쉬자냥!`,
@@ -244,7 +246,8 @@ const I18N = {
   ja: {
     agentComplete: "タスク完了にゃ！",
     needsAttention: (name) => `${name ? `${name}さん` : "ご主人"}、確認が必要だにゃ！`,
-    agentApproval: (name, who) => `${who || "エージェント"}が承認待ちだにゃ！`,
+    agentApproval: (name, who, project) => `${who || "エージェント"}${project ? `（${project}）` : ""}が承認待ちだにゃ！`,
+    moreWaiting: (n) => `（ほか${n}件待ち）`,
     focusLabel: "集中にゃ",
     restLabel: "休憩にゃ",
     startBreak: (name) => `${name ? `${name}さん` : "ご主人"}、休憩するにゃ！`,
@@ -291,7 +294,8 @@ const I18N = {
   tr: {
     agentComplete: "Görev tamam, miyav!",
     needsAttention: (name) => `${name || "Dostum"}, bir bakman lazım!`,
-    agentApproval: (name, who) => `${who || "Bir ajan"} onayını bekliyor${name ? ", " + name : ""}!`,
+    agentApproval: (name, who, project) => `${who || "Bir ajan"}${project ? ` (${project})` : ""} onayını bekliyor${name ? ", " + name : ""}!`,
+    moreWaiting: (n) => ` (+${n} tane daha bekliyor)`,
     focusLabel: "Odak",
     restLabel: "Mola",
     startBreak: (name) => `${name || "Dostum"}, mola zamanı!`,
@@ -1588,13 +1592,57 @@ function playAiDing() {
 
 const AGENT_LABELS = { "claude-code": "Claude", cursor: "Cursor", codex: "Codex", kiro: "Kiro", antigravity: "Antigravity" };
 
-function playAiNotification(event) {
+const AI_NOTIFY_DURATION_MS = 5600;
+// Approval requests from several sessions can land at once; show them one
+// after another instead of letting the newest bubble overwrite the rest.
+const aiNotifyQueue = [];
+let aiNotifyCurrent = null;
+let aiNotifyTimer = null;
+
+function aiNotifyKey(event) {
+  return `${(event && event.agentId) || "agent"}:${(event && event.sessionId) || ""}`;
+}
+
+function aiNotificationText(event) {
+  const who = AGENT_LABELS[event.agentId];
+  let msg = who ? tr("agentApproval", currentUserName, who, event.project || "") : tr("needsAttention", currentUserName);
+  if (aiNotifyQueue.length) msg += tr("moreWaiting", aiNotifyQueue.length);
+  return msg;
+}
+
+function showNextAiNotification() {
+  if (aiNotifyTimer) clearTimeout(aiNotifyTimer);
+  aiNotifyTimer = null;
+  aiNotifyCurrent = aiNotifyQueue.shift() || null;
+  if (!aiNotifyCurrent) return;
+  const event = aiNotifyCurrent;
   setThinkingDotsVisible(false);
   playAiDing();
   triggerPoseListening();
-  const who = event && AGENT_LABELS[event.agentId];
-  const msg = who ? tr("agentApproval", currentUserName, who) : tr("needsAttention", currentUserName);
-  showSpeech(msg, { duration: 5600, kind: "reminder" });
+  showSpeech(aiNotificationText(event), { duration: AI_NOTIFY_DURATION_MS, kind: "reminder" });
+  aiNotifyTimer = setTimeout(showNextAiNotification, AI_NOTIFY_DURATION_MS + 300);
+}
+
+function playAiNotification(event) {
+  const entry = { ...(event || {}), key: aiNotifyKey(event) };
+  if (aiNotifyCurrent && aiNotifyCurrent.key === entry.key) return;
+  const queued = aiNotifyQueue.findIndex((e) => e.key === entry.key);
+  if (queued >= 0) aiNotifyQueue[queued] = entry;
+  else aiNotifyQueue.push(entry);
+  if (!aiNotifyCurrent) showNextAiNotification();
+  // Refresh the "+N more waiting" count on the bubble already on screen.
+  else if (activeSpeechKind === "reminder") renderSpeech({ text: aiNotificationText(aiNotifyCurrent), kind: "reminder" });
+}
+
+// A session moved on (approved in its terminal, finished, errored): drop its
+// pending bubble, and skip ahead if it is the one on screen.
+function resolveAiNotification(event) {
+  const key = aiNotifyKey(event);
+  const queued = aiNotifyQueue.findIndex((e) => e.key === key);
+  if (queued >= 0) aiNotifyQueue.splice(queued, 1);
+  if (!aiNotifyCurrent || aiNotifyCurrent.key !== key) return;
+  if (aiNotifyQueue.length) showNextAiNotification();
+  else aiNotifyCurrent = { ...aiNotifyCurrent, key: null }; // a fresh prompt from it dings again
 }
 
 function formatPomodoroTime(totalSec) {
@@ -1635,6 +1683,7 @@ function clearAiTaskVisuals() {
 
 function applyAiTaskState(event) {
   const state = event && typeof event.state === "string" ? event.state : "";
+  if (state && state !== "notification") resolveAiNotification(event);
   const active = state === "thinking" || state === "working";
   // Community pets share the pose-set condition flags; updatePoseState() fans
   // out to updatePetdexState() so the sheet's state row follows along.
